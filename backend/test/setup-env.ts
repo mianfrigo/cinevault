@@ -11,6 +11,14 @@ for (const [k, v] of Object.entries(vars)) {
   else process.env[k] ??= v;
 }
 
+// Tests flush Redis, so they must use a dedicated, non-default database index.
+const redisDb = new URL(process.env.REDIS_URL ?? '').pathname.slice(1);
+if (!/^[1-9]\d*$/.test(redisDb)) {
+  throw new Error(
+    'Refusing to run tests: REDIS_URL must select a non-zero database (e.g. /1)',
+  );
+}
+
 // Also checked by scripts/migrate-test.js before migrations run; keep both in sync.
 const dbName = new URL(process.env.DATABASE_URL ?? '').pathname.slice(1);
 if (!dbName.endsWith('_test')) {

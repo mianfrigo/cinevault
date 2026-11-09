@@ -11,7 +11,8 @@ const FIXED: Record<number, [code: string, message: string]> = {
  * Error middleware registered right after the body parsers. Nest would wrap a
  * parse failure into a plain BadRequestException that echoes the parser text and
  * has lost its type, so it is converted here, where the original error is intact.
- * Only exposed 4xx http-errors (what body-parser throws) are converted: parser
+ * Only exposed 4xx http-errors carrying a parser `type` (entity.parse.failed,
+ * entity.too.large, charset.unsupported...) are converted: parser
  * text and request content never reach the response. Everything else is passed on
  * untouched and ends up as a logged 500.
  */
@@ -21,8 +22,9 @@ export const parserErrorHandler: ErrorRequestHandler = (
   _res,
   next,
 ) => {
-  const { status, expose } = (err ?? {}) as Record<string, unknown>;
+  const { status, expose, type } = (err ?? {}) as Record<string, unknown>;
   if (
+    typeof type !== 'string' ||
     expose !== true ||
     typeof status !== 'number' ||
     !Number.isInteger(status) ||

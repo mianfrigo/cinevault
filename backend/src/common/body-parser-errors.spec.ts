@@ -40,6 +40,9 @@ describe('parserErrorHandler', () => {
       expose: true,
     });
     expect(handle(serverError)).toBe(serverError);
+    // http-errors style but without a parser `type`: not ours to rewrite.
+    const noType = Object.assign(new Error('x'), { status: 401, expose: true });
+    expect(handle(noType)).toBe(noType);
     const fractional = parserError(400.5, 'entity.parse.failed');
     expect(handle(fractional)).toBe(fractional);
   });

@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { INestApplication, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { AppException } from '../src/common/app.exception';
@@ -66,12 +66,12 @@ class FakeTmdb {
   }
 }
 
-async function buildApp(tmdb: FakeTmdb): Promise<INestApplication<App>> {
+async function buildApp(tmdb: FakeTmdb): Promise<NestExpressApplication> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(TmdbClient)
     .useValue(tmdb)
     .compile();
-  const app = moduleRef.createNestApplication<INestApplication<App>>();
+  const app = moduleRef.createNestApplication<NestExpressApplication>();
   configureApp(app);
   await app.init();
   return app;
@@ -80,7 +80,7 @@ async function buildApp(tmdb: FakeTmdb): Promise<INestApplication<App>> {
 const json = (res: { body: unknown }) => res.body as Record<string, any>;
 
 describe('Catalog (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestExpressApplication;
   let tmdb: FakeTmdb;
   const get = (url: string) => request(app.getHttpServer()).get(url);
 

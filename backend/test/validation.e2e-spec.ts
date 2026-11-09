@@ -1,9 +1,9 @@
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import {
   BadRequestException,
   Body,
   Controller,
   Get,
-  INestApplication,
   Param,
   ParseIntPipe,
   Post,
@@ -11,7 +11,6 @@ import {
 import { Test } from '@nestjs/testing';
 import { IsString } from 'class-validator';
 import request from 'supertest';
-import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { AppException } from '../src/common/app.exception';
@@ -51,14 +50,14 @@ class ProbeController {
 }
 
 describe('Global pipe and filter (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestExpressApplication;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
       controllers: [ProbeController],
     }).compile();
-    app = moduleRef.createNestApplication();
+    app = moduleRef.createNestApplication<NestExpressApplication>();
     configureApp(app);
     await app.init();
   });
@@ -128,6 +127,41 @@ describe('Global pipe and filter (e2e)', () => {
       code: 'ERROR',
       message: 'Payload too large',
     });
+  });
+
+  it('parser error responses carry CORS headers for WEB_ORIGIN', async () => {
+    const origin = process.env.WEB_ORIGIN as string;
+    const expectCors = (res: { headers: Record<string, string> }) => {
+      expect(res.headers['access-control-allow-origin']).toBe(origin);
+      expect(res.headers['access-control-allow-credentials']).toBe('true');
+    };
+    expectCors(
+      await request(app.getHttpServer())
+        .post('/api/v1/probe')
+        .set('Origin', origin)
+        .set('Content-Type', 'application/json')
+        .send('{"name":')
+        .expect(400),
+    );
+    expectCors(
+      await request(app.getHttpServer())
+        .post('/api/v1/probe')
+        .set('Origin', origin)
+        .send({ name: 'x'.repeat(200_000) })
+        .expect(413),
+    );
+  });
+
+  it('a CORS preflight is still answered before the body parsers', async () => {
+    const origin = process.env.WEB_ORIGIN as string;
+    const res = await request(app.getHttpServer())
+      .options('/api/v1/probe')
+      .set('Origin', origin)
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'content-type')
+      .expect(204);
+    expect(res.headers['access-control-allow-origin']).toBe(origin);
+    expect(res.headers['access-control-allow-methods']).toContain('POST');
   });
 
   it('an unsupported charset gives 415 ERROR with a fixed message', async () => {

@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { AppException } from './common/app.exception';
+import { parserErrorHandler } from './common/body-parser-errors';
 import { ENV, Env } from './config/env';
 
 function validationMessage(errors: ValidationError[]): string {
@@ -28,6 +29,13 @@ export function configureApp(app: INestApplication): void {
   app.setGlobalPrefix('api/v1');
   app.use(helmet());
   app.use(cookieParser());
+  // Registered here (not left to Nest's defaults) so parser errors can be
+  // converted right after them. Nest skips its own parsers once these exist.
+  (app as NestExpressApplication).useBodyParser('json');
+  (app as NestExpressApplication).useBodyParser('urlencoded', {
+    extended: true,
+  });
+  app.use(parserErrorHandler);
   app.enableCors({ origin: env.webOrigin, credentials: true });
   app.useGlobalPipes(
     new ValidationPipe({

@@ -172,6 +172,7 @@ describe('Catalog (e2e)', () => {
       statusCode: 400,
       code: 'VALIDATION_ERROR',
     });
+    expect(json(res).message).toContain('q must be longer than');
     await get('/api/v1/catalog/search?q=%20%20').expect(400);
     await get('/api/v1/catalog/search').expect(400);
   });
@@ -181,6 +182,7 @@ describe('Catalog (e2e)', () => {
       400,
     );
     expect(json(res).code).toBe('VALIDATION_ERROR');
+    expect(json(res).message).toContain('q must be shorter than');
     await get(`/api/v1/catalog/search?q=${'a'.repeat(100)}`).expect(200);
   });
 
@@ -188,6 +190,7 @@ describe('Catalog (e2e)', () => {
     for (const p of ['0', '501', 'abc', '1.5']) {
       const res = await get(`/api/v1/catalog/popular?page=${p}`).expect(400);
       expect(json(res).code).toBe('VALIDATION_ERROR');
+      expect(json(res).message).toContain('page must');
     }
     await get('/api/v1/catalog/popular?page=500').expect(200);
   });
@@ -195,8 +198,10 @@ describe('Catalog (e2e)', () => {
   it('rejects an unknown type with 400 VALIDATION_ERROR', async () => {
     const res = await get('/api/v1/catalog/trending?type=person').expect(400);
     expect(json(res).code).toBe('VALIDATION_ERROR');
+    expect(json(res).message).toContain('type must be one of');
     const detail = await get('/api/v1/catalog/person/603').expect(400);
     expect(json(detail).code).toBe('VALIDATION_ERROR');
+    expect(json(detail).message).toContain('type must be one of');
   });
 
   it('GET /catalog/movie/603 returns TitleDetail', async () => {

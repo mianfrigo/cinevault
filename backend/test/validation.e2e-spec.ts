@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -25,6 +26,12 @@ class ProbeController {
   @Post()
   echo(@Body() dto: EchoDto) {
     return dto;
+  }
+
+  @Post('reject')
+  reject(@Body() body: unknown): never {
+    void body;
+    throw new BadRequestException('probe reason');
   }
 
   @Get('int/:n')
@@ -67,6 +74,22 @@ describe('Global pipe and filter (e2e)', () => {
       statusCode: 400,
       code: 'VALIDATION_ERROR',
     });
+    // The detail of what is wrong is kept.
+    expect((res.body as { message: string }).message).toContain(
+      'name must be a string',
+    );
+  });
+
+  it('a controller BadRequestException on a JSON POST keeps its own reason', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/probe/reject')
+      .send({ anything: 'goes' })
+      .expect(400);
+    expect(res.body).toEqual({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+      message: 'probe reason',
+    });
   });
 
   it('a ParseIntPipe failure keeps the pipe message with VALIDATION_ERROR', async () => {
@@ -104,6 +127,19 @@ describe('Global pipe and filter (e2e)', () => {
       statusCode: 413,
       code: 'ERROR',
       message: 'Payload too large',
+    });
+  });
+
+  it('an unsupported charset gives 415 ERROR with a fixed message', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/probe')
+      .set('Content-Type', 'application/json; charset=nope')
+      .send('{"name":"x"}')
+      .expect(415);
+    expect(res.body).toEqual({
+      statusCode: 415,
+      code: 'ERROR',
+      message: 'Unsupported media type',
     });
   });
 

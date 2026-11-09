@@ -1,0 +1,27 @@
+{
+  "id": 1396,
+  "name": "Breaking Bad",
+  "overview": "A teacher turns to crime.",
+  "tagline": "Remember my name",
+  "poster_path": "/bb.jpg",
+  "backdrop_path": "/bb-bg.jpg",
+  "first_air_date": "2008-01-20",
+  "vote_average": 8.9,
+  "vote_count": 13000,
+  "episode_run_time": [47, 45],
+  "number_of_seasons": 5,
+  "status": "Ended",
+  "original_language": "en",
+  "genres": [{ "id": 18, "name": "Drama" }],
+  "seasons": [
+    { "season_number": 0, "name": "Specials", "episode_count": 9 },
+    { "season_number": 1, "name": "Season 1", "episode_count": 7 },
+    { "season_number": 2, "name": "Season 2", "episode_count": 13 }
+  ],
+  "credits": {
+    "cast": [{ "name": "Bryan Cranston", "character": "Walter White" }],
+    "crew": [{ "name": "Vince Gilligan", "job": "Creator" }]
+  },
+  "videos": { "results": [{ "site": "YouTube", "type": "Trailer", "key": "HhesaQXLuRY" }] },
+  "similar": { "results": [] }
+}

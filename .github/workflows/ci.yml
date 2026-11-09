@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Static checks and build: no services needed.
+  backend-quality:
+    name: Backend quality (format, lint, types, audit, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint:ci
+      - run: npm run typecheck
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run build
+
+  # Unit and e2e tests against the same postgres and redis as local dev (docker-compose.yml).
+  backend-test:
+    name: Backend tests (unit + e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Start postgres and redis
+        run: docker compose up -d --wait postgres redis
+      - name: Install
+        run: npm ci
+        working-directory: backend
+      - name: Unit tests
+        run: npm test
+        working-directory: backend
+      - name: E2E tests (migrates cinevault_test first)
+        run: npm run test:e2e
+        working-directory: backend
+      - name: Infra logs on failure
+        if: failure()
+        run: docker compose logs --no-color postgres redis

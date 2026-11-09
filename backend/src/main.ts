@@ -12,6 +12,7 @@ if (existsSync(envFile)) process.loadEnvFile(envFile);
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   configureApp(app);
+  app.enableShutdownHooks(); // so SIGTERM runs PrismaService.onModuleDestroy
   await app.listen(app.get<Env>(ENV).port);
 }
 void bootstrap();

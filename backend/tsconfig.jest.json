@@ -1,0 +1,6 @@
+{
+  // Jest runs CommonJS without --experimental-vm-modules, so the dynamic import()
+  // in the generated Prisma client must be compiled to require().
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "module": "commonjs", "moduleResolution": "node10", "resolvePackageJsonExports": false }
+}

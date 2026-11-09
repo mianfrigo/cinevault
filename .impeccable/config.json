@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "docs/design/directions/c-title-sequence.html"
+        ],
+        "createdAt": "2026-11-09T11:40:38.058Z",
+        "reason": "assistant: film-slate grid dividers (border-right/bottom between cells), not a card accent stripe; owner has not reviewed"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "docs/design/directions/c-title-sequence.html"
+        ],
+        "createdAt": "2026-11-09T11:40:38.154Z",
+        "reason": "assistant: cinema marquee is the direction's concept; has visible pause button, pauses on hover/focus, 70s slow, off under prefers-reduced-motion; owner has not reviewed"
+      }
+    ]
+  }
+}

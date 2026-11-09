@@ -1,0 +1,53 @@
+<h2>Dashboard: user view and admin view</h2>
+<p class="subtitle">Login required. Admin sees two extra sidebar items. Is anything missing or wrong?</p>
+
+<div class="split">
+  <!-- USER -->
+  <div style="background:#0f1420;color:#e8ecf4;border-radius:10px;overflow:hidden;font-family:system-ui,sans-serif;font-size:12px">
+    <div style="padding:10px 14px;border-bottom:1px solid #1d2535"><b>▶ STREAMVERSE</b> <span style="float:right;color:#8a94a8">Alex M. ▾</span></div>
+    <div style="display:flex;min-height:300px">
+      <div style="width:110px;background:#121a2a;padding:12px;line-height:2.2">
+        <div style="color:#fff;font-weight:600">♡ Favorites</div>
+        <div style="color:#8a94a8">👤 Account</div>
+        <div style="color:#8a94a8">← Back to site</div>
+        <div style="color:#8a94a8">Log out</div>
+      </div>
+      <div style="flex:1;padding:14px">
+        <div style="font-size:15px;font-weight:600;margin-bottom:4px">My Favorites <span style="color:#8a94a8;font-weight:400">(12)</span></div>
+        <div style="margin-bottom:10px"><span style="background:#1a73e8;padding:3px 10px;border-radius:10px">All</span> <span style="color:#8a94a8;padding:3px 8px">Movies</span> <span style="color:#8a94a8;padding:3px 8px">Series</span></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div class="placeholder" style="height:80px">P ♥</div><div class="placeholder" style="height:80px">P ♥</div><div class="placeholder" style="height:80px">P ♥</div><div class="placeholder" style="height:80px">P ♥</div>
+          <div class="placeholder" style="height:80px">P ♥</div><div class="placeholder" style="height:80px">P ♥</div><div class="placeholder" style="height:80px">P ♥</div><div class="placeholder" style="height:80px">P ♥</div>
+        </div>
+        <div style="margin-top:14px;padding-top:10px;border-top:1px solid #1d2535;color:#aab3c5">
+          <b style="color:#e8ecf4">Account tab:</b> name, email, change password, delete my account
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div style="background:#0f1420;color:#e8ecf4;border-radius:10px;overflow:hidden;font-family:system-ui,sans-serif;font-size:12px">
+    <div style="padding:10px 14px;border-bottom:1px solid #1d2535"><b>▶ STREAMVERSE</b> <span style="float:right;color:#8a94a8">Admin ▾</span></div>
+    <div style="display:flex;min-height:300px">
+      <div style="width:110px;background:#121a2a;padding:12px;line-height:2.2">
+        <div style="color:#8a94a8">♡ Favorites</div>
+        <div style="color:#8a94a8">👤 Account</div>
+        <div style="color:#fff;font-weight:600;border-left:2px solid #1a73e8;padding-left:6px;margin-left:-8px">🛡 Users</div>
+        <div style="color:#8a94a8">📊 Overview</div>
+        <div style="color:#8a94a8">Log out</div>
+      </div>
+      <div style="flex:1;padding:14px">
+        <div style="font-size:15px;font-weight:600;margin-bottom:8px">Manage Users</div>
+        <div style="background:#1a2133;border-radius:6px;padding:6px 10px;color:#8a94a8;margin-bottom:8px">Search by name or email…</div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr style="color:#8a94a8;text-align:left"><th>User</th><th>Role</th><th>Status</th><th></th></tr>
+          <tr style="border-top:1px solid #1d2535"><td style="padding:7px 0">Alex M.<br><span style="color:#8a94a8">alex@mail.com</span></td><td>Admin</td><td style="color:#4cc38a">Active</td><td>⋯</td></tr>
+          <tr style="border-top:1px solid #1d2535"><td style="padding:7px 0">Sara K.<br><span style="color:#8a94a8">sara@mail.com</span></td><td>User</td><td style="color:#4cc38a">Active</td><td>⋯</td></tr>
+          <tr style="border-top:1px solid #1d2535"><td style="padding:7px 0">Tom R.<br><span style="color:#8a94a8">tom@mail.com</span></td><td>User</td><td style="color:#e5484d">Blocked</td><td>⋯</td></tr>
+        </table>
+        <div style="margin-top:10px;color:#aab3c5">Row menu ⋯: change role, block / unblock, delete user.<br>Overview (my guess): total users, new this week.</div>
+      </div>
+    </div>
+  </div>
+</div>

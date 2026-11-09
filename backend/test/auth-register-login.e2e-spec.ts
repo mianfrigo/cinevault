@@ -151,6 +151,8 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
       await waitForMail(mail, 2);
       await expectNoMoreMail(mail, 2);
       expect(mail.sent[1].subject).toBe('Verify your Cinevault email');
+      expect(mail.sent[0].text).toContain('Hi Ana,');
+      expect(mail.sent[1].text).toContain('Hi Ana Two,'); // the new name, not the stale one
       const after = await prisma.user.findUniqueOrThrow({
         where: { email: 'ana@example.com' },
       });
@@ -178,13 +180,22 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
         data: { status: 'ACTIVE', emailVerifiedAt: new Date() },
       });
       // The lookup still sees the PENDING row, as if verification landed right after it.
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce(stale);
-      const res = await register({
-        ...ana,
-        name: 'Mallory',
-        password: 'a completely different password',
-      }).expect(202);
-      expect(res.body).toEqual(accepted);
+      const lookup = jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValueOnce(stale);
+      let body: unknown;
+      try {
+        body = (
+          await register({
+            ...ana,
+            name: 'Mallory',
+            password: 'a completely different password',
+          }).expect(202)
+        ).body;
+      } finally {
+        lookup.mockRestore();
+      }
+      expect(body).toEqual(accepted);
       await expectNoMoreMail(mail, 0);
       const after = await prisma.user.findUniqueOrThrow({
         where: { id: stale.id },
@@ -240,9 +251,16 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
       await waitForMail(mail, 1);
       mail.reset();
       // The lookup misses the row the winner just committed, so create() hits P2002.
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce(null);
-      const res = await register({ ...ana, name: 'Loser' }).expect(202);
-      expect(res.body).toEqual(accepted);
+      const lookup = jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValueOnce(null);
+      let body: unknown;
+      try {
+        body = (await register({ ...ana, name: 'Loser' }).expect(202)).body;
+      } finally {
+        lookup.mockRestore();
+      }
+      expect(body).toEqual(accepted);
       await expectNoMoreMail(mail, 0);
       expect(await prisma.user.count()).toBe(1);
       expect(await prisma.user.findFirst()).toMatchObject({ name: 'Ana' });

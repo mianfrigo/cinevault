@@ -77,7 +77,7 @@ export class AuthService {
         where: { id: existing.id, status: 'PENDING' },
         data: { name: dto.name, passwordHash },
       });
-      if (count === 1) this.sendVerification(existing);
+      if (count === 1) this.sendVerification({ ...existing, name: dto.name });
     } else {
       this.background('already-registered mail', () =>
         this.mail.sendAlreadyRegistered(existing.email, existing.name),

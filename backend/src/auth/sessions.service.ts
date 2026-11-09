@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AppException } from '../common/app.exception';
+import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokensService } from './tokens.service';
 
@@ -73,8 +74,12 @@ export class SessionsService {
     });
   }
 
-  async revokeAll(userId: string): Promise<void> {
-    await this.prisma.refreshToken.updateMany({
+  /** Pass `tx` to revoke inside the caller's transaction. */
+  async revokeAll(
+    userId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    await db.refreshToken.updateMany({
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });

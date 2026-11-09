@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AppException } from '../common/app.exception';
+import { runInBackground } from '../common/background';
 import { Prisma } from '../generated/prisma/client';
 import type { User } from '../generated/prisma/client';
 import { MailService } from '../mail/mail.service';
@@ -33,20 +34,8 @@ export class AuthService {
     private readonly mail: MailService,
   ) {}
 
-  /**
-   * Runs `job` without awaiting it, so SMTP latency or failure cannot change the
-   * response. Logs only the error class: never an address, token or link.
-   */
-  private background(what: string, job: () => Promise<void>): void {
-    void job().catch((e: unknown) =>
-      this.logger.warn(
-        `${what} failed: ${e instanceof Error ? e.name : 'Unknown error'}`,
-      ),
-    );
-  }
-
   private sendVerification(user: Pick<User, 'id' | 'email' | 'name'>): void {
-    this.background('verification mail', async () => {
+    runInBackground(this.logger, 'verification mail', async () => {
       const token = await this.emailTokens.issue(user.id, 'VERIFY_EMAIL');
       await this.mail.sendVerifyEmail(user.email, user.name, token);
     });
@@ -79,7 +68,7 @@ export class AuthService {
       });
       if (count === 1) this.sendVerification({ ...existing, name: dto.name });
     } else {
-      this.background('already-registered mail', () =>
+      runInBackground(this.logger, 'already-registered mail', () =>
         this.mail.sendAlreadyRegistered(existing.email, existing.name),
       );
     }
@@ -173,7 +162,7 @@ export class AuthService {
       where: { email: normalizeEmail(dto.email) },
     });
     if (user?.status === 'ACTIVE') {
-      this.background('reset mail', async () => {
+      runInBackground(this.logger, 'reset mail', async () => {
         const token = await this.emailTokens.issue(user.id, 'RESET_PASSWORD');
         await this.mail.sendResetPassword(user.email, user.name, token);
       });

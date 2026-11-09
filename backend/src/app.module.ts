@@ -6,6 +6,7 @@ import { ConfigModule } from './config/config.module';
 import { HealthController } from './health/health.controller';
 import { MailModule } from './mail/mail.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PrismaModule } from './prisma/prisma.module';
     CatalogModule,
     MailModule,
     AuthModule,
+    UsersModule,
   ],
   controllers: [HealthController],
 })

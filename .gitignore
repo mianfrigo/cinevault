@@ -1,0 +1,28 @@
+# dependencies and build output
+node_modules/
+dist/
+.angular/
+coverage/
+
+# secrets and local env
+.env
+.env.local
+.env.*.local
+
+# generated
+backend/src/generated/
+
+# tool scratch (brainstorm server, design tool mocks and reviews)
+.superpowers/
+.impeccable/mocks/
+.impeccable/review/
+
+# large design screenshots (the HTML mockups are kept)
+docs/design/directions/shots/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.impeccable/hook.cache.json

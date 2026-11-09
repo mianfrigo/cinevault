@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cinevault: Gallery Dark</title>
+<meta name="description" content="Cinevault design direction B, Gallery Dark: a content-first dark gallery. Synthetic placeholder art.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400;1,6..96,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ===================== DESIGN TOKENS (port to Angular as-is) ===================== */
+:root{
+  /* color: warm near-black ground, artwork is the only colour */
+  --ground:#0a0908;
+  --ground-2:#110f0d;
+  --mat:#171511;
+  --rule:#2b2824;
+  --rule-strong:#47433b;
+  --ink:#eeeae2;
+  --ink-2:#bdb7ac;
+  --ink-3:#9a9488;
+  --brass:#cdae78;          /* the single accent: focus, active, primary */
+  --brass-ink:#0a0908;
+  --danger:#ee8a70;
+  --ok:#9cc59a;
+  --scrim:rgba(5,4,3,.72);
+
+  /* type */
+  --font-display:'Bodoni Moda','Bodoni 72','Didot','Bodoni MT',Georgia,'Times New Roman',serif;
+  --font-ui:'Jost','Futura','Avenir Next','Century Gothic','Segoe UI',system-ui,sans-serif;
+  --t-xs:.75rem;     /* 12 labels / captions */
+  --t-sm:.875rem;    /* 14 */
+  --t-md:1rem;       /* 16 body */
+  --t-lg:1.25rem;
+  --t-xl:clamp(1.625rem,2.6vw,2.25rem);
+  --t-2xl:clamp(2.25rem,4.6vw,3.75rem);
+  --t-3xl:clamp(2.75rem,6.4vw,5.5rem);   /* display max 6rem */
+  --track-caps:.14em;
+  --lh-body:1.7;
+
+  /* space (4px base) */
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:32px; --s-7:48px; --s-8:64px; --s-9:96px; --s-10:144px;
+  --gutter:clamp(16px,4vw,56px);
+  --gap:clamp(12px,2vw,24px);
+
+  /* shape */
+  --r-0:0; --r-1:2px; --r-pill:999px;
+  --mat-pad:14px;
+
+  /* layout */
+  --sw-h:40px; --top-h:52px; --tab-h:60px; --rail-w:204px;
+
+  /* motion */
+  --ease:cubic-bezier(.16,1,.3,1);
+  --dur-slow:1100ms; --dur:600ms; --dur-fast:200ms;
+}
+
+/* ===================== BASE ===================== */
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:dark;-webkit-text-size-adjust:100%;scrollbar-color:#3a362f var(--ground);scrollbar-width:thin}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{margin:0;background:var(--ground);color:var(--ink);font:300 var(--t-md)/var(--lh-body) var(--font-ui);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;caret-color:var(--brass);padding-top:var(--sw-h)}
+::selection{background:var(--brass);color:var(--brass-ink)}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:var(--ground)}::-webkit-scrollbar-thumb{background:#3a362f;border:2px solid var(--ground)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit}
+img,svg{max-width:100%}
+h1,h2,h3,p,ul,ol,dl,dd,figure{margin:0}
+ul,ol{padding:0;list-style:none}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ic{flex:none}
+.num{font-variant-numeric:tabular-nums lining-nums}
+.cap-meta{font:400 var(--t-xs)/1.5 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-3)}
+.hair{border:0;border-top:1px solid var(--rule);margin:0}
+.t-it{font-family:var(--font-display);font-style:italic;font-weight:400}
+
+/* ===================== MOCKUP SWITCHER (outside product chrome) ===================== */
+.sw{position:fixed;inset:0 0 auto 0;height:var(--sw-h);z-index:100;display:flex;align-items:center;gap:6px;padding:0 10px;background:#e4e2dd;color:#161616;font:500 12px/1 system-ui,-apple-system,'Segoe UI',sans-serif;overflow-x:auto;white-space:nowrap;scrollbar-width:none;border-bottom:1px solid #b9b6af}
+.sw::-webkit-scrollbar{display:none}
+.sw b{font-weight:700;margin-right:4px;flex:none}
+.sw a,.sw button{flex:none;border:1px solid #a9a69f;background:#f4f3f0;color:#161616;padding:5px 9px;border-radius:3px;font:inherit;cursor:pointer;text-decoration:none}
+.sw a[aria-current="page"],.sw button[aria-pressed="true"]{background:#161616;color:#fff;border-color:#161616}
+.sw a:focus-visible,.sw button:focus-visible{outline:2px solid #0a58ca;outline-offset:1px}
+.sw .sep{width:1px;height:18px;background:#a9a69f;flex:none;margin:0 4px}
+.sw .note{color:#4a4a4a;font-weight:400;margin-left:auto;padding-left:12px;flex:none}
+@media (max-width:899px){.sw .note{display:none}}
+
+/* ===================== SHELL ===================== */
+.shell{min-height:calc(100svh - var(--sw-h));display:flex;flex-direction:column;padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom))}
+main{flex:1;padding-top:var(--top-h);outline:none}
+.page{padding:0 var(--gutter);max-width:1360px}
+.rail{display:none}
+
+/* top bar (phone) */
+.topbar{position:fixed;top:var(--sw-h);left:0;right:0;height:var(--top-h);z-index:40;background:var(--ground);border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 var(--gutter)}
+.wm{font:400 1.5rem/1 var(--font-display);letter-spacing:.01em;color:var(--ink);display:inline-flex;align-items:baseline}
+.wm i{font-style:italic}
+.ib{display:inline-grid;place-items:center;min-width:44px;min-height:44px;background:none;border:0;color:var(--ink-2);cursor:pointer}
+.ib:hover{color:var(--ink)}
+.av{display:inline-grid;place-items:center;width:32px;height:32px;border:1px solid var(--rule-strong);border-radius:50%;font:400 .75rem/1 var(--font-ui);letter-spacing:.06em;color:var(--ink)}
+
+/* bottom tabs (phone) */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;height:calc(var(--tab-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--ground);border-top:1px solid var(--rule);display:grid;grid-template-columns:repeat(5,1fr)}
+.tabbar a,.tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:44px;background:none;border:0;color:var(--ink-3);font:400 var(--t-xs)/1 var(--font-ui);letter-spacing:.06em;cursor:pointer}
+.tabbar [aria-current="page"]{color:var(--brass)}
+
+/* bottom sheet */
+.scrim{position:fixed;inset:0;z-index:60;background:var(--scrim);opacity:0;visibility:hidden;transition:opacity var(--dur) var(--ease),visibility 0s var(--dur)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:70;max-height:calc(100svh - var(--sw-h) - 24px);overflow:auto;background:var(--ground-2);border-top:1px solid var(--rule-strong);padding:var(--s-4) var(--gutter) calc(var(--s-6) + env(safe-area-inset-bottom));transform:translateY(102%);visibility:hidden;transition:transform var(--dur) var(--ease),visibility 0s var(--dur)}
+.sheet.open{transform:none;visibility:visible;transition:transform var(--dur) var(--ease)}
+.scrim.open{opacity:1;visibility:visible;transition:opacity var(--dur) var(--ease)}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--s-3)}
+.sheet-h span{font:400 var(--t-xs)/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-3)}
+
+/* nav lists (rail + sheet) */
+.nav a{display:flex;align-items:center;gap:10px;min-height:44px;color:var(--ink-2);font:300 1.0625rem/1.2 var(--font-ui);position:relative;transition:color var(--dur-fast)}
+.nav a:hover{color:var(--ink)}
+.nav a[aria-current="page"]{color:var(--ink)}
+.nav a[aria-current="page"]::before{content:"";width:14px;height:1px;background:var(--brass);flex:none;margin-left:-22px;margin-right:8px}
+.nav-g{margin-top:var(--s-4);padding-top:var(--s-3);border-top:1px solid var(--rule)}
+.nav-g>span{display:block;font:400 var(--t-xs)/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-3);padding:var(--s-2) 0}
+.sheet .nav a[aria-current="page"]::before{margin-left:0}
+.search{position:relative;display:flex;align-items:center;border-bottom:1px solid var(--rule-strong);color:var(--ink-3)}
+.search:focus-within{border-color:var(--brass)}
+.search input{flex:1;min-width:0;height:44px;background:none;border:0;color:var(--ink);font:300 1rem var(--font-ui);padding:0 0 0 8px;outline:none}
+.search input::placeholder{color:var(--ink-3);opacity:1}
+
+/* desktop rail */
+@media (min-width:1024px){
+  .topbar,.tabbar{display:none}
+  .shell{padding-left:var(--rail-w);padding-bottom:0}
+  main{padding-top:0}
+  .rail{display:flex;flex-direction:column;position:fixed;left:0;top:var(--sw-h);bottom:0;width:var(--rail-w);padding:var(--s-6) 28px var(--s-5) 40px;border-right:1px solid var(--rule);background:var(--ground);z-index:30;overflow:auto}
+  .rail .wm{font-size:1.75rem;margin-bottom:var(--s-7)}
+  .rail .search{margin:var(--s-5) 0 var(--s-2)}
+  .rail-user{margin-top:auto;padding-top:var(--s-5);display:grid;gap:var(--s-3)}
+  .rail-user .who{display:flex;gap:10px;align-items:center;font-size:var(--t-sm);color:var(--ink-2);line-height:1.3}
+  .rail-user .who small{display:block;color:var(--ink-3);font-size:var(--t-xs)}
+  .sheet,.scrim{display:none}
+}
+
+/* ===================== PRIMITIVES ===================== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:0 22px;border:1px solid var(--rule-strong);border-radius:var(--r-0);background:transparent;color:var(--ink);font:400 .8125rem/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;cursor:pointer;transition:border-color var(--dur-fast),background-color var(--dur-fast),color var(--dur-fast)}
+.btn:hover{border-color:var(--ink-2);background:rgba(255,255,255,.04)}
+.btn-primary{border-color:var(--brass);color:var(--brass)}
+.btn-primary:hover{background:var(--brass);color:var(--brass-ink);border-color:var(--brass)}
+.btn-dashed{border-style:dashed;color:var(--ink-2)}
+.btn-danger{border-color:var(--danger);color:var(--danger)}
+.btn-danger:hover{background:var(--danger);color:var(--brass-ink);border-color:var(--danger)}
+.btn[disabled],.tbtn[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none}
+.btn[aria-pressed="true"]{border-color:var(--ink-2)}
+.btn-row{display:flex;flex-wrap:wrap;gap:var(--s-3)}
+.tag{display:inline-block;padding:3px 7px;border:1px solid var(--rule-strong);font:400 var(--t-xs)/1 var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);border-radius:var(--r-1)}
+.tlink{color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule-strong);text-underline-offset:.28em;text-decoration-thickness:1px;transition:text-decoration-color var(--dur-fast)}
+.tlink:hover{text-decoration-color:var(--brass)}
+.pill{min-height:44px;padding:0 18px;border:1px solid var(--rule-strong);border-radius:var(--r-pill);background:none;color:var(--ink-2);font:400 .8125rem/1 var(--font-ui);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.pill:hover{color:var(--ink);border-color:var(--ink-3)}
+.pill[aria-pressed="true"]{border-color:var(--brass);color:var(--brass)}
+.pill .n{color:var(--ink-3)}
+.pill[aria-pressed="true"] .n{color:var(--brass)}
+
+/* the frame: poster as hung artwork */
+.frame{display:block;position:relative;background:var(--mat);padding:var(--mat-pad);border:1px solid var(--rule);box-shadow:0 34px 50px -34px #000,0 2px 8px rgba(0,0,0,.55)}
+.frame::after{content:"";position:absolute;inset:calc(var(--mat-pad) - 1px);box-shadow:inset 0 0 0 1px rgba(0,0,0,.55);pointer-events:none}
+.frame-xl{--mat-pad:clamp(14px,2.2vw,30px)}
+.frame-lg{--mat-pad:clamp(12px,1.8vw,24px)}
+.frame-sm{--mat-pad:clamp(6px,.9vw,11px)}
+.frame-xs{--mat-pad:5px}
+.art{display:block;width:100%;height:auto;aspect-ratio:2/3;transition:filter var(--dur) var(--ease)}
+.art.wide{aspect-ratio:21/9}
+
+/* wall tiles */
+.tile{display:block}
+.tile .cap{display:block;margin-top:var(--s-3);transition:transform var(--dur) var(--ease)}
+.tile .cap-title{display:block;font:300 1.0625rem/1.3 var(--font-ui);color:var(--ink);overflow-wrap:anywhere}
+.tile .cap-meta{display:block;margin-top:3px}
+.tile .cap-more{display:block;margin-top:6px;font:400 var(--t-xs)/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--brass);opacity:0;transform:translateX(-8px);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease)}
+@media (hover:hover){
+  .tile:hover .art,.tile:focus-visible .art{filter:brightness(1.12) saturate(1.05)}
+  .tile:hover .cap,.tile:focus-visible .cap{transform:translateY(-3px)}
+  .tile:hover .cap-more,.tile:focus-visible .cap-more{opacity:1;transform:none}
+}
+.tile:focus-visible{outline-offset:6px}
+
+/* section label (exhibition label) */
+.sec{padding-top:var(--s-9)}
+.sec-h{display:flex;align-items:baseline;gap:var(--s-4);margin-bottom:var(--s-6)}
+.sec-h h2{font:400 var(--t-xl)/1.1 var(--font-display);letter-spacing:-.005em}
+.sec-h .rule{flex:1;border-bottom:1px solid var(--rule);transform:translateY(-.3em)}
+.sec-h .pl{font:400 var(--t-sm)/1 var(--font-ui);letter-spacing:.14em;color:var(--ink-3)}
+
+/* ===================== HOME: FEATURED WORK ===================== */
+.feat{padding:var(--s-5) var(--gutter) 0;min-height:calc(100svh - var(--sw-h) - var(--top-h) - var(--tab-h))}
+.feat-grid{display:grid;gap:var(--s-5);grid-template-columns:minmax(0,1fr)}
+.feat-poster .frame{width:min(80vw,calc((100svh - 330px) * .66),400px);margin:0 auto}
+.feat-still{display:none}
+.feat-cap{margin-top:var(--s-1)}
+.feat-title{font:italic 400 var(--t-2xl)/1.02 var(--font-display);letter-spacing:-.012em;margin:var(--s-2) 0 var(--s-3);text-wrap:balance}
+.feat-ov{color:var(--ink-2);max-width:52ch;margin-bottom:var(--s-5);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.feat-ctl{display:flex;align-items:center;gap:var(--s-2);margin-top:var(--s-5);color:var(--ink-3)}
+.feat-ctl .counter{font:400 var(--t-sm)/1 var(--font-ui);letter-spacing:.14em;min-width:72px;text-align:center}
+.feat-ctl .ib{border:1px solid var(--rule-strong)}
+.feat-ctl .ib:hover{border-color:var(--ink-2)}
+@media (min-width:720px){
+  .feat-still{display:block}
+  .feat-grid{grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:var(--s-7);align-items:center;min-height:calc(100svh - var(--sw-h) - 60px)}
+  .feat-poster .frame{width:min(100%,calc((100svh - var(--sw-h) - 130px) / 1.5),520px);margin:0}
+  .feat-cap{margin-top:var(--s-6)}
+}
+@media (min-width:720px) and (max-width:1023px){
+  .feat{min-height:0}
+  .feat-grid{min-height:0;padding-top:var(--s-4)}
+}
+
+/* feature reveal: the one authored moment */
+@keyframes unveil{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes still-in{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.feat.swap .feat-poster .frame{animation:unveil var(--dur-slow) var(--ease) both}
+.feat.swap .feat-still{animation:still-in 1300ms var(--ease) 120ms both}
+.feat.swap .feat-cap>*{animation:rise 900ms var(--ease) both}
+.feat.swap .feat-cap>:nth-child(2){animation-delay:90ms}
+.feat.swap .feat-cap>:nth-child(3){animation-delay:170ms}
+.feat.swap .feat-cap>:nth-child(4){animation-delay:250ms}
+
+/* scroll reveals (JS adds .pre only if motion allowed) */
+.pre{opacity:0}
+.pre.in{opacity:1;transition:opacity 1s var(--ease) var(--d,0ms)}
+.tile.pre .frame{clip-path:inset(0 0 100% 0)}
+.tile.pre.in .frame{clip-path:inset(0 0 0 0);transition:clip-path 1.3s var(--ease) var(--d,0ms)}
+
+/* ===================== WALL (staggered, asymmetric) ===================== */
+.wall{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gap);row-gap:var(--s-7);align-items:start}
+.wall>li{min-width:0}
+.wall>li:nth-child(4n+1){grid-column:1/span 7}
+.wall>li:nth-child(4n+2){grid-column:8/span 5;margin-top:var(--s-8)}
+.wall>li:nth-child(4n+3){grid-column:1/span 5}
+.wall>li:nth-child(4n+4){grid-column:6/span 7;margin-top:var(--s-6)}
+@media (min-width:640px){
+  .wall{row-gap:var(--s-8)}
+  .wall>li:nth-child(4n+1){grid-column:1/span 6}
+  .wall>li:nth-child(4n+2){grid-column:8/span 4;margin-top:var(--s-9)}
+  .wall>li:nth-child(4n+3){grid-column:2/span 4;margin-top:0}
+  .wall>li:nth-child(4n+4){grid-column:7/span 5;margin-top:var(--s-7)}
+}
+@media (min-width:1024px){
+  .wall{row-gap:var(--s-9)}
+  .wall>li:nth-child(6n+1){grid-column:1/span 4;margin-top:0}
+  .wall>li:nth-child(6n+2){grid-column:6/span 3;margin-top:var(--s-9)}
+  .wall>li:nth-child(6n+3){grid-column:10/span 3;margin-top:var(--s-5)}
+  .wall>li:nth-child(6n+4){grid-column:2/span 3;margin-top:0}
+  .wall>li:nth-child(6n+5){grid-column:6/span 4;margin-top:var(--s-7)}
+  .wall>li:nth-child(6n+6){grid-column:11/span 2;margin-top:var(--s-4)}
+}
+.wall--b{direction:rtl}
+.wall--b>li{direction:ltr}
+
+/* series split */
+.split{display:grid;gap:var(--s-7)}
+.split-feature .cap{display:block;margin-top:var(--s-4)}
+.split-feature h3{font:italic 400 var(--t-xl)/1.15 var(--font-display)}
+.split-feature p{color:var(--ink-2);margin-top:var(--s-2);max-width:56ch}
+.thumbs li{border-top:1px solid var(--rule)}
+.thumbs li:last-child{border-bottom:1px solid var(--rule)}
+.thumbs a{display:grid;grid-template-columns:64px 1fr auto;gap:var(--s-4);align-items:center;padding:var(--s-4) 0;min-height:44px}
+.thumbs .t{font:300 1.125rem/1.25 var(--font-ui)}
+.thumbs .go{color:var(--ink-3);transition:transform var(--dur) var(--ease),color var(--dur-fast)}
+.thumbs a:hover .go{transform:translateX(4px);color:var(--brass)}
+.thumbs a:hover .t{color:#fff}
+@media (min-width:900px){.split{grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:var(--s-8);align-items:start}}
+
+/* genre index */
+.index{display:grid;column-gap:var(--s-8)}
+@media (min-width:720px){.index{grid-template-columns:1fr 1fr}}
+.index a{display:flex;align-items:baseline;gap:var(--s-3);min-height:52px;padding:var(--s-3) 0;border-bottom:1px solid var(--rule);font:300 1.375rem/1.2 var(--font-display);font-style:italic;transition:color var(--dur-fast)}
+.index a .l{flex:1;transition:transform var(--dur) var(--ease)}
+.index a .c{font:400 var(--t-sm)/1 var(--font-ui);font-style:normal;color:var(--ink-3);letter-spacing:.08em}
+.index a:hover{color:var(--brass)}
+.index a:hover .l{transform:translateX(6px)}
+.note-s{color:var(--ink-3);font-size:var(--t-sm);margin-top:var(--s-4)}
+
+/* ===================== PAGE HEAD ===================== */
+.pg{padding:var(--s-6) var(--gutter) var(--s-9)}
+.pg-h{margin-bottom:var(--s-5);display:grid;gap:var(--s-3)}
+.pg-h h1{font:400 var(--t-2xl)/1 var(--font-display);letter-spacing:-.015em}
+.pg-h h1 em{font-style:italic}
+.pg-h p{color:var(--ink-2);max-width:56ch}
+.dnav{display:flex;gap:var(--s-5);flex-wrap:wrap;border-bottom:1px solid var(--rule);margin-bottom:var(--s-5)}
+.dnav a{display:inline-flex;align-items:center;min-height:48px;color:var(--ink-3);font:400 .8125rem/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;border-bottom:1px solid transparent;margin-bottom:-1px}
+.dnav a:hover{color:var(--ink)}
+.dnav a[aria-current="page"]{color:var(--brass);border-bottom-color:var(--brass)}
+
+/* ===================== TITLE PAGE (wall label) ===================== */
+.tp{display:grid;gap:var(--s-7);padding:var(--s-6) var(--gutter) 0}
+.tp-poster .frame{width:min(86vw,460px);margin:0 auto}
+.tp-poster .plate{margin-top:var(--s-4);text-align:center}
+.tp-label{max-width:540px}
+.tp-label h1{font:italic 400 var(--t-3xl)/.98 var(--font-display);letter-spacing:-.018em;text-wrap:balance;margin:var(--s-2) 0 var(--s-5)}
+.score{display:flex;align-items:baseline;gap:var(--s-3);margin-bottom:var(--s-5)}
+.score b{font:400 3rem/1 var(--font-display);font-variant-numeric:lining-nums}
+.score span{color:var(--ink-3);font-size:var(--t-sm)}
+.lbl{display:grid;margin-bottom:var(--s-5);border-top:1px solid var(--rule)}
+.lbl div{display:grid;grid-template-columns:104px 1fr;gap:var(--s-4);padding:var(--s-3) 0;border-bottom:1px solid var(--rule);font-size:var(--t-sm);line-height:1.5}
+.lbl dt{font:400 var(--t-xs)/1.7 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-3)}
+.lbl dd{color:var(--ink)}
+.tp-ov{color:var(--ink-2);max-width:62ch;margin-bottom:var(--s-6)}
+.dl-note{margin-top:var(--s-3);font-size:var(--t-xs);color:var(--ink-3);letter-spacing:.04em}
+@media (min-width:900px){
+  .tp{grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:var(--s-8);align-items:start;padding-top:var(--s-7)}
+  .tp-poster{position:sticky;top:calc(var(--sw-h) + var(--s-5))}
+  .tp-poster .frame{margin:0 0 0 auto;width:min(100%,calc((100svh - var(--sw-h) - 150px) / 1.5),520px)}
+  .tp-poster .plate{text-align:right;width:min(100%,520px);margin-left:auto}
+}
+.seasons details{border-top:1px solid var(--rule)}
+.seasons details:last-child{border-bottom:1px solid var(--rule)}
+.seasons summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:var(--s-4);min-height:56px;font:300 1.25rem/1.2 var(--font-display);font-style:italic}
+.seasons summary::-webkit-details-marker{display:none}
+.seasons summary .cap-meta{margin-left:auto;font-style:normal}
+.seasons summary .chev{transition:transform var(--dur) var(--ease);color:var(--ink-3)}
+.seasons details[open] summary .chev{transform:rotate(90deg)}
+.eps li{display:grid;grid-template-columns:36px 1fr auto;gap:var(--s-3);padding:var(--s-3) 0;border-top:1px solid var(--rule);font-size:var(--t-sm);color:var(--ink-2)}
+.eps li:first-child{border-top:0}
+.eps .e{color:var(--ink-3)}
+.eps .n{color:var(--ink)}
+.stills{margin-top:var(--s-9)}
+.stills .cap-meta{display:block;margin-top:var(--s-3)}
+.more{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
+@media (min-width:720px){.more{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* ===================== COLLECTION (salon hang) ===================== */
+.hang{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:var(--s-7) var(--s-5);padding:var(--s-6) 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.hang>li{flex:0 0 auto;width:calc(48% - 12px)}
+.hang>li[data-z="l"]{width:min(100%,86%)}
+.hang>li[data-z="m"]{width:calc(55% - 12px)}
+.hang>li[data-z="s"]{width:calc(41% - 12px)}
+.hang>li[data-z="l"]{width:calc(70% - 12px)}
+@media (min-width:640px){
+  .hang>li[data-z="l"]{width:300px}.hang>li[data-z="m"]{width:230px}.hang>li[data-z="s"]{width:176px}
+  .hang{gap:var(--s-8) var(--s-7)}
+}
+@media (min-width:1280px){.hang>li[data-z="l"]{width:340px}.hang>li[data-z="m"]{width:260px}.hang>li[data-z="s"]{width:196px}}
+.hang .cap{display:block;margin-top:var(--s-3)}
+.hang .cap-title{display:block;font:italic 400 1.125rem/1.25 var(--font-display)}
+.hang .cap-meta{display:block;margin-top:3px}
+.rm{display:inline-flex;align-items:center;gap:6px;min-height:44px;background:none;border:0;padding:0;color:var(--ink-3);font:400 var(--t-xs)/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;cursor:pointer}
+.rm:hover{color:var(--danger)}
+.hang>li{transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease)}
+.hang>li.gone{opacity:0;transform:scale(.96)}
+.filters{display:flex;flex-wrap:wrap;gap:var(--s-2);margin-bottom:var(--s-5)}
+.empty{display:grid;gap:var(--s-5);justify-items:start;padding:var(--s-8) 0 var(--s-9);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.empty .ghost{display:flex;gap:var(--s-4);align-items:flex-end}
+.empty .ghost i{display:block;border:1px dashed var(--rule-strong);background:transparent}
+.empty h2{font:italic 400 var(--t-xl)/1.15 var(--font-display)}
+.empty p{color:var(--ink-2);max-width:46ch}
+
+/* ===================== FORMS ===================== */
+.field{display:grid;gap:4px;margin-bottom:var(--s-5)}
+.field label{font:400 var(--t-xs)/1.4 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-2)}
+.ctl{position:relative;display:flex;align-items:center}
+.field input,.field select,.sel{width:100%;min-height:48px;background:transparent;border:0;border-bottom:1px solid var(--rule-strong);border-radius:0;color:var(--ink);font:300 1.0625rem/1.2 var(--font-ui);padding:8px 0}
+.field input::placeholder{color:var(--ink-3);opacity:1}
+.field input:focus-visible{outline:0;border-bottom-color:var(--brass);box-shadow:0 1px 0 0 var(--brass)}
+.field input:-webkit-autofill{-webkit-text-fill-color:var(--ink);box-shadow:0 0 0 100px var(--ground) inset;caret-color:var(--ink)}
+.field[data-err="1"] input{border-bottom-color:var(--danger)}
+.reveal{position:absolute;right:0;top:50%;transform:translateY(-50%);min-height:44px;padding:0 4px 0 12px;background:none;border:0;color:var(--ink-2);font:400 var(--t-xs)/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;cursor:pointer}
+.reveal:hover{color:var(--ink)}
+.field.has-reveal input{padding-right:64px}
+.msg{min-height:1.4em;font-size:var(--t-sm);line-height:1.4;color:var(--ink-3)}
+.field[data-err="1"] .msg{color:var(--danger);display:flex;gap:6px;align-items:flex-start}
+.banner{display:flex;gap:var(--s-3);align-items:flex-start;padding:var(--s-3) var(--s-4);border:1px solid var(--danger);color:var(--ink);font-size:var(--t-sm);line-height:1.5;margin-bottom:var(--s-5)}
+.banner .ic{color:var(--danger);margin-top:2px}
+.banner.ok{border-color:var(--ok)}.banner.ok .ic{color:var(--ok)}
+.rules{display:grid;gap:4px;margin:calc(var(--s-2) * -1) 0 var(--s-5);font-size:var(--t-sm);color:var(--ink-3)}
+.rules li{display:flex;gap:8px;align-items:center}
+.rules li::before{content:"";width:8px;height:8px;border:1px solid var(--ink-3);border-radius:50%;flex:none}
+.rules li.met{color:var(--ink)}
+.rules li.met::before{background:var(--ok);border-color:var(--ok)}
+.sel{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%239a9488' stroke-width='1.25'%3E%3Cpath d='m1 1.5 5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 2px center;padding-right:22px;cursor:pointer}
+.sel:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+.sel option{background:var(--ground-2);color:var(--ink)}
+.check{display:flex;gap:var(--s-3);align-items:center;min-height:44px;color:var(--ink-2);font-size:var(--t-sm)}
+.check input{width:20px;height:20px;accent-color:var(--brass);margin:0}
+
+/* auth */
+.auth{display:grid;gap:var(--s-6);padding:var(--s-6) var(--gutter) var(--s-9);align-items:start}
+.auth-art .frame{width:100%}
+.auth-art .ap{display:none}.auth-art .aw{display:block}
+.auth-art .plate{margin-top:var(--s-3)}
+.auth-art .plate b{font:italic 400 1.125rem/1.3 var(--font-display);display:block;color:var(--ink)}
+.auth-form{max-width:440px;width:100%}
+.auth-form h1{font:400 var(--t-2xl)/1.02 var(--font-display);letter-spacing:-.015em;margin-bottom:var(--s-3)}
+.auth-form h1 em{font-style:italic}
+.auth-form .lede{color:var(--ink-2);margin-bottom:var(--s-6)}
+.auth-form .alt{margin-top:var(--s-5);color:var(--ink-2);font-size:var(--t-sm);display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-5)}
+.auth-form .alt a{min-height:44px;display:inline-flex;align-items:center}
+.auth-form .btn{width:100%}
+.mock{margin-top:var(--s-6);padding:var(--s-3) var(--s-4);border:1px dashed var(--rule-strong);color:var(--ink-3);font-size:var(--t-xs);line-height:1.6}
+.mock b{color:var(--ink-2);font-weight:400}
+.envelope{width:72px;height:72px;border:1px solid var(--rule-strong);display:grid;place-items:center;color:var(--brass);margin-bottom:var(--s-5)}
+.steps{margin:var(--s-5) 0 var(--s-6);counter-reset:s;border-top:1px solid var(--rule)}
+.steps li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;padding:var(--s-3) 0;border-bottom:1px solid var(--rule);font-size:var(--t-sm);color:var(--ink-2)}
+.steps li::before{content:counter(s);color:var(--ink-3);font-variant-numeric:tabular-nums}
+@media (min-width:900px){
+  .auth{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s-9);padding-top:var(--s-8);min-height:calc(100svh - var(--sw-h) - 200px)}
+  .auth-art .ap{display:block}.auth-art .aw{display:none}
+  .auth-art{order:2;max-width:480px;justify-self:end;width:100%}
+  .auth-form{order:1;justify-self:start}
+}
+
+/* account */
+.acc-sec{display:grid;gap:var(--s-5);padding:var(--s-7) 0;border-top:1px solid var(--rule)}
+.acc-sec:last-of-type{border-bottom:1px solid var(--rule)}
+.acc-sec h2{font:italic 400 var(--t-xl)/1.15 var(--font-display);margin-bottom:var(--s-2)}
+.acc-sec .d{color:var(--ink-2);font-size:var(--t-sm);max-width:40ch}
+.acc-form{max-width:460px}
+@media (min-width:900px){.acc-sec{grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:var(--s-8)}}
+.del-panel{border:1px solid var(--danger);padding:var(--s-5);max-width:460px;display:grid;gap:var(--s-4)}
+.del-panel[hidden]{display:none}
+.del-panel p{font-size:var(--t-sm);color:var(--ink-2)}
+
+/* admin */
+.toolbar{display:flex;flex-wrap:wrap;gap:var(--s-4) var(--s-6);align-items:end;justify-content:space-between;margin-bottom:var(--s-5)}
+.toolbar .field{margin:0;width:min(100%,360px)}
+.count{font-size:var(--t-sm);color:var(--ink-3)}
+.tbl{width:100%;border-collapse:collapse;border-top:1px solid var(--rule-strong)}
+.tbl th{text-align:left;font:400 var(--t-xs)/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-3);padding:var(--s-3) var(--s-4) var(--s-3) 0;border-bottom:1px solid var(--rule-strong)}
+.tbl td{padding:var(--s-3) var(--s-4) var(--s-3) 0;border-bottom:1px solid var(--rule);vertical-align:middle;font-size:.9375rem}
+.tbl .u-name{display:block;color:var(--ink);line-height:1.3}
+.tbl .u-mail{display:block;color:var(--ink-3);font-size:var(--t-sm);overflow-wrap:anywhere}
+.tbl .sel{min-height:44px;width:auto;min-width:104px;border-bottom-color:var(--rule);font-size:.9375rem}
+.tbl .acts{white-space:nowrap;text-align:right;padding-right:0}
+.tbl tr[data-blocked="1"] .u-name{color:var(--ink-2)}
+.tbtn{min-height:44px;padding:0 12px;background:none;border:0;color:var(--ink-2);font:400 .8125rem/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;cursor:pointer;text-decoration:underline;text-decoration-color:var(--rule-strong);text-underline-offset:.4em}
+.tbtn:hover{color:var(--ink);text-decoration-color:var(--ink-2)}
+.tbtn-danger{color:var(--danger)}
+.tbtn-danger:hover{color:var(--danger);text-decoration-color:var(--danger)}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:3px 10px 3px 8px;border:1px solid var(--rule-strong);border-radius:var(--r-pill);font:400 var(--t-xs)/1.4 var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.chip-blocked{border-color:var(--danger);color:var(--danger)}.chip-blocked::before{background:var(--danger)}
+.chip-pending::before{background:transparent;border:1px solid var(--ink-3)}
+.confirm-row td{padding:var(--s-4) 0;background:transparent}
+.confirm{display:flex;flex-wrap:wrap;gap:var(--s-3) var(--s-5);align-items:center;justify-content:space-between;border:1px solid var(--danger);padding:var(--s-3) var(--s-4)}
+.confirm p{font-size:var(--t-sm);color:var(--ink)}
+.confirm .btn-row .btn{min-height:44px;padding:0 16px}
+.nores{padding:var(--s-8) 0;color:var(--ink-2)}
+@media (max-width:899px){
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .tbl tr{padding:var(--s-4) 0;border-bottom:1px solid var(--rule)}
+  .tbl td{border:0;padding:4px 0}
+  .tbl td[data-l]:not(.who){display:flex;align-items:center;gap:var(--s-4)}
+  .tbl td[data-l]:not(.who)::before{content:attr(data-l);flex:0 0 64px;font:400 var(--t-xs)/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--ink-3)}
+  .tbl .acts{display:flex;justify-content:flex-start;gap:var(--s-2);padding-top:var(--s-2)}
+  .tbl .acts .tbtn{padding:0 var(--s-4) 0 0}
+  .tbl .confirm-row{padding:var(--s-3) 0}
+}
+.statement{font:300 var(--t-2xl)/1.14 var(--font-display);letter-spacing:-.015em;max-width:20ch;text-wrap:balance}
+.statement .n{font-style:italic;font-weight:400;color:var(--ink)}
+.statement span.dim{color:var(--ink-2)}
+.recent li{display:grid;grid-template-columns:1fr auto;gap:var(--s-2) var(--s-4);padding:var(--s-3) 0;border-bottom:1px solid var(--rule);align-items:center}
+.recent li:first-child{border-top:1px solid var(--rule-strong)}
+.recent .u-mail{color:var(--ink-3);font-size:var(--t-sm)}
+.recent .when{color:var(--ink-3);font-size:var(--t-sm);text-align:right}
+.ov-grid{display:grid;gap:var(--s-8)}
+@media (min-width:900px){.ov-grid{grid-template-columns:minmax(0,6fr) minmax(0,5fr);gap:var(--s-9);align-items:start}}
+.ov-grid h2{font:italic 400 var(--t-xl)/1.15 var(--font-display);margin-bottom:var(--s-4)}
+
+/* ===================== FOOTER / TOAST ===================== */
+.foot{margin-top:var(--s-9);padding:var(--s-7) var(--gutter) var(--s-7);border-top:1px solid var(--rule);display:grid;gap:var(--s-5);color:var(--ink-3);font-size:var(--t-sm)}
+.foot nav{display:flex;flex-wrap:wrap;gap:0 var(--s-5)}
+.foot nav a{min-height:44px;display:inline-flex;align-items:center;color:var(--ink-2)}
+.foot nav a:hover{color:var(--ink)}
+.foot p{max-width:70ch;line-height:1.6}
+.foot .syn{color:var(--ink-3)}
+@media (min-width:900px){.foot{grid-template-columns:auto 1fr;gap:var(--s-8);align-items:start}}
+.toast{position:fixed;z-index:90;left:50%;bottom:calc(var(--tab-h) + 16px + env(safe-area-inset-bottom));transform:translate(-50%,16px);max-width:min(92vw,520px);background:var(--ground-2);border:1px solid var(--rule-strong);padding:var(--s-3) var(--s-4);font-size:var(--t-sm);line-height:1.5;display:flex;gap:var(--s-4);align-items:center;opacity:0;visibility:hidden;transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease),visibility 0s var(--dur)}
+.toast.show{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease)}
+.toast button{background:none;border:0;color:var(--brass);cursor:pointer;min-height:44px;padding:0 4px;font:400 .8125rem/1 var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;white-space:nowrap}
+@media (min-width:1024px){.toast{bottom:24px;left:calc(50% + var(--rail-w)/2)}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0ms!important;transition-duration:.01ms!important;transition-delay:0ms!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<div class="sw" id="sw" role="navigation" aria-label="Mockup screens (not part of the product)"></div>
+
+<div class="shell">
+  <header class="topbar" id="topbar"></header>
+  <aside class="rail" id="rail" aria-label="Site"></aside>
+  <main id="main" tabindex="-1"></main>
+  <footer class="foot" id="foot">
+    <nav aria-label="Footer">
+      <a href="#/account">Account</a><a href="#/home">Help Center</a><a href="#/home">Terms</a><a href="#/home">Privacy</a>
+    </nav>
+    <div>
+      <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+      <p class="syn" style="margin-top:8px">Synthetic placeholder art — real posters come from TMDB at runtime.</p>
+    </div>
+  </footer>
+  <nav class="tabbar" id="tabbar" aria-label="Primary"></nav>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Menu"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ===================== helpers ===================== */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const IC={
+ search:'<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+ left:'<path d="m14 6-6 6 6 6"/>',right:'<path d="m10 6 6 6-6 6"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',check:'<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+ x:'<path d="M6 6l12 12M18 6 6 18"/>',play:'<path d="M8 5.5v13l10-6.5z"/>',
+ dl:'<path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19.5h14"/>',
+ home:'<path d="M4 11 12 4l8 7v8.5H4z"/><path d="M10 19.5V14h4v5.5"/>',
+ film:'<rect x="4" y="5" width="16" height="14"/><path d="M8 5v14M16 5v14M4 10h4M4 14h4M16 10h4M16 14h4"/>',
+ tv:'<rect x="3.5" y="6" width="17" height="11"/><path d="M9 20.5h6"/>',
+ heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+ user:'<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-4 3.6-5.5 7-5.5s6.2 1.5 7 5.5"/>',
+ mail:'<rect x="3.5" y="6" width="17" height="12"/><path d="m4 7 8 6 8-6"/>',
+ alert:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16v.5"/>',
+ more:'<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>'
+};
+const ico=(n,s=20)=>`<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+
+/* ===================== synthetic catalog (20 titles) ===================== */
+const NAMES=['Elio Park','Tessa Brandt','Odile Marrow','Kazimir Holt','Wren Adeyemi','Soraya Lind','Matteo Quill','Ines Falk','Bram Oduya','Noa Castellan','Hester Vane','Ravi Sundaram','Linnea Ardent','Cass Moreau','Ottoline Reeve','Dev Karlsson','Marguerite Oyelaran','Jun Takeda','Ilsa Brannigan','Tobias Wren','Amara Voss','Lev Santoro','Petra Nilsen','Quentin Abara'];
+const T=[
+ {id:'m1',type:'movie',title:'The Salt Meridian',year:2025,rt:134,genres:['Drama','Mystery'],score:8.1,pal:['#1d2f3a','#e9dcc3','#c8553d','#e9dcc3'],motif:'horizon',ov:'A salvage surveyor returns to the flooded coast where her father vanished and finds the tide tables have been quietly rewritten. Every map she trusts disagrees with the next.'},
+ {id:'m2',type:'movie',title:'Low Orbit Lullaby',year:2026,rt:112,genres:['Sci-Fi','Drama'],score:7.6,pal:['#151a3a','#f2b134','#8aa0ff','#f2b134'],motif:'rings',sans:1,ov:'Three engineers keep a failing station aloft for one more winter. The only system still running is a lullaby the station sings to itself.'},
+ {id:'m3',type:'movie',title:'Ember Tide',year:2025,rt:121,genres:['Thriller'],score:7.2,pal:['#2a0f0c','#ff6b35','#ffd08a','#ffd08a'],motif:'waves',ov:'A harbour fire investigator is handed a case that closes itself each time she gets near the truth.'},
+ {id:'m4',type:'movie',title:'A Room Called Ochre',year:2024,rt:98,genres:['Drama'],score:7.9,pal:['#b9772a','#2b1a0e','#f1d9a8','#2b1a0e'],motif:'arch',ov:'Two siblings clear their late mother’s flat in a single afternoon and find a lifetime of arguments filed by colour.'},
+ {id:'m5',type:'movie',title:'Paper Harbor',year:2026,rt:87,genres:['Animation','Family'],score:7.7,pal:['#e8e1d0','#2f5d8a','#d4543a','#1f2c3a'],motif:'tri',sans:1,ov:'A folded-paper ferry is the only way across a city that rebuilds itself every night. Its small crew must be home by morning.'},
+ {id:'m6',type:'movie',title:'Hollow Crown Road',year:2025,rt:148,genres:['Fantasy'],score:7.0,pal:['#1f3a2a','#c9d98a','#0e1f16','#c9d98a'],motif:'split',ov:'The last toll keeper on a kingdom’s oldest road must decide who is allowed to pass when nobody remembers the crown.'},
+ {id:'m7',type:'movie',title:'Nine Silent Floors',year:2024,rt:104,genres:['Horror'],score:6.8,pal:['#101010','#e8e8e8','#b3202a','#e8e8e8'],motif:'grid',sans:1,ov:'A night porter notices the lift now stops at a floor the building does not have.'},
+ {id:'m8',type:'movie',title:'Cartographer of Rain',year:2026,rt:126,genres:['Drama','Fantasy'],score:8.0,pal:['#3b4f66','#cfe0ea','#f0a35e','#f4f1ea'],motif:'stripes',ov:'In a valley where it has never stopped raining, a mapmaker is hired to chart the places where it does.'},
+ {id:'m9',type:'movie',title:'Velvet Static',year:2025,rt:109,genres:['Crime','Thriller'],score:7.4,pal:['#4a1230','#ee7aa8','#1a0a14','#fbe3ee'],motif:'diag',sans:1,ov:'A radio host receives a request line that only plays songs from cases the police have closed.'},
+ {id:'m10',type:'movie',title:'Glass Season',year:2024,rt:101,genres:['Romance','Drama'],score:7.3,pal:['#cfe3df','#1f4a47','#e88a6e','#14312f'],motif:'sun',ov:'Two greenhouse keepers share one winter and a single working stove. Neither says what they came here to forget.'},
+ {id:'m11',type:'movie',title:'Midnight Fathom',year:2026,rt:92,genres:['Documentary'],score:8.2,pal:['#06222b','#1fb5b0','#e6f4f1','#e6f4f1'],motif:'eclipse',sans:1,ov:'Eleven months with a small crew listening to the deep sea, and to the things that listen back.'},
+ {id:'m12',type:'movie',title:'Quiet Machinery',year:2025,rt:116,genres:['Sci-Fi'],score:7.5,pal:['#c9c9c2','#1d1d1d','#e0452b','#1d1d1d'],motif:'grid',sans:1,ov:'A maintenance robot is ordered to stop repairing a factory that has not made anything in years.'},
+ {id:'s1',type:'series',title:'Northlight',year:2025,seasons:3,genres:['Crime','Drama'],score:8.4,pal:['#0e2a3d','#7fe3c7','#2f7f8f','#eafff8'],motif:'stripes',ov:'Winter policing in a town with six hours of daylight. Each season, one case that the sun will not solve.'},
+ {id:'s2',type:'series',title:'The Long Thaw',year:2024,seasons:2,genres:['Drama'],score:8.0,pal:['#d8e3ea','#3b5a73','#aebfcb','#1d2f3d'],motif:'horizon',ov:'Four families on a glacier-fed river wait for the ice to release what it has kept for forty years.'},
+ {id:'s3',type:'series',title:'Archive of Small Gods',year:2026,seasons:1,genres:['Fantasy'],score:7.8,pal:['#3a1d4a','#f2c94c','#9b6bd1','#f2c94c'],motif:'rings',ov:'A night archivist catalogues minor deities that have been quietly demoted to household objects.'},
+ {id:'s4',type:'series',title:'Tidewater',year:2025,seasons:2,genres:['Thriller'],score:7.6,pal:['#14343a','#e8b64a','#0a1a1d','#e8b64a'],motif:'waves',sans:1,ov:'A river pilot discovers the same barge in the logbook of every decade since the lock was built.'},
+ {id:'s5',type:'series',title:'Kiln',year:2024,seasons:4,genres:['Comedy'],score:7.9,pal:['#c8452d','#f4e2c0','#3a1710','#f4e2c0'],motif:'arch',ov:'A failing pottery studio and its seven unreliable tenants, fired together at high heat.'},
+ {id:'s6',type:'series',title:'Signal & Ash',year:2026,seasons:1,genres:['Sci-Fi'],score:7.7,pal:['#26262b','#d9d9d9','#ff5a36','#f2f2f2'],motif:'diag',sans:1,ov:'After a quiet apocalypse, a relay station keeps broadcasting to a world that may have stopped listening.'},
+ {id:'s7',type:'series',title:'Lantern Row',year:2025,seasons:2,genres:['Drama','Mystery'],score:7.5,pal:['#1b1230','#ffb347','#6a4bd0','#ffb347'],motif:'sun',ov:'One street, one festival night a year, and a lantern that is lit by someone different every time.'},
+ {id:'s8',type:'series',title:'Opal Hours',year:2026,seasons:1,genres:['Comedy'],score:7.4,pal:['#e9d8e6','#5a3a7a','#2d8f85','#3a2150'],motif:'eclipse',ov:'The staff of an all-night jeweller’s trade small talk, theories and one very patient clock.'}
+];
+T.forEach((t,i)=>{t.dir=NAMES[(i*3)%24];t.cast=[NAMES[(i*3+5)%24],NAMES[(i*3+11)%24],NAMES[(i*3+17)%24]];t.lang='English';t.status=t.type==='series'?(t.seasons>1?'Returning series':'Limited run'):'Released'});
+const byId=Object.fromEntries(T.map(t=>[t.id,t]));
+const GENRES=[['Drama',412],['Thriller',268],['Sci-Fi',196],['Animation',143],['Documentary',121],['Comedy',305],['Fantasy',154],['Crime',187],['Romance',132],['Horror',98]];
+const fmtRt=m=>`${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')} min`;
+const metaOf=t=>t.type==='movie'?`${t.year} · ${fmtRt(t.rt)} · ${t.genres[0]}`:`${t.year} · ${t.seasons} season${t.seasons>1?'s':''} · ${t.genres[0]}`;
+
+/* ===================== synthetic art (inline SVG, typographic key-art, no figures) ===================== */
+const r=v=>Math.round(v*10)/10;
+const MOTIF={
+ horizon:(w,h,p,u)=>`<circle cx="${w*.5}" cy="${h*.47}" r="${r(u*.24)}" fill="${p[1]}"/><rect y="${h*.5}" width="${w}" height="${h*.5}" fill="${p[2]}"/>`+[[.3,.4,.014,.8],[.38,.24,.012,.55],[.44,.12,.01,.35]].map((a,i)=>`<rect x="${w*a[0]}" y="${h*(.54+.04*i)}" width="${w*a[1]}" height="${h*a[2]}" fill="${p[1]}" opacity="${a[3]}"/>`).join(''),
+ rings:(w,h,p,u)=>[1,2,3,4,5,6].map(i=>`<circle cx="${w*.58}" cy="${h*.32}" r="${r(u*.07*i)}" fill="none" stroke="${p[i%2?1:2]}" stroke-width="${r(u*(i===3?.016:.006))}" opacity="${r(1-i*.1)}"/>`).join('')+`<circle cx="${w*.58}" cy="${h*.32}" r="${r(u*.045)}" fill="${p[2]}"/>`,
+ waves:(w,h,p,u)=>`<circle cx="${w*.68}" cy="${h*.2}" r="${r(u*.1)}" fill="${p[1]}"/>`+[0,1,2,3,4,5].map(i=>{const y=h*(.24+.06*i),a=u*.04;return `<path d="M0 ${r(y)} Q ${w*.25} ${r(y-a*2)} ${w*.5} ${r(y)} T ${w} ${r(y)}" fill="none" stroke="${p[1+i%2]}" stroke-width="${r(u*.012)}" opacity="${r(.4+i*.1)}"/>`}).join(''),
+ arch:(w,h,p,u)=>{const x0=w*.26,x1=w*.74,rr=(x1-x0)/2,top=h*.12,b=h*.55,i=w*.07;return `<path d="M${x0} ${b}V${top+rr}A${rr} ${rr} 0 0 1 ${x1} ${top+rr}V${b}Z" fill="${p[2]}"/><path d="M${x0+i} ${b}V${top+rr}A${rr-i} ${rr-i} 0 0 1 ${x1-i} ${top+rr}V${b}Z" fill="${p[1]}"/><rect x="${w*.14}" y="${b}" width="${w*.72}" height="${h*.012}" fill="${p[2]}"/>`},
+ tri:(w,h,p,u)=>`<polygon points="${w*.1},${h*.58} ${w*.5},${h*.12} ${w*.9},${h*.58}" fill="${p[1]}"/><polygon points="${w*.42},${h*.58} ${w*.68},${h*.3} ${w*.94},${h*.58}" fill="${p[2]}"/><circle cx="${w*.24}" cy="${h*.2}" r="${r(u*.06)}" fill="${p[2]}"/>`,
+ split:(w,h,p,u)=>`<rect width="${w*.5}" height="${h}" fill="${p[1]}" opacity=".16"/><circle cx="${w*.5}" cy="${h*.42}" r="${r(u*.22)}" fill="${p[1]}"/><circle cx="${w*.5}" cy="${h*.42}" r="${r(u*.12)}" fill="${p[0]}"/><rect x="${w*.499}" width="${w*.004}" height="${h}" fill="${p[1]}" opacity=".6"/>`,
+ grid:(w,h,p,u)=>{const c=Math.max(4,Math.round(w/38)),rw=Math.max(5,Math.round(h*.5/38)),hi=Math.floor(c*rw*.38);let s='';for(let j=0;j<rw;j++)for(let i=0;i<c;i++){const x=w*(.12+.76*i/(c-1)),y=h*(.08+.46*j/(rw-1)),k=j*c+i;s+=k===hi?`<rect x="${r(x-u*.05)}" y="${r(y-u*.05)}" width="${r(u*.1)}" height="${r(u*.1)}" fill="${p[2]}"/>`:`<circle cx="${r(x)}" cy="${r(y)}" r="${r(u*.011)}" fill="${p[1]}" opacity=".6"/>`}return s},
+ stripes:(w,h,p,u)=>[.9,.6,.75,.45,.85,.55,.7,.4].map((k,i)=>`<rect x="${i%2?w*(1-k)+0:0}" y="${h*(.12+.055*i)}" width="${w*k}" height="${h*.04}" fill="${p[1+i%2]}" opacity="${r(.5+i*.07)}"/>`).join(''),
+ diag:(w,h,p,u)=>[[.18,.14,1,1],[.42,.08,2,1],[.62,.16,1,.6]].map(a=>{const x=w*a[0],d=w*a[1],s=w*.3;return `<polygon points="${r(x)},0 ${r(x+d)},0 ${r(x+d-s)},${h} ${r(x-s)},${h}" fill="${p[a[2]]}" opacity="${a[3]}" transform="translate(${r(w*.22)} 0)"/>`}).join(''),
+ eclipse:(w,h,p,u)=>`<circle cx="${w*.5}" cy="${h*.4}" r="${r(u*.26)}" fill="${p[1]}"/><circle cx="${r(w*.5+u*.07)}" cy="${r(h*.4-u*.03)}" r="${r(u*.24)}" fill="${p[0]}"/><circle cx="${w*.5}" cy="${h*.4}" r="${r(u*.34)}" fill="none" stroke="${p[2]}" stroke-width="${r(u*.004)}"/><circle cx="${r(w*.5-u*.34)}" cy="${h*.4}" r="${r(u*.018)}" fill="${p[2]}"/>`,
+ sun:(w,h,p,u)=>`<circle cx="${w*.5}" cy="${h*.38}" r="${r(u*.2)}" fill="${p[1]}"/><circle cx="${w*.5}" cy="${h*.38}" r="${r(u*.3)}" fill="none" stroke="${p[2]}" stroke-width="${r(u*.006)}"/><rect y="${h*.7}" width="${w}" height="${h*.3}" fill="${p[2]}" opacity=".28"/><rect y="${h*.7}" width="${w}" height="${h*.006}" fill="${p[1]}"/>`
+};
+function lines(title,max){const out=[];let cur='';title.split(' ').forEach(wd=>{if(cur&&(cur+' '+wd).length>max){out.push(cur);cur=wd}else cur=cur?cur+' '+wd:wd});out.push(cur);return out}
+function art(t,kind='poster',label){
+  const wide=kind==='wide',w=wide?420:200,h=wide?180:300,u=Math.min(w,h*.67),p=t.pal;
+  const ls=lines(t.title,wide?24:10),mx=Math.max(...ls.map(l=>l.length));
+  const sans=!!t.sans, k=sans?.74:.52;
+  const size=r(Math.min(wide?h*.12:w*.15,(wide?w*.55:w*.8)/(mx*k)));
+  const x=w*(wide?.07:.1),base=h*(wide?.88:.93);
+  const txt=ls.map((l,i)=>`<text x="${x}" y="${r(base-(ls.length-1-i)*size*1.12)}" fill="${p[3]}" font-size="${size}" ${sans?`font-family="Jost,Futura,sans-serif" font-weight="500" letter-spacing="${r(size*.1)}"`:`font-family="'Bodoni Moda',Didot,Georgia,serif" font-style="italic" font-weight="400"`}>${esc(sans?l.toUpperCase():l)}</text>`).join('');
+  const rule=`<rect x="${x}" y="${r(base-(ls.length-1)*size*1.12-size*1.25)}" width="${w*.1}" height="${wide?.8:.7}" fill="${p[3]}" opacity=".7"/>`;
+  const yr=`<text x="${x}" y="${h*.075+ (wide?6:0)}" fill="${p[3]}" opacity=".75" font-size="${wide?9:7.5}" font-family="Jost,Futura,sans-serif" letter-spacing="1.4">${t.year}</text>`;
+  return `<svg class="art${wide?' wide':''}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" ${label?`role="img" aria-label="${esc(label)}"`:'aria-hidden="true" focusable="false"'} style="background:${p[0]}"><rect width="${w}" height="${h}" fill="${p[0]}"/>${MOTIF[t.motif](w,h,p,u)}${yr}${rule}${txt}</svg>`;
+}
+
+/* ===================== state ===================== */
+const TODAY=new Date('2026-11-09T12:00:00');
+const state={
+  role:'user',
+  favs:['m1','m3','m4','m5','m9','s1','s3'],
+  filter:'all',
+  users:[
+   {id:1,name:'Rowan Hale',email:'admin@cinevault.test',role:'admin',status:'active',joined:'2026-02-14',you:1},
+   {id:2,name:'Ana Moreno',email:'ana@cinevault.test',role:'user',status:'active',joined:'2026-03-02'},
+   {id:3,name:'Teodor Lind',email:'teodor.lind@cinevault.test',role:'admin',status:'active',joined:'2026-04-19'},
+   {id:4,name:'Priya Nair',email:'priya.nair@cinevault.test',role:'user',status:'active',joined:'2026-05-27'},
+   {id:5,name:'Jonas Weber',email:'jonas.weber@cinevault.test',role:'user',status:'blocked',prev:'active',joined:'2026-06-08'},
+   {id:6,name:'Mei Tanaka',email:'mei.tanaka@cinevault.test',role:'user',status:'active',joined:'2026-08-11'},
+   {id:7,name:'Sam Okafor',email:'sam.okafor@cinevault.test',role:'user',status:'active',joined:'2026-09-30'},
+   {id:8,name:'Lucía Ferrer',email:'lucia.ferrer@cinevault.test',role:'user',status:'active',joined:'2026-10-21'},
+   {id:9,name:'Dara Quinn',email:'dara.quinn@cinevault.test',role:'user',status:'active',joined:'2026-11-04'},
+   {id:10,name:'Idris Bell',email:'idris.bell@cinevault.test',role:'user',status:'active',joined:'2026-11-06'},
+   {id:11,name:'Noor Haddad',email:'noor.haddad@cinevault.test',role:'user',status:'pending',joined:'2026-11-08'},
+   {id:12,name:'Felix Aarons',email:'felix.aarons@cinevault.test',role:'user',status:'pending',joined:'2026-11-09'}
+  ],
+  q:'',confirmId:null
+};
+const initials=n=>n.split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
+const ME={user:{name:'Ana Moreno',email:'ana@cinevault.test'},admin:{name:'Rowan Hale',email:'admin@cinevault.test'}};
+const fmtDate=s=>new Date(s+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+
+/* ===================== toast ===================== */
+let toastT;
+function toast(msg,act){const el=$('#toast');el.innerHTML=`<span>${msg}</span>${act?`<button type="button" data-act="${act[0]}">${act[1]}</button>`:''}`;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),act?7000:4200)}
+
+/* ===================== components ===================== */
+const tileHtml=(t,i=0)=>`<li><a class="tile${reduced?'':' pre'}" style="--d:${(i%3)*110}ms" href="#/title/${t.id}"><span class="frame frame-sm">${art(t)}</span><span class="cap"><span class="cap-title">${esc(t.title)}</span><span class="cap-meta">${metaOf(t)}</span><span class="cap-more">View · ${t.score.toFixed(1)}</span></span></a></li>`;
+const wallHtml=(list,v='a')=>`<ul class="wall wall--${v}">${list.map(tileHtml).join('')}</ul>`;
+const secHead=(title,pl)=>`<div class="sec-h"><h2>${title}</h2><span class="rule"></span>${pl?`<span class="pl num">${pl}</span>`:''}</div>`;
+const favBtn=(id,cls='')=>`<button type="button" class="btn ${cls}" data-fav="${id}" aria-pressed="false"></button>`;
+function syncFav(){$$('[data-fav]').forEach(b=>{const on=state.favs.includes(b.dataset.fav);b.setAttribute('aria-pressed',on);b.innerHTML=(on?ico('check',18)+' In my list':ico('plus',18)+' Add to my list')})}
+
+/* ===================== chrome (rail / topbar / tabbar / sheet) ===================== */
+const NAV=[['home','Home','#/home'],['film','Films','#/browse/films'],['tv','Series','#/browse/series'],['more','New & popular','#/browse/new'],['search','Genres','#/home?at=genres']];
+function curPath(){const h=location.hash.replace(/^#\/?/,'').split('?')[0];return h||'home'}
+function navLinks(){
+  const p=curPath(),at=location.hash.includes('at=genres');
+  const a=(href,label,match)=>`<a href="${href}"${match?' aria-current="page"':''}>${label}</a>`;
+  let h=`<ul class="nav">`+
+   [['#/home','Home',p==='home'&&!at],['#/browse/films','Films',p==='browse/films'],['#/browse/series','Series',p==='browse/series'],['#/browse/new','New &amp; popular',p==='browse/new'],['#/home?at=genres','Genres',at||p.startsWith('browse/genre')],['#/favorites','My list',p==='favorites']].map(x=>`<li>${a(x[0],x[1],x[2])}</li>`).join('')+`</ul>`;
+  if(state.role!=='visitor'){
+    h+=`<div class="nav-g"><span>Dashboard</span><ul class="nav"><li>${a('#/favorites','My collection',p==='favorites')}</li><li>${a('#/account','Account',p==='account')}</li></ul></div>`;
+  }
+  if(state.role==='admin'){
+    h+=`<div class="nav-g"><span>Administration</span><ul class="nav"><li>${a('#/admin/users','Users',p==='admin/users')}</li><li>${a('#/admin/overview','Overview',p==='admin/overview')}</li></ul></div>`;
+  }
+  return h;
+}
+function userBlock(){
+  if(state.role==='visitor')return `<div class="rail-user"><a class="btn btn-primary" href="#/login">Log in</a><a class="tlink" href="#/register" style="font-size:.875rem">Create an account</a></div>`;
+  const m=ME[state.role];
+  return `<div class="rail-user"><div class="who"><span class="av" aria-hidden="true">${initials(m.name)}</span><span>${m.name}<small>${state.role==='admin'?'Administrator':'Member'}</small></span></div><button type="button" class="tlink" data-act="logout" style="background:none;border:0;padding:0;text-align:left;min-height:44px;cursor:pointer;font-size:.875rem;color:var(--ink-2)">Log out</button></div>`;
+}
+const searchForm=id=>`<form class="search" role="search" data-search><span aria-hidden="true">${ico('search',18)}</span><label class="sr" for="${id}">Search titles</label><input id="${id}" type="search" name="q" placeholder="Search" autocomplete="off"></form>`;
+function renderChrome(){
+  $('#rail').innerHTML=`<a class="wm" href="#/home" aria-label="Cinevault, home">Cine<i>vault</i></a><nav aria-label="Primary">${navLinks()}</nav>${searchForm('q-rail')}${userBlock()}`;
+  const p=curPath();
+  const m=state.role==='visitor'?`<a class="ib" href="#/login" aria-label="Log in">${ico('user',22)}</a>`:`<a class="ib" href="#/account" aria-label="Account, ${ME[state.role].name}"><span class="av">${initials(ME[state.role].name)}</span></a>`;
+  $('#topbar').innerHTML=`<a class="wm" href="#/home" aria-label="Cinevault, home">Cine<i>vault</i></a><div style="display:flex">${'<button type="button" class="ib" data-act="sheet-search" aria-label="Search">'+ico('search',22)+'</button>'}${m}</div>`;
+  const t=(href,ic,l,cur)=>`<a href="${href}"${cur?' aria-current="page"':''}>${ico(ic,22)}<span>${l}</span></a>`;
+  $('#tabbar').innerHTML=t('#/home','home','Home',p==='home')+t('#/browse/films','film','Films',p==='browse/films')+t('#/browse/series','tv','Series',p==='browse/series')+t('#/favorites','heart','My list',p==='favorites')+`<button type="button" data-act="sheet-open" aria-haspopup="dialog">${ico('more',22)}<span>Menu</span></button>`;
+  $('#sheet').innerHTML=`<div class="sheet-h"><span>Menu</span><button type="button" class="ib" data-act="sheet-close" aria-label="Close menu">${ico('x',22)}</button></div>${searchForm('q-sheet')}<nav aria-label="Menu">${navLinks()}</nav>
+   <div class="nav-g"><span>Genres</span><ul class="nav">${GENRES.slice(0,6).map(g=>`<li><a href="#/browse/genre/${encodeURIComponent(g[0])}">${g[0]}</a></li>`).join('')}</ul></div>
+   <div class="nav-g">${state.role==='visitor'?`<div class="btn-row"><a class="btn btn-primary" href="#/login">Log in</a><a class="btn" href="#/register">Create account</a></div>`:`<span>${ME[state.role].name}</span><ul class="nav"><li><button type="button" data-act="logout" class="tlink" style="background:none;border:0;min-height:44px;cursor:pointer;color:var(--ink-2);font-size:1.0625rem">Log out</button></li></ul>`}</div>`;
+}
+function sheet(open,focusSearch){
+  $('#sheet').classList.toggle('open',open);$('#scrim').classList.toggle('open',open);
+  if(open)setTimeout(()=>focusSearch?$('#q-sheet').focus():$('#sheet [data-act="sheet-close"]').focus(),60);
+}
+
+/* ===================== switcher ===================== */
+const SCREENS=[['Home','#/home',null],['Title · movie','#/title/m1',null],['Title · series','#/title/s1',null],['Favorites','#/favorites?seed=1','user'],['Favorites · empty','#/favorites?seed=0','user'],['Account','#/account','user'],['Admin · Users','#/admin/users','admin'],['Admin · Overview','#/admin/overview','admin'],['Login','#/login','visitor'],['Register','#/register','visitor'],['Forgot password','#/forgot','visitor'],['Check your email','#/check-email?mode=verify','visitor']];
+function renderSwitcher(){
+  const h=location.hash||'#/home';
+  const exact=SCREENS.findIndex(s=>s[1]===h);
+  const pathOf=x=>x.split('?')[0];
+  const idx=exact>=0?exact:SCREENS.findIndex(s=>pathOf(s[1])===pathOf(h));
+  $('#sw').innerHTML=`<b>Cinevault · B Gallery Dark</b>`+SCREENS.map((s,i)=>`<a href="${s[1]}" data-role="${s[2]||''}"${i===idx?' aria-current="page"':''}>${s[0]}</a>`).join('')+`<span class="sep"></span><span>As</span>`+['visitor','user','admin'].map(x=>`<button type="button" data-setrole="${x}" aria-pressed="${state.role===x}">${x[0].toUpperCase()+x.slice(1)}</button>`).join('')+`<span class="note">Synthetic placeholder art — real posters come from TMDB at runtime</span>`;
+}
+
+/* ===================== screens ===================== */
+const FEAT=['m1','s1','m2'];let fi=0;
+function featPoster(t){return `<a class="frame frame-xl" href="#/title/${t.id}" aria-label="${esc(t.title)}, details">${art(t)}</a>`}
+function featSide(t){return `<a class="frame frame-lg feat-still" href="#/title/${t.id}" tabindex="-1" aria-hidden="true">${art(t,'wide')}</a><div class="feat-cap"><p class="cap-meta">${metaOf(t)}</p><h2 class="feat-title">${esc(t.title)}</h2><p class="feat-ov">${esc(t.ov)}</p><div class="btn-row"><a class="btn btn-primary" href="#/title/${t.id}">Details</a>${favBtn(t.id)}</div></div>`}
+function showFeat(n,anim=true){
+  fi=(n+FEAT.length)%FEAT.length;const t=byId[FEAT[fi]],root=$('#feat');
+  $('#fp').innerHTML=featPoster(t);$('#fs').innerHTML=featSide(t);$('#fcount').textContent=`0${fi+1} / 0${FEAT.length}`;
+  if(anim&&!reduced){root.classList.remove('swap');void root.offsetWidth;root.classList.add('swap')}
+  syncFav();
+}
+function renderHome(q){
+  const trending=['m3','m4','m5','m6','m7','m8','m9','s2'].map(i=>byId[i]);
+  const top=[...T].sort((a,b)=>b.score-a.score).slice(0,6);
+  const ser=['s2','s3','s5','s6'].map(i=>byId[i]);const sf=byId.s4;
+  return `<h1 class="sr">Cinevault</h1>
+  <section class="feat" id="feat" aria-roledescription="carousel" aria-label="Featured works">
+    <div class="feat-grid">
+      <div class="feat-poster" id="fp"></div>
+      <div class="feat-side"><div id="fs"></div>
+        <div class="feat-ctl" role="group" aria-label="Featured work controls"><button type="button" class="ib" data-act="feat-prev" aria-label="Previous featured work">${ico('left',20)}</button><span class="counter num" id="fcount" aria-live="polite">01 / 03</span><button type="button" class="ib" data-act="feat-next" aria-label="Next featured work">${ico('right',20)}</button></div>
+      </div>
+    </div>
+  </section>
+  <div class="page">
+    <section class="sec" aria-labelledby="h-trend">${secHead('<span id="h-trend">Now trending</span>','01')}${wallHtml(trending)}</section>
+    <section class="sec" aria-labelledby="h-ser">${secHead('<span id="h-ser">Series in season</span>','02')}
+      <div class="split">
+        <a class="tile split-feature${reduced?'':' pre'}" href="#/title/${sf.id}"><span class="frame frame-lg">${art(sf,'wide')}</span><span class="cap"><span class="cap-meta" style="display:block;margin-bottom:6px">${metaOf(sf)}</span><h3>${esc(sf.title)}</h3><p>${esc(sf.ov)}</p></span></a>
+        <ol class="thumbs">${ser.map(t=>`<li><a href="#/title/${t.id}"><span class="frame frame-xs">${art(t)}</span><span><span class="t t-it">${esc(t.title)}</span><span class="cap-meta" style="display:block">${metaOf(t)}</span></span><span class="go" aria-hidden="true">${ico('right',18)}</span></a></li>`).join('')}</ol>
+      </div></section>
+    <section class="sec" aria-labelledby="h-top">${secHead('<span id="h-top">Top rated</span>','03')}${wallHtml(top,'b')}</section>
+    <section class="sec" id="genres" aria-labelledby="h-gen">${secHead('<span id="h-gen">Genres, indexed</span>','04')}
+      <ul class="index">${GENRES.map(g=>`<li><a href="#/browse/genre/${encodeURIComponent(g[0])}"><span class="l">${g[0]}</span><span class="c num">${g[1]}</span></a></li>`).join('')}</ul>
+      <p class="note-s">Counts are mockup numbers; the live catalog is read from TMDB.</p></section>
+  </div>`;
+}
+function afterHome(q){showFeat(fi,false);if(q.get('at')==='genres')setTimeout(()=>$('#genres').scrollIntoView({behavior:reduced?'auto':'smooth'}),50);else if(!reduced){const root=$('#feat');root.classList.add('swap')}}
+
+function renderTitle(id){
+  const t=byId[id]||byId.m1,mv=t.type==='movie';
+  const more=T.filter(x=>x.id!==t.id&&x.genres.some(g=>t.genres.includes(g))).concat(T.filter(x=>x.id!==t.id&&x.type===t.type)).filter((x,i,a)=>a.indexOf(x)===i).slice(0,4);
+  const eps=['Pilot','The Quiet Hours','Salt and Thread','What the Water Keeps','Ledger','Low Light','Second Tide','Homecoming'];
+  const seasons=mv?'':`<section class="sec" aria-labelledby="h-sea">${secHead('<span id="h-sea">Seasons</span>')}<div class="seasons">${Array.from({length:t.seasons},(_,s)=>`<details${s===0?' open':''}><summary><span>Season ${s+1}</span><span class="cap-meta num">${t.year+s} · 8 episodes</span><span class="chev" aria-hidden="true">${ico('right',18)}</span></summary><ol class="eps">${eps.map((e,i)=>`<li><span class="e num">${String(i+1).padStart(2,'0')}</span><span class="n">${e}</span><span class="num">${40+((i*7+s*5)%19)} min</span></li>`).join('')}</ol></details>`).join('')}</div></section>`;
+  return `<article>
+  <div class="tp">
+    <div class="tp-poster"><div class="frame frame-xl">${art(t,'poster',`Synthetic poster art for ${t.title}`)}</div><p class="plate cap-meta">Plate · synthetic art for ${esc(t.title)}</p></div>
+    <div class="tp-label">
+      <p class="cap-meta">${t.year} · ${mv?'Film':'Series'}</p>
+      <h1>${esc(t.title)}</h1>
+      <div class="score"><b class="num">${t.score.toFixed(1)}</b><span>out of 10, TMDB user score</span></div>
+      <dl class="lbl">
+        <div><dt>${mv?'Runtime':'Seasons'}</dt><dd class="num">${mv?fmtRt(t.rt):t.seasons+' · 8 episodes each'}</dd></div>
+        <div><dt>Genre</dt><dd>${t.genres.join(', ')}</dd></div>
+        <div><dt>${mv?'Directed by':'Created by'}</dt><dd>${t.dir}</dd></div>
+        <div><dt>With</dt><dd>${t.cast.join(', ')}</dd></div>
+        <div><dt>Language</dt><dd>${t.lang}</dd></div>
+        <div><dt>Status</dt><dd>${t.status}</dd></div>
+      </dl>
+      <p class="tp-ov">${esc(t.ov)}</p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" data-act="trailer">${ico('play',16)} Watch trailer</button>
+        ${favBtn(t.id)}
+        <button type="button" class="btn btn-dashed" data-act="download" aria-describedby="dl-note">${ico('dl',16)} Download <span class="tag">dev flag</span></button>
+      </div>
+      <p class="dl-note" id="dl-note">Placeholder, does nothing yet. Rendered only while the downloadButton flag is on.</p>
+    </div>
+  </div>
+  <div class="page">
+    ${seasons}
+    <section class="sec stills" aria-labelledby="h-still" style="padding-top:var(--s-9);margin-top:0">${secHead('<span id="h-still">Still</span>')}<div class="frame frame-lg" style="max-width:920px">${art(t,'wide',`Synthetic backdrop art for ${t.title}`)}</div><span class="cap-meta">Backdrop · synthetic art</span></section>
+    <section class="sec" aria-labelledby="h-more">${secHead('<span id="h-more">More like this</span>')}<ul class="more">${more.map(tileHtml).join('')}</ul></section>
+  </div></article>`;
+}
+
+function renderBrowse(seg){
+  let list=T.slice(),h,sub;
+  if(seg[1]==='films'){list=T.filter(t=>t.type==='movie');h='Films';sub='Every film in the synthetic set.'}
+  else if(seg[1]==='series'){list=T.filter(t=>t.type==='series');h='Series';sub='Every series in the synthetic set.'}
+  else if(seg[1]==='new'){list=T.filter(t=>t.year>=2026).sort((a,b)=>b.score-a.score);h='New &amp; popular';sub='Released this year, best rated first.'}
+  else if(seg[1]==='genre'){const g=decodeURIComponent(seg[2]||'');list=T.filter(t=>t.genres.includes(g));h=`<em>${esc(g)}</em>`;sub='Showing the synthetic set; the live catalog lists every TMDB title in this genre.'}
+  else {h='Browse';sub=''}
+  return browseShell(h,sub,list);
+}
+function browseShell(h,sub,list,q){
+  return `<div class="pg"><div class="pg-h"><h1>${h}</h1><p>${sub}<span class="num"> ${list.length} work${list.length===1?'':'s'}.</span></p></div>${list.length?wallHtml(list):`<div class="empty"><h2>Nothing hangs here yet</h2><p>${q?`No title matches “${esc(q)}”. Try part of a title or a genre.`:'No titles match.'}</p><a class="btn btn-primary" href="#/home">Back to home</a></div>`}</div>`;
+}
+function renderSearch(q){const s=(q.get('q')||'').trim().toLowerCase();const list=s?T.filter(t=>(t.title+' '+t.genres.join(' ')+' '+t.year).toLowerCase().includes(s)):[];return browseShell(`Search: <em>${esc(q.get('q')||'')}</em>`,'',list,q.get('q'))}
+
+/* ---- dashboard ---- */
+const dnav=cur=>`<nav class="dnav" aria-label="Dashboard"><a href="#/favorites"${cur==='fav'?' aria-current="page"':''}>My collection</a><a href="#/account"${cur==='acc'?' aria-current="page"':''}>Account</a>${state.role==='admin'?`<a href="#/admin/users"${cur==='usr'?' aria-current="page"':''}>Users</a><a href="#/admin/overview"${cur==='ovw'?' aria-current="page"':''}>Overview</a>`:''}</nav>`;
+function renderFav(){
+  const all=state.favs.map(i=>byId[i]);
+  const mv=all.filter(t=>t.type==='movie').length,sr=all.length-mv;
+  const list=all.filter(t=>state.filter==='all'||(state.filter==='movie'?t.type==='movie':t.type==='series'));
+  const sizes=['m','s','l','s','m','s','m'];
+  const f=(k,l,n)=>`<button type="button" class="pill" data-filter="${k}" aria-pressed="${state.filter===k}">${l} <span class="n num">${n}</span></button>`;
+  let body;
+  if(!all.length)body=`<div class="empty"><div class="ghost" aria-hidden="true"><i style="width:84px;height:126px"></i><i style="width:112px;height:168px"></i><i style="width:84px;height:126px"></i></div><h2>The wall is empty</h2><p>Works you add with “Add to my list” are hung here, so they are easy to find again.</p><a class="btn btn-primary" href="#/home">Browse the catalog</a></div>`;
+  else if(!list.length)body=`<div class="empty"><h2>No ${state.filter==='movie'?'films':'series'} in your collection</h2><p>Nothing here matches this filter yet. Show everything, or find something new.</p><div class="btn-row"><button type="button" class="btn" data-filter="all">Show all</button><a class="btn btn-primary" href="#/browse/${state.filter==='movie'?'films':'series'}">Browse ${state.filter==='movie'?'films':'series'}</a></div></div>`;
+  else body=`<ul class="hang" id="hang">${list.map((t,i)=>`<li data-z="${sizes[i%sizes.length]}" data-id="${t.id}"><a class="tile" href="#/title/${t.id}"><span class="frame frame-sm">${art(t)}</span></a><span class="cap"><span class="cap-title">${esc(t.title)}</span><span class="cap-meta">${metaOf(t)}</span><button type="button" class="rm" data-rm="${t.id}" aria-label="Remove ${esc(t.title)} from my collection">${ico('x',14)} Remove</button></span></li>`).join('')}</ul>`;
+  return `<div class="pg"><div class="pg-h"><h1>My <em class="t-it">collection</em></h1><p>${all.length?`${all.length} work${all.length>1?'s':''} you have kept, hung as you left them.`:'Nothing kept yet.'}</p></div>${dnav('fav')}
+  <div class="filters" role="group" aria-label="Filter collection">${f('all','All',all.length)}${f('movie','Movies',mv)}${f('series','Series',sr)}</div>${body}</div>`;
+}
+
+/* ---- forms ---- */
+const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function F(o){const id='f-'+o.name,pw=o.type==='password';return `<div class="field${pw?' has-reveal':''}" data-f="${o.name}" data-hint="${esc(o.hint||'')}"><label for="${id}">${o.label}</label><div class="ctl"><input id="${id}" name="${o.name}" type="${o.type||'text'}" autocomplete="${o.ac||'off'}" aria-describedby="${id}-m" ${o.ph?`placeholder="${esc(o.ph)}"`:''} value="${esc(o.value||'')}" ${o.inputmode?`inputmode="${o.inputmode}"`:''} spellcheck="false">${pw?`<button type="button" class="reveal" data-show="${id}" aria-label="Show ${o.label.toLowerCase()}" aria-pressed="false">Show</button>`:''}</div><p class="msg" id="${id}-m">${esc(o.hint||'')}</p></div>`}
+function setErr(form,name,msg){const f=$(`[data-f="${name}"]`,form);if(!f)return false;const inp=$('input',f),m=$('.msg',f);f.dataset.err=msg?'1':'';inp.setAttribute('aria-invalid',msg?'true':'false');m.innerHTML=msg?ico('alert',16)+`<span>${esc(msg)}</span>`:esc(f.dataset.hint);return !!msg}
+const val=(form,n)=>$(`[name="${n}"]`,form).value.trim();
+function pwRules(pw){return[['8 or more characters',pw.length>=8],['A letter and a number',/[A-Za-z]/.test(pw)&&/\d/.test(pw)]]}
+const rulesHtml=id=>`<ul class="rules" id="${id}" aria-label="Password requirements">${pwRules('').map(r=>`<li>${r[0]}</li>`).join('')}</ul>`;
+function updRules(id,pw){const ul=$('#'+id);if(!ul)return;pwRules(pw).forEach((r,i)=>{const li=ul.children[i];li.classList.toggle('met',r[1]);li.setAttribute('data-met',r[1])})}
+const checks={
+ email:v=>!v?'Enter your email address.':!EMAIL.test(v)?'That does not look like an email address. Check for a missing @ or domain.':'',
+ name:v=>!v?'Enter your name.':v.length<2?'Your name needs at least 2 characters.':'',
+ pw:v=>!v?'Enter your password.':'',
+ newpw:v=>!v?'Choose a password.':v.length<8?'Use at least 8 characters.':!(/[A-Za-z]/.test(v)&&/\d/.test(v))?'Add at least one letter and one number.':''
+};
+function banner(form,msg,ok){let b=$('.banner',form);if(!b){b=document.createElement('div');form.prepend(b)}b.className='banner'+(ok?' ok':'');b.setAttribute('role',ok?'status':'alert');b.innerHTML=ico(ok?'check':'alert',18)+`<span>${msg}</span>`;b.scrollIntoView({block:'nearest'})}
+const clearBanner=form=>{const b=$('.banner',form);if(b)b.remove()};
+
+function authShell(inner,t,cap){return `<div class="auth"><div class="auth-art"><div class="frame frame-lg"><span class="ap">${art(byId[t||'m8'])}</span><span class="aw">${art(byId[t||'m8'],'wide')}</span></div><p class="plate cap-meta">${cap||'Plate'}</p></div><div class="auth-form">${inner}</div></div>`}
+function renderLogin(q){
+  const note=q.get('need')?`<div class="banner ok" role="status">${ico('alert',18)}<span>Log in to see your collection and add titles to your list.</span></div>`:'';
+  return authShell(`<h1>Log <em class="t-it">in</em></h1><p class="lede">Welcome back. Your collection is where you left it.</p>${note}
+  <form id="f-login" novalidate>${F({name:'email',label:'Email',type:'email',ac:'email',ph:'you@example.com'})}${F({name:'pw',label:'Password',type:'password',ac:'current-password'})}
+  <div class="btn-row"><button class="btn btn-primary" type="submit">Log in</button></div></form>
+  <div class="alt"><a class="tlink" href="#/forgot">Forgot your password?</a><a class="tlink" href="#/register">Create an account</a></div>
+  <p class="mock"><b>Mockup logins.</b> ana@cinevault.test or admin@cinevault.test, password Vault#2026. Also try unverified@cinevault.test and blocked@cinevault.test.</p>`,'m8','Plate · Cartographer of Rain (synthetic)');
+}
+function renderRegister(){
+  return authShell(`<h1>Create an <em class="t-it">account</em></h1><p class="lede">Keep a collection of films and series. We email a link to confirm your address before the account is active.</p>
+  <form id="f-reg" novalidate>${F({name:'name',label:'Name',ac:'name'})}${F({name:'email',label:'Email',type:'email',ac:'email',ph:'you@example.com'})}${F({name:'pw',label:'Password',type:'password',ac:'new-password',hint:'At least 8 characters, with a letter and a number.'})}${rulesHtml('r-reg')}${F({name:'pw2',label:'Confirm password',type:'password',ac:'new-password'})}
+  <div class="btn-row"><button class="btn btn-primary" type="submit">Create account</button></div></form>
+  <div class="alt"><span>Already registered?</span><a class="tlink" href="#/login">Log in</a></div>
+  <p class="mock"><b>Mockup.</b> Use taken@cinevault.test to see the “already registered” error.</p>`,'s1','Plate · Northlight (synthetic)');
+}
+function renderForgot(){
+  return authShell(`<h1>Forgot your <em class="t-it">password?</em></h1><p class="lede">Enter the email you signed up with. If an account exists, we send a link to choose a new password.</p>
+  <form id="f-forgot" novalidate>${F({name:'email',label:'Email',type:'email',ac:'email',ph:'you@example.com'})}<div class="btn-row"><button class="btn btn-primary" type="submit">Email me a reset link</button></div></form>
+  <div class="alt"><a class="tlink" href="#/login">Back to log in</a></div>`,'m10','Plate · Glass Season (synthetic)');
+}
+let resendT;
+function renderCheck(q){
+  const mode=q.get('mode')==='reset'?'reset':'verify',em=q.get('email')||'you@example.com';
+  const copy=mode==='reset'?{h:'Check your <em class="t-it">inbox</em>',p:`If an account exists for <b style="font-weight:400;color:var(--ink)">${esc(em)}</b>, a reset link is on its way. It works for 60 minutes.`,s:['Open the email from Cinevault.','Choose “Reset password”.','Pick a new password, then log in.']}:{h:'Check your <em class="t-it">inbox</em>',p:`We sent a confirmation link to <b style="font-weight:400;color:var(--ink)">${esc(em)}</b>. Your account is active once you open it.`,s:['Open the email from Cinevault.','Choose “Confirm email”.','Come back here and log in.']};
+  return authShell(`<div class="envelope">${ico('mail',32)}</div><h1>${copy.h}</h1><p class="lede">${copy.p}</p>
+  <ol class="steps">${copy.s.map(s=>`<li><span>${s}</span></li>`).join('')}</ol>
+  <div class="btn-row"><button class="btn" type="button" id="resend" data-act="resend" disabled>Resend email</button></div>
+  <p class="count" id="resend-note" style="margin-top:12px" aria-live="polite"></p>
+  <div class="alt"><a class="tlink" href="#/${mode==='reset'?'forgot':'register'}">Wrong address? Use a different email</a><a class="tlink" href="#/login">Back to log in</a></div>
+  <p class="mock"><b>Not in the inbox?</b> Check spam. Links expire, so resend if it has been a while.</p>`,'m11','Plate · Midnight Fathom (synthetic)');
+}
+function startResend(){
+  clearInterval(resendT);let n=30;const b=$('#resend'),note=$('#resend-note');if(!b)return;
+  const tick=()=>{if(!$('#resend')){clearInterval(resendT);return}if(n>0){b.disabled=true;note.textContent=`You can resend in ${n} s.`;n--}else{b.disabled=false;note.textContent='';clearInterval(resendT)}};
+  tick();resendT=setInterval(tick,1000);
+}
+
+/* ---- account ---- */
+function renderAccount(){
+  const m=ME[state.role];
+  return `<div class="pg"><div class="pg-h"><h1><em class="t-it">Account</em></h1><p>Your details and your sign-in. Only you can see this page.</p></div>${dnav('acc')}
+  <section class="acc-sec" aria-labelledby="a1"><div><h2 id="a1">Profile</h2><p class="d">Your name appears on your collection. Changing your email asks you to confirm the new address.</p></div>
+   <form class="acc-form" id="f-prof" novalidate>${F({name:'name',label:'Name',ac:'name',value:m.name})}${F({name:'email',label:'Email',type:'email',ac:'email',value:m.email,hint:'We email a link to confirm a new address. The old one stays active until you do.'})}<div class="btn-row"><button class="btn btn-primary" type="submit">Save changes</button></div></form></section>
+  <section class="acc-sec" aria-labelledby="a2"><div><h2 id="a2">Password</h2><p class="d">Enter your current password first. You stay signed in on this device.</p></div>
+   <form class="acc-form" id="f-pw" novalidate>${F({name:'old',label:'Current password',type:'password',ac:'current-password',hint:'Mockup: the current password is Vault#2026.'})}${F({name:'nw',label:'New password',type:'password',ac:'new-password'})}${rulesHtml('r-acc')}${F({name:'cf',label:'Confirm new password',type:'password',ac:'new-password'})}<div class="btn-row"><button class="btn btn-primary" type="submit">Update password</button></div></form></section>
+  <section class="acc-sec" aria-labelledby="a3"><div><h2 id="a3">Delete account</h2><p class="d">Removes your account and your collection of ${state.favs.length} work${state.favs.length===1?'':'s'}. This cannot be undone.</p></div>
+   <div><button type="button" class="btn btn-danger" data-act="del-open" id="del-open" aria-expanded="false" aria-controls="del-panel">Delete account…</button>
+   <div class="del-panel" id="del-panel" hidden><p><strong style="font-weight:500;color:var(--ink)">Delete ${esc(m.email)}?</strong> Your collection and sign-in are removed immediately. Type DELETE to confirm.</p>
+    <div class="field" style="margin:0" data-f="del"><label for="f-del">Type DELETE</label><div class="ctl"><input id="f-del" name="del" autocomplete="off" spellcheck="false" aria-describedby="f-del-m"></div><p class="msg" id="f-del-m"></p></div>
+    <div class="btn-row"><button type="button" class="btn" data-act="del-cancel">Keep my account</button><button type="button" class="btn btn-danger" id="del-go" data-act="del-go" disabled>Delete permanently</button></div></div></div></section></div>`;
+}
+
+/* ---- admin ---- */
+const chip=u=>u.status==='blocked'?'<span class="chip chip-blocked">Blocked</span>':u.status==='pending'?'<span class="chip chip-pending">Unverified</span>':'<span class="chip">Active</span>';
+function rowsHtml(){
+  const q=state.q.toLowerCase();
+  const list=state.users.filter(u=>!q||u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
+  $('#ucount').textContent=`${list.length} of ${state.users.length} users`;
+  if(!list.length)return `<tr><td colspan="5" class="nores">No user matches “${esc(state.q)}”. Check the spelling or search by email.</td></tr>`;
+  return list.map(u=>{
+    if(state.confirmId===u.id)return `<tr class="confirm-row" data-id="${u.id}"><td colspan="5"><div class="confirm" role="alertdialog" aria-label="Confirm delete"><p>Delete <strong style="font-weight:500">${esc(u.name)}</strong> and their collection? This cannot be undone.</p><div class="btn-row"><button type="button" class="btn" data-uact="cancel" data-id="${u.id}">Cancel</button><button type="button" class="btn btn-danger" data-uact="delete" data-id="${u.id}">Delete user</button></div></div></td></tr>`;
+    const blocked=u.status==='blocked';
+    return `<tr data-id="${u.id}" data-blocked="${blocked?1:0}"><td class="who" data-l="User"><span class="u-name">${esc(u.name)}${u.you?' <span class="tag" style="margin-left:6px">You</span>':''}</span><span class="u-mail">${esc(u.email)}</span></td>
+    <td data-l="Role"><label class="sr" for="role-${u.id}">Role for ${esc(u.name)}</label><select class="sel" id="role-${u.id}" data-uact="role" data-id="${u.id}"${u.you?' disabled':''}><option value="user"${u.role==='user'?' selected':''}>User</option><option value="admin"${u.role==='admin'?' selected':''}>Admin</option></select></td>
+    <td data-l="Status">${chip(u)}</td><td data-l="Joined" class="num">${fmtDate(u.joined)}</td>
+    <td class="acts"><button type="button" class="tbtn" data-uact="block" data-id="${u.id}" aria-label="${blocked?'Unblock':'Block'} ${esc(u.name)}"${u.you?' disabled':''}>${blocked?'Unblock':'Block'}</button><button type="button" class="tbtn tbtn-danger" data-uact="ask" data-id="${u.id}" aria-label="Delete ${esc(u.name)}"${u.you?' disabled':''}>Delete</button></td></tr>`}).join('');
+}
+function renderUsers(){
+  return `<div class="pg"><div class="pg-h"><h1><em class="t-it">Users</em></h1><p>Search, change roles, block or remove accounts.</p></div>${dnav('usr')}
+  <div class="toolbar"><div class="field" data-f="uq"><label for="uq">Search by name or email</label><div class="ctl"><input id="uq" type="search" autocomplete="off" placeholder="Name or email" value="${esc(state.q)}"></div></div><p class="count num" id="ucount" aria-live="polite"></p></div>
+  <table class="tbl"><thead><tr><th scope="col">User</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Joined</th><th scope="col"><span class="sr">Actions</span></th></tr></thead><tbody id="ubody"></tbody></table></div>`;
+}
+function renderOverview(){
+  const total=state.users.length,week=state.users.filter(u=>(TODAY-new Date(u.joined+'T12:00:00'))/864e5<7).length;
+  const recent=[...state.users].sort((a,b)=>b.joined.localeCompare(a.joined)).slice(0,5);
+  return `<div class="pg"><div class="pg-h"><h1><em class="t-it">Overview</em></h1><p>A short reading of who is here.</p></div>${dnav('ovw')}
+  <div class="ov-grid"><div><p class="statement"><span class="n num">${total}</span> <span class="dim">people hold an account.</span><br><span class="n num">${week}</span> <span class="dim">joined in the last seven days.</span></p><p class="note-s" style="margin-top:24px">Counts follow the Users list. <a class="tlink" href="#/admin/users">Manage users</a></p></div>
+  <section aria-labelledby="rs"><h2 id="rs">Recent signups</h2><ul class="recent">${recent.map(u=>`<li><div><span class="u-name" style="display:block">${esc(u.name)}</span><span class="u-mail">${esc(u.email)}</span></div><div style="text-align:right">${chip(u)}<div class="when num">${fmtDate(u.joined)}</div></div></li>`).join('')}</ul></section></div></div>`;
+}
+const denied=()=>`<div class="pg"><div class="empty"><h2>This page is for administrators</h2><p>Your account does not have access. Switch the mockup role to Admin to view it.</p><a class="btn btn-primary" href="#/home">Back to home</a></div></div>`;
+
+/* ===================== router ===================== */
+function parse(){const h=location.hash.replace(/^#\/?/,'');const[p,q='']=h.split('?');return{path:p||'home',seg:(p||'home').split('/'),q:new URLSearchParams(q)}}
+let lastPath='';
+function route(){
+  const{path,seg,q}=parse();const main=$('#main');let html,after,title='Cinevault';
+  clearInterval(resendT);
+  const needUser=['favorites','account'].includes(seg[0]);
+  if(needUser&&state.role==='visitor'){location.replace('#/login?need=1');return}
+  if(seg[0]==='favorites'){if(q.get('seed')==='1')state.favs=['m1','m3','m4','m5','m9','s1','s3'];if(q.get('seed')==='0')state.favs=[];}
+  switch(seg[0]){
+   case 'home':html=renderHome(q);after=()=>afterHome(q);break;
+   case 'title':html=renderTitle(seg[1]);title=(byId[seg[1]]||byId.m1).title;after=syncFav;break;
+   case 'browse':html=renderBrowse(seg);title='Browse';break;
+   case 'search':html=renderSearch(q);title='Search';break;
+   case 'favorites':html=renderFav();title='My collection';break;
+   case 'account':html=renderAccount();title='Account';after=()=>updRules('r-acc','');break;
+   case 'admin':if(state.role!=='admin'){html=denied();break}
+      if(seg[1]==='overview'){html=renderOverview();title='Overview'}else{html=renderUsers();title='Users';after=()=>{$('#ubody').innerHTML=rowsHtml()}}break;
+   case 'login':html=renderLogin(q);title='Log in';break;
+   case 'register':html=renderRegister();title='Create account';after=()=>updRules('r-reg','');break;
+   case 'forgot':html=renderForgot();title='Forgot password';break;
+   case 'check-email':html=renderCheck(q);title='Check your email';after=startResend;break;
+   default:html=renderHome(q);after=()=>afterHome(q);
+  }
+  main.innerHTML=html;document.title=title+' · Cinevault';
+  renderChrome();renderSwitcher();sheet(false);
+  if(after)after();
+  if(path!==lastPath||!q.get('at'))if(!(seg[0]==='home'&&q.get('at')))window.scrollTo(0,0);
+  lastPath=path;
+  observe();
+}
+function observe(){
+  if(reduced||!('IntersectionObserver' in window)){$$('.pre').forEach(e=>e.classList.remove('pre'));return}
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{rootMargin:'0px 0px -6% 0px',threshold:.05});
+  $$('.pre').forEach(e=>io.observe(e));
+}
+addEventListener('hashchange',route);
+
+/* ===================== events ===================== */
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-act],[data-fav],[data-filter],[data-rm],[data-uact],[data-setrole],[data-show],#sw a,#scrim,.sheet a');
+  if(!a)return;
+  if(a.id==='scrim'||a.matches('.sheet a')){sheet(false);return}
+  if(a.matches('#sw a')){const r=a.dataset.role;if(r==='user'&&state.role==='visitor')state.role='user';if(r==='admin')state.role='admin';if(r==='visitor')state.role='visitor';return}
+  if(a.dataset.setrole){state.role=a.dataset.setrole;route();return}
+  if(a.dataset.fav){
+    if(state.role==='visitor'){toast('Log in to add titles to your list.',['login','Log in']);return}
+    const id=a.dataset.fav,i=state.favs.indexOf(id);
+    if(i>=0){state.favs.splice(i,1);toast(`Removed <em class="t-it">${esc(byId[id].title)}</em> from your list.`)}else{state.favs.push(id);toast(`Added <em class="t-it">${esc(byId[id].title)}</em> to your list.`)}
+    syncFav();return}
+  if(a.dataset.filter){state.filter=a.dataset.filter;$('#main').innerHTML=renderFav();$$('.pill')[['all','movie','series'].indexOf(state.filter)]?.focus();return}
+  if(a.dataset.rm){
+    const id=a.dataset.rm,li=a.closest('li');state.lastRm={id,i:state.favs.indexOf(id)};
+    const done=()=>{state.favs=state.favs.filter(x=>x!==id);$('#main').innerHTML=renderFav();toast(`Removed <em class="t-it">${esc(byId[id].title)}</em> from your collection.`,['undo','Undo']);($('.hang .rm')||$('.empty a,.empty .btn')||$('#main')).focus()};
+    if(reduced)done();else{li.classList.add('gone');setTimeout(done,420)}return}
+  if(a.dataset.show){const inp=$('#'+a.dataset.show),on=inp.type==='password';inp.type=on?'text':'password';a.textContent=on?'Hide':'Show';a.setAttribute('aria-pressed',on);return}
+  if(a.dataset.uact){userAct(a);return}
+  switch(a.dataset.act){
+   case 'feat-prev':showFeat(fi-1);break;
+   case 'feat-next':showFeat(fi+1);break;
+   case 'sheet-open':sheet(true);break;
+   case 'sheet-search':sheet(true,true);break;
+   case 'sheet-close':sheet(false);$('[data-act="sheet-open"]').focus();break;
+   case 'logout':state.role='visitor';sheet(false);toast('You are logged out.');location.hash='#/home';route();break;
+   case 'login':location.hash='#/login';$('#toast').classList.remove('show');break;
+   case 'trailer':toast('Opens the TMDB trailer link in a new tab.');break;
+   case 'download':toast('Download is a placeholder and does nothing yet.');break;
+   case 'undo':{const u=state.lastRm;if(u){state.favs.splice(Math.min(u.i,state.favs.length),0,u.id);state.lastRm=null;if(curPath()==='favorites')$('#main').innerHTML=renderFav();toast('Restored.')}break}
+   case 'resend':toast('Email sent again. Check your inbox.');startResend();break;
+   case 'del-open':$('#del-panel').hidden=false;a.setAttribute('aria-expanded','true');a.hidden=true;$('#f-del').focus();break;
+   case 'del-cancel':$('#del-panel').hidden=true;$('#del-open').hidden=false;$('#del-open').setAttribute('aria-expanded','false');$('#del-open').focus();$('#f-del').value='';$('#del-go').disabled=true;break;
+   case 'del-go':state.role='visitor';toast('Your account was deleted.');location.hash='#/home';break;
+  }
+});
+function userAct(a){
+  const id=+a.dataset.id,u=state.users.find(x=>x.id===id),k=a.dataset.uact;
+  if(k==='role')return;
+  if(k==='block'){if(u.status==='blocked'){u.status=u.prev||'active';toast(`${esc(u.name)} can log in again.`)}else{u.prev=u.status;u.status='blocked';toast(`${esc(u.name)} is blocked and signed out.`)}}
+  if(k==='ask')state.confirmId=id;
+  if(k==='cancel')state.confirmId=null;
+  if(k==='delete'){state.users=state.users.filter(x=>x.id!==id);state.confirmId=null;toast(`${esc(u.name)} was deleted.`)}
+  $('#ubody').innerHTML=rowsHtml();
+  const f=$(`[data-id="${id}"] [data-uact="${k==='ask'?'delete':'block'}"]`)||$(`[data-id="${id}"] [data-uact="ask"]`);if(f)f.focus();
+}
+document.addEventListener('change',e=>{
+  const s=e.target.closest('[data-uact="role"]');if(!s)return;
+  const u=state.users.find(x=>x.id===+s.dataset.id);u.role=s.value;toast(`${esc(u.name)} is now ${s.value==='admin'?'an admin':'a user'}.`);
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='uq'){state.q=t.value;state.confirmId=null;$('#ubody').innerHTML=rowsHtml();return}
+  if(t.id==='f-del'){$('#del-go').disabled=t.value.trim()!=='DELETE';return}
+  const f=t.closest('[data-f]');if(f&&f.dataset.err==='1')setErr(t.form,f.dataset.f,'');
+  const form=t.form;if(!form)return;
+  if(form.id==='f-reg'&&t.name==='pw')updRules('r-reg',t.value);
+  if(form.id==='f-pw'&&t.name==='nw')updRules('r-acc',t.value);
+});
+document.addEventListener('focusout',e=>{
+  const t=e.target,form=t.form;if(!form||!t.name)return;
+  if(t.name==='email'&&t.value)setErr(form,'email',checks.email(t.value.trim()));
+  if(t.name==='pw2'&&t.value||t.name==='cf'&&t.value){const o=form.id==='f-reg'?'pw':'nw';setErr(form,t.name,t.value!==val(form,o)?'The passwords do not match.':'')}
+});
+document.addEventListener('submit',e=>{
+  const form=e.target;e.preventDefault();
+  if(form.matches('[data-search]')){const v=form.q.value.trim();if(v){sheet(false);location.hash='#/search?q='+encodeURIComponent(v)}return}
+  const fail=(name,msg)=>{const bad=setErr(form,name,msg);return bad};
+  const first=()=>{const f=$('[data-err="1"] input',form);if(f)f.focus();};
+  if(form.id==='f-login'){
+    clearBanner(form);const em=val(form,'email').toLowerCase(),pw=$('[name=pw]',form).value;
+    let bad=[fail('email',checks.email(em)),fail('pw',checks.pw(pw))].some(Boolean);if(bad){first();return}
+    if(em==='unverified@cinevault.test'){banner(form,`Verify your email before logging in. We sent a link to ${esc(em)}. <a class="tlink" href="#/check-email?mode=verify&email=${encodeURIComponent(em)}">Resend it</a>.`);return}
+    if(em==='blocked@cinevault.test'){banner(form,'This account has been blocked. Contact support if you think this is a mistake.');return}
+    if((em==='ana@cinevault.test'||em==='admin@cinevault.test')&&pw==='Vault#2026'){state.role=em.startsWith('admin')?'admin':'user';toast('Welcome back.');location.hash=state.role==='admin'?'#/admin/users':'#/favorites';return}
+    fail('pw','');banner(form,'Email or password is incorrect. Check both and try again, or <a class="tlink" href="#/forgot">reset your password</a>.');
+  }
+  if(form.id==='f-reg'){
+    const em=val(form,'email').toLowerCase(),pw=$('[name=pw]',form).value,p2=$('[name=pw2]',form).value;
+    let bad=[fail('name',checks.name(val(form,'name'))),fail('email',checks.email(em)||(em==='taken@cinevault.test'?'An account with this email already exists. Log in instead.':'')),fail('pw',checks.newpw(pw)),fail('pw2',!p2?'Confirm your password.':p2!==pw?'The passwords do not match.':'')].some(Boolean);
+    if(bad){first();return}location.hash='#/check-email?mode=verify&email='+encodeURIComponent(em);
+  }
+  if(form.id==='f-forgot'){const em=val(form,'email');const m=checks.email(em);if(fail('email',m)){first();return}location.hash='#/check-email?mode=reset&email='+encodeURIComponent(em)}
+  if(form.id==='f-prof'){
+    clearBanner(form);const bad=[fail('name',checks.name(val(form,'name'))),fail('email',checks.email(val(form,'email')))].some(Boolean);if(bad){first();return}
+    const changed=val(form,'email')!==ME[state.role].email;ME[state.role].name=val(form,'name');renderChrome();
+    banner(form,changed?`Saved. We sent a link to ${esc(val(form,'email'))}; the new address applies once you confirm it.`:'Saved. Your name is updated.',true);
+  }
+  if(form.id==='f-pw'){
+    clearBanner(form);const o=$('[name=old]',form).value,n=$('[name=nw]',form).value,c=$('[name=cf]',form).value;
+    const bad=[fail('old',!o?'Enter your current password.':o!=='Vault#2026'?'That is not your current password. Try again or reset it by email.':''),fail('nw',checks.newpw(n)||(n===o&&o?'Choose a password you have not used here before.':'')),fail('cf',!c?'Confirm the new password.':c!==n?'The passwords do not match.':'')].some(Boolean);
+    if(bad){first();return}form.reset();updRules('r-acc','');banner(form,'Password updated. Other devices are signed out.',true);
+  }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#sheet').classList.contains('open')){sheet(false);$('[data-act="sheet-open"]')?.focus()}});
+
+/* boot */
+if(!location.hash)history.replaceState(null,'','#/home');
+route();
+</script>
+</body>
+</html>

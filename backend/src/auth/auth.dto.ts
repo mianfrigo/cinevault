@@ -43,3 +43,10 @@ export class TokenDto {
   @Length(1, 256)
   token!: string;
 }
+
+export class ResetPasswordDto extends TokenDto {
+  // Same limits as registration; never trimmed.
+  @IsString()
+  @Length(10, 128)
+  newPassword!: string;
+}

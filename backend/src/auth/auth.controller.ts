@@ -1,27 +1,26 @@
-import { Body, Controller, HttpCode, Inject, Post, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import {
+  Body,
+  Controller,
+  Headers,
+  HttpCode,
+  Inject,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { AppException } from '../common/app.exception';
 import { ENV, type Env } from '../config/env';
 import type { UserDto } from '../users/user.dto';
-import { EmailDto, LoginDto, RegisterDto, TokenDto } from './auth.dto';
+import {
+  EmailDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+  TokenDto,
+} from './auth.dto';
 import { ACCEPTED, AuthService } from './auth.service';
-
-export const REFRESH_COOKIE = 'cv_refresh';
-
-/** Single place that defines the refresh cookie (Tasks 7+ reuse it on rotation). */
-export function setRefreshCookie(
-  res: Response,
-  raw: string,
-  expiresAt: Date,
-  env: Pick<Env, 'cookieSecure'>,
-): void {
-  res.cookie(REFRESH_COOKIE, raw, {
-    httpOnly: true,
-    secure: env.cookieSecure,
-    sameSite: 'lax',
-    path: '/api/v1/auth',
-    expires: expiresAt,
-  });
-}
+import { clearRefreshCookie, REFRESH_COOKIE, setRefreshCookie } from './cookie';
 
 @Controller('auth')
 export class AuthController {
@@ -57,5 +56,69 @@ export class AuthController {
     const { accessToken, user, session } = await this.auth.login(dto);
     setRefreshCookie(res, session.raw, session.expiresAt, this.env);
     return { accessToken, user };
+  }
+  /**
+   * The one cookie-authenticated mutation (TRD 5), so it is CSRF-guarded: when a
+   * browser sends an Origin it must be ours. A request with no Origin header
+   * (curl, server-side) is allowed: it cannot be a cross-site browser request,
+   * and SameSite=Lax already keeps the cookie off cross-site POSTs.
+   *
+   * It also requires `Content-Type: application/json` (checked first, before
+   * anything is consumed): a cross-site form or text/plain POST cannot set it
+   * without a CORS preflight. `req.is` is falsy for a request without a body,
+   * so clients must send a JSON body (`{}` is enough).
+   */
+  @Post('refresh')
+  @HttpCode(200)
+  async refresh(
+    @Req() req: Request,
+    @Headers('origin') origin: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<{ accessToken: string; user: UserDto }> {
+    if (!req.is('application/json')) {
+      throw new AppException(
+        415,
+        'UNSUPPORTED_MEDIA_TYPE',
+        'Content-Type must be application/json',
+      );
+    }
+    if (origin !== undefined && origin !== this.env.webOrigin) {
+      throw new AppException(403, 'FORBIDDEN', 'Origin not allowed');
+    }
+    try {
+      const { accessToken, user, session } = await this.auth.refresh(
+        (req.cookies as Record<string, string | undefined>)[REFRESH_COOKIE],
+      );
+      setRefreshCookie(res, session.raw, session.expiresAt, this.env);
+      return { accessToken, user };
+    } catch (e) {
+      // The cookie is useless after a refusal; keep Set-Cookie on the error response.
+      if (e instanceof AppException) clearRefreshCookie(res, this.env);
+      throw e;
+    }
+  }
+
+  @Post('logout')
+  @HttpCode(204)
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    await this.auth.logout(
+      (req.cookies as Record<string, string | undefined>)[REFRESH_COOKIE],
+    );
+    clearRefreshCookie(res, this.env);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(202)
+  forgotPassword(@Body() dto: EmailDto): Promise<typeof ACCEPTED> {
+    return this.auth.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(204)
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
+    await this.auth.resetPassword(dto.token, dto.newPassword);
   }
 }

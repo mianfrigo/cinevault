@@ -62,6 +62,11 @@ export class AuthController {
    * browser sends an Origin it must be ours. A request with no Origin header
    * (curl, server-side) is allowed: it cannot be a cross-site browser request,
    * and SameSite=Lax already keeps the cookie off cross-site POSTs.
+   *
+   * It also requires `Content-Type: application/json` (checked first, before
+   * anything is consumed): a cross-site form or text/plain POST cannot set it
+   * without a CORS preflight. `req.is` is falsy for a request without a body,
+   * so clients must send a JSON body (`{}` is enough).
    */
   @Post('refresh')
   @HttpCode(200)
@@ -70,6 +75,13 @@ export class AuthController {
     @Headers('origin') origin: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ accessToken: string; user: UserDto }> {
+    if (!req.is('application/json')) {
+      throw new AppException(
+        415,
+        'UNSUPPORTED_MEDIA_TYPE',
+        'Content-Type must be application/json',
+      );
+    }
     if (origin !== undefined && origin !== this.env.webOrigin) {
       throw new AppException(403, 'FORBIDDEN', 'Origin not allowed');
     }

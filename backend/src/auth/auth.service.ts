@@ -184,14 +184,24 @@ export class AuthService {
   async resetPassword(raw: string, newPassword: string): Promise<void> {
     const t = await this.emailTokens.consume(raw, ['RESET_PASSWORD']);
     // Only an ACTIVE user may reset; for anyone else the token is spent and refused.
-    const { count } = await this.prisma.user.updateMany({
-      where: { id: t.userId, status: 'ACTIVE' },
-      data: { passwordHash: await this.passwords.hash(newPassword) },
+    const passwordHash = await this.passwords.hash(newPassword);
+    // One transaction: the user row stays locked until every session is revoked,
+    // so a refresh in flight cannot slip a new token past the revoke-all.
+    const changed = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.user.updateMany({
+        where: { id: t.userId, status: 'ACTIVE' },
+        data: { passwordHash },
+      });
+      if (count !== 1) return false;
+      await tx.refreshToken.updateMany({
+        where: { userId: t.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      return true;
     });
-    if (count !== 1) {
+    if (!changed) {
       throw new AppException(400, 'TOKEN_INVALID', 'Token is invalid');
     }
-    await this.sessions.revokeAll(t.userId);
   }
 
   /** Rotates the refresh token and re-checks the account, since the DB is the source of truth. */

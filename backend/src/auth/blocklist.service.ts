@@ -21,17 +21,20 @@ export class BlockListService {
 
   constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) {}
 
-  private warn(op: string, e: unknown): void {
-    this.logger.warn(
+  private fail(level: 'warn' | 'error', op: string, e: unknown): void {
+    this.logger[level](
       `block list ${op} failed: ${e instanceof Error ? e.name : 'Unknown error'}`,
     );
   }
 
+  // A failed write is swallowed (the admin request must not fail) but logged at
+  // error level. Accepted degradation: the DB status and revokeAll still stop
+  // refresh; access tokens already issued stay valid for up to 10 minutes.
   async block(userId: string): Promise<void> {
     try {
       await this.cache.set(key(userId), '1', BLOCK_TTL_MS);
     } catch (e) {
-      this.warn('write', e);
+      this.fail('error', 'write', e);
     }
   }
 
@@ -39,7 +42,7 @@ export class BlockListService {
     try {
       await this.cache.del(key(userId));
     } catch (e) {
-      this.warn('delete', e);
+      this.fail('error', 'delete', e);
     }
   }
 
@@ -50,7 +53,7 @@ export class BlockListService {
       // Warn once per process: this runs on every guarded request.
       if (!this.readWarned) {
         this.readWarned = true;
-        this.warn('read', e);
+        this.fail('warn', 'read', e);
       }
       return false;
     }

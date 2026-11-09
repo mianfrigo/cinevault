@@ -112,7 +112,8 @@ describe('Auth sessions: refresh, logout, reset, guards (e2e)', () => {
   const login = (email = 'ana@example.com', password = PASSWORD) =>
     http.post('/api/v1/auth/login').send({ email, password });
   const refresh = (raw?: string, origin?: string) => {
-    const r = http.post('/api/v1/auth/refresh');
+    // A client must send a JSON body (`{}` is enough): see AuthController.refresh.
+    const r = http.post('/api/v1/auth/refresh').send({});
     if (raw !== undefined) r.set('Cookie', `cv_refresh=${raw}`);
     if (origin !== undefined) r.set('Origin', origin);
     return r;
@@ -302,6 +303,126 @@ describe('Auth sessions: refresh, logout, reset, guards (e2e)', () => {
       expect(
         await prisma.refreshToken.count({ where: { revokedAt: null } }),
       ).toBe(0);
+    });
+
+    it('refresh without Content-Type: application/json is 415 and the token is not consumed', async () => {
+      await makeUser();
+      const { raw } = await session();
+      const cookie = `cv_refresh=${raw}`;
+      const bad = [
+        http.post('/api/v1/auth/refresh').set('Cookie', cookie),
+        http
+          .post('/api/v1/auth/refresh')
+          .set('Cookie', cookie)
+          .type('text/plain')
+          .send('hello'),
+        http
+          .post('/api/v1/auth/refresh')
+          .set('Cookie', cookie)
+          .type('form')
+          .send({ a: '1' }),
+      ];
+      for (const r of bad) {
+        const res = await r.expect(415);
+        expect(res.body).toMatchObject({
+          statusCode: 415,
+          code: 'UNSUPPORTED_MEDIA_TYPE',
+        });
+        expect(res.headers['set-cookie']).toBeUndefined();
+      }
+      // The check runs before the Origin check and before anything is consumed.
+      await http
+        .post('/api/v1/auth/refresh')
+        .set('Cookie', cookie)
+        .set('Origin', 'https://evil.example')
+        .expect(415);
+      expect(
+        await prisma.refreshToken.count({ where: { revokedAt: null } }),
+      ).toBe(1);
+      await refresh(raw).expect(200);
+    });
+
+    it('a refresh waiting behind a lock on the user cannot leave a live token after the revoke-all that held it', async () => {
+      const user = await makeUser();
+      const { raw } = await session();
+      let pending!: Promise<request.Response>;
+      let done = false;
+      await prisma.$transaction(async (tx) => {
+        // Stands in for reset-password / block: holds the user row, then revokes all.
+        await tx.user.update({
+          where: { id: user.id },
+          data: { name: 'Ana 2' },
+        });
+        pending = refresh(raw).then((r) => {
+          done = true;
+          return r;
+        });
+        await sleep(400);
+        expect(done).toBe(false); // rotation is blocked on the user row lock
+        await tx.refreshToken.updateMany({
+          where: { userId: user.id, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      });
+      expect((await pending).status).toBe(401);
+      expect(
+        await prisma.refreshToken.count({ where: { revokedAt: null } }),
+      ).toBe(0);
+    });
+
+    it('a rotation holding the user row makes a concurrent reset wait, so the new token is revoked too', async () => {
+      const user = await makeUser();
+      await session();
+      const token = await app
+        .get(EmailTokensService)
+        .issue(user.id, 'RESET_PASSWORD');
+      let pending!: Promise<request.Response>;
+      let done = false;
+      await prisma.$transaction(async (tx) => {
+        // What rotate does: share-lock the user, then insert the new token.
+        await tx.$queryRaw`SELECT 1 FROM users WHERE id = ${user.id} FOR SHARE`;
+        pending = reset(token).then((r) => {
+          done = true;
+          return r;
+        });
+        await sleep(400);
+        expect(done).toBe(false);
+        await tx.refreshToken.create({
+          data: {
+            userId: user.id,
+            tokenHash: 'inflight-rotation',
+            expiresAt: new Date(Date.now() + 60_000),
+          },
+        });
+      });
+      expect((await pending).status).toBe(204);
+      expect(
+        await prisma.refreshToken.count({ where: { revokedAt: null } }),
+      ).toBe(0);
+    });
+
+    it('refresh racing reset-password never leaves a live refresh token or the old password', async () => {
+      const user = await makeUser();
+      const emailTokens = app.get(EmailTokensService);
+      for (let i = 0; i < 8; i++) {
+        const { raw } = await session();
+        const token = await emailTokens.issue(user.id, 'RESET_PASSWORD');
+        const [r, p] = await Promise.all([refresh(raw), reset(token)]);
+        expect(p.status).toBe(204);
+        expect([200, 401]).toContain(r.status);
+        expect(
+          await prisma.refreshToken.count({ where: { revokedAt: null } }),
+        ).toBe(0);
+        await login('ana@example.com', PASSWORD).expect(401);
+        // Put the original password back for the next round.
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { passwordHash: await app.get(PasswordService).hash(PASSWORD) },
+        });
+        await prisma.refreshToken.updateMany({
+          data: { revokedAt: new Date() },
+        });
+      }
     });
   });
 

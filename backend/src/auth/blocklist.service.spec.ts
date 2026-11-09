@@ -4,7 +4,11 @@ import { BlockListService } from './blocklist.service';
 
 describe('BlockListService', () => {
   let warn: jest.SpyInstance;
+  let error: jest.SpyInstance;
   beforeEach(() => {
+    error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     warn = jest
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
@@ -51,6 +55,12 @@ describe('BlockListService', () => {
     const svc = broken();
     await expect(svc.block('u1')).resolves.toBeUndefined();
     await expect(svc.unblock('u1')).resolves.toBeUndefined();
-    expect(warn).toHaveBeenCalledTimes(2);
+    // Write failures are logged at error level, class name only.
+    expect(error).toHaveBeenCalledTimes(2);
+    expect(warn).not.toHaveBeenCalled();
+    const logged = JSON.stringify(error.mock.calls);
+    expect(logged).toContain('Error');
+    expect(logged).not.toContain('secret');
+    expect(logged).not.toContain('u1');
   });
 });

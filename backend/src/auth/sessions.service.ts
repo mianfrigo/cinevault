@@ -44,6 +44,10 @@ export class SessionsService {
     const { token, hash } = this.tokens.generateOpaque();
     const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
     const won = await this.prisma.$transaction(async (tx) => {
+      // Share-lock the user first: reset-password and block update that row, so
+      // they wait for an in-flight rotation (and see its new token in revokeAll),
+      // and a rotation that starts after them finds its token already revoked.
+      await tx.$queryRaw`SELECT 1 FROM users WHERE id = ${row.userId} FOR SHARE`;
       // Of concurrent calls with the same token exactly one gets count === 1.
       const { count } = await tx.refreshToken.updateMany({
         where: { id: row.id, revokedAt: null },

@@ -4,8 +4,8 @@ import type { Cache } from 'cache-manager';
 import { AppException } from '../common/app.exception';
 import { paged, type Paged } from '../common/paged';
 import { cached } from '../cache/cached';
-import { TMDB_MAX_PAGE } from './catalog.dto';
 import { TmdbClient } from '../tmdb/tmdb.client';
+import { TMDB_MAX_PAGE } from '../tmdb/tmdb.constants';
 import { mapDetail, mapSeason, mapSummary } from '../tmdb/tmdb.mapper';
 import type {
   MediaTypeParam,

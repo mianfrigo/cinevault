@@ -5,15 +5,34 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { AppException } from './app.exception';
 
-function clientErrorStatus(e: unknown): number | undefined {
-  const { status, statusCode } = (e ?? {}) as Record<string, unknown>;
-  const s = typeof status === 'number' ? status : statusCode;
-  return typeof s === 'number' && Number.isInteger(s) && s >= 400 && s <= 499
-    ? s
+/**
+ * Errors body-parser throws itself (http-errors: `expose` true, 4xx status), e.g. 413
+ * entity.too.large. Anything else with a status field is NOT trusted: it may come
+ * from an HTTP client, Redis, a mailer...
+ */
+function exposedClientStatus(e: unknown): number | undefined {
+  const { status, expose } = (e ?? {}) as Record<string, unknown>;
+  return expose === true &&
+    typeof status === 'number' &&
+    status >= 400 &&
+    status <= 499
+    ? status
     : undefined;
+}
+
+/**
+ * Nest wraps body-parser's SyntaxError into a plain BadRequestException that echoes
+ * the parser message and drops the error type. The wrapped case is recognisable by
+ * the request: JSON content with a body, yet no parsed `req.body`.
+ */
+function isJsonParseFailure(req: Request | undefined): boolean {
+  const h = req?.headers ?? {};
+  const hasBody =
+    h['transfer-encoding'] !== undefined || Number(h['content-length']) > 0;
+  return hasBody && req?.body === undefined && !!req?.is?.('json');
 }
 
 @Catch()
@@ -23,24 +42,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const res = host.switchToHttp().getResponse<Response>();
 
-    // Parser/Express errors: malformed JSON reaches us as a plain BadRequestException
-    // (Nest maps SyntaxError and URIError), oversized bodies as a raw error with
-    // status 413. Fixed messages only: parser messages echo request content. Our own
-    // validation always throws AppException, so a plain 400 can only come from there.
-    const status =
+    const parserStatus =
       exception instanceof HttpException
-        ? !(exception instanceof AppException) && exception.getStatus() === 400
+        ? !(exception instanceof AppException) &&
+          exception.getStatus() === 400 &&
+          isJsonParseFailure(host.switchToHttp().getRequest<Request>())
           ? 400
           : undefined
-        : clientErrorStatus(exception);
-    if (status) {
-      res.status(status).json({
-        statusCode: status,
-        code: status === 400 ? 'VALIDATION_ERROR' : 'ERROR',
+        : exposedClientStatus(exception);
+    if (parserStatus) {
+      // Fixed messages only: parser messages echo request content.
+      res.status(parserStatus).json({
+        statusCode: parserStatus,
+        code: parserStatus === 400 ? 'VALIDATION_ERROR' : 'ERROR',
         message:
-          status === 400
-            ? 'Malformed request'
-            : status === 413
+          parserStatus === 400
+            ? 'Malformed request body'
+            : parserStatus === 413
               ? 'Payload too large'
               : 'Request could not be processed',
       });
@@ -61,7 +79,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     const statusCode = exception.getStatus();
-    const code = exception instanceof AppException ? exception.code : 'ERROR';
+    const code =
+      exception instanceof AppException
+        ? exception.code
+        : statusCode === 400
+          ? 'VALIDATION_ERROR'
+          : 'ERROR';
     const body = exception.getResponse();
     const raw =
       typeof body === 'string' ? body : (body as { message?: unknown }).message;

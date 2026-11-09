@@ -1,11 +1,10 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform, Type } from 'class-transformer';
 import { IsIn, IsInt, IsString, Length, Max, Min } from 'class-validator';
+import { TMDB_MAX_PAGE } from '../tmdb/tmdb.constants';
 import type { MediaTypeParam } from '../tmdb/tmdb.types';
 
 const MEDIA_TYPES: MediaTypeParam[] = ['movie', 'tv'];
-/** TMDB serves at most 500 pages. */
-export const TMDB_MAX_PAGE = 500;
 const MAX_ID = 2_147_483_647;
 
 /** Query/path integers arrive as strings: convert, then require a whole number in range. */

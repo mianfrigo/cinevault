@@ -77,6 +77,12 @@ describe('loadEnv', () => {
       expect(message).not.toContain(short);
     });
 
+    it('rejects a short secret in any non-test, non-development environment', () => {
+      expect(() =>
+        loadEnv({ ...required, NODE_ENV: 'staging', JWT_ACCESS_SECRET: short }),
+      ).toThrow(/JWT_ACCESS_SECRET must be at least 32/);
+    });
+
     it('accepts 32 characters in production', () => {
       expect(() =>
         loadEnv({

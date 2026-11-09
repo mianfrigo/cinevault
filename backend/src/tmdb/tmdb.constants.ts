@@ -9,3 +9,6 @@ export const imageUrl = (path: string | null, size: string): string | null =>
 
 /** DI token for optional TmdbClient tuning (tests lower the timeout). */
 export const TMDB_CLIENT_OPTIONS = Symbol('TMDB_CLIENT_OPTIONS');
+
+/** TMDB serves at most 500 pages. */
+export const TMDB_MAX_PAGE = 500;

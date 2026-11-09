@@ -1,4 +1,12 @@
-import { Body, Controller, Get, INestApplication, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  INestApplication,
+  Param,
+  ParseIntPipe,
+  Post,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { IsString } from 'class-validator';
 import request from 'supertest';
@@ -17,6 +25,11 @@ class ProbeController {
   @Post()
   echo(@Body() dto: EchoDto) {
     return dto;
+  }
+
+  @Get('int/:n')
+  int(@Param('n', ParseIntPipe) n: number) {
+    return { n };
   }
 
   @Get('app')
@@ -56,6 +69,19 @@ describe('Global pipe and filter (e2e)', () => {
     });
   });
 
+  it('a ParseIntPipe failure keeps the pipe message with VALIDATION_ERROR', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/probe/int/abc')
+      .expect(400);
+    expect(res.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+    expect((res.body as { message: string }).message).toContain(
+      'numeric string is expected',
+    );
+  });
+
   it('malformed JSON gives 400 VALIDATION_ERROR without echoing the parser message', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/v1/probe')
@@ -65,7 +91,7 @@ describe('Global pipe and filter (e2e)', () => {
     expect(res.body).toEqual({
       statusCode: 400,
       code: 'VALIDATION_ERROR',
-      message: 'Malformed request',
+      message: 'Malformed request body',
     });
   });
 

@@ -58,12 +58,13 @@ export function loadEnv(raw: Raw): Env {
 
   const jwtAccessSecret = str('JWT_ACCESS_SECRET');
   if (
-    nodeEnv === 'production' &&
+    nodeEnv !== 'test' &&
+    nodeEnv !== 'development' &&
     jwtAccessSecret &&
     jwtAccessSecret.length < 32
   ) {
     problems.push(
-      'JWT_ACCESS_SECRET must be at least 32 characters in production',
+      'JWT_ACCESS_SECRET must be at least 32 characters outside test and development',
     );
   }
 

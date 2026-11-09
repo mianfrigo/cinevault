@@ -123,8 +123,8 @@ jobs:
   codeql:
     name: CodeQL (JavaScript/TypeScript)
     needs: changes
-    # Dependabot PRs get a read-only token, which cannot upload code scanning results.
-    if: (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true') && github.actor != 'dependabot[bot]'
+    # Dependabot and fork PRs get a read-only token, which cannot upload code scanning results.
+    if: (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true') && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:

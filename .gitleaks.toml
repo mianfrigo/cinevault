@@ -1,0 +1,15 @@
+# Secret scanning config (gitleaks). Default rules stay on. Only the committed placeholders and dummy
+# test values are allowed, and only in the two env template files, so the same strings pasted
+# anywhere else (or a real secret in these files) are still caught.
+title = "cinevault gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Placeholders in .env.example and dummy values in .env.test"
+condition = "AND"
+paths = ['''^backend/\.env\.(example|test)$''']
+regexes = [
+  '''^(replace-me[A-Za-z0-9-]*|test-token|test-secret[A-Za-z0-9-]*)$''',
+]

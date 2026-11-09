@@ -74,7 +74,7 @@ export class SessionsService {
     });
   }
 
-  /** Pass `tx` to revoke inside the caller's transaction. */
+  /** Transactional only when `db` is a transaction client; by default it runs on its own. */
   async revokeAll(
     userId: string,
     db: Prisma.TransactionClient = this.prisma,

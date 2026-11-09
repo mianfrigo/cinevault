@@ -421,6 +421,112 @@ describe('Me endpoints (e2e)', () => {
     });
   });
 
+  describe('account state and races', () => {
+    it('a BLOCKED user with a still-valid token (block list not set) is 403 on every password-checked route and nothing changes', async () => {
+      const user = await makeUser();
+      const { token } = await signIn();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'BLOCKED' },
+      });
+      const calls = [
+        changePassword(token, {
+          oldPassword: PASSWORD,
+          newPassword: NEW_PASSWORD,
+        }),
+        changeEmail(token, { newEmail: 'new@example.com', password: PASSWORD }),
+        deleteMe(token, { password: PASSWORD }),
+      ];
+      for (const c of calls) {
+        const res = await c.expect(403);
+        expect(res.body).toMatchObject({
+          statusCode: 403,
+          code: 'ACCOUNT_BLOCKED',
+        });
+      }
+      const row = await prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+      });
+      expect(row.passwordHash).toBe(passwordHash);
+      expect(row.email).toBe('ana@example.com');
+      expect(await prisma.emailToken.count()).toBe(0);
+      expect(
+        await prisma.refreshToken.count({ where: { revokedAt: null } }),
+      ).toBe(1); // change-password did not revoke anything
+      await expectNoMail(mail);
+    });
+
+    it('a PENDING user with a still-valid token is 401 UNAUTHORIZED on the password-checked routes', async () => {
+      const user = await makeUser();
+      const { token } = await signIn();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'PENDING' },
+      });
+      const calls = [
+        changePassword(token, {
+          oldPassword: PASSWORD,
+          newPassword: NEW_PASSWORD,
+        }),
+        changeEmail(token, { newEmail: 'new@example.com', password: PASSWORD }),
+        deleteMe(token, { password: PASSWORD }),
+      ];
+      for (const c of calls) {
+        const res = await c.expect(401);
+        expect((res.body as { code: string }).code).toBe('UNAUTHORIZED');
+      }
+      expect(await prisma.user.count({ where: { id: user.id } })).toBe(1);
+    });
+
+    it('two concurrent change-password calls with the same old password: one 204, one 400 OLD_PASSWORD_WRONG, the winner password survives', async () => {
+      await makeUser();
+      const a = await signIn();
+      const b = await signIn();
+      const passwords = [
+        'first brand new passphrase',
+        'second brand new passphrase',
+      ];
+      const res = await Promise.all([
+        changePassword(a.token, {
+          oldPassword: PASSWORD,
+          newPassword: passwords[0],
+        }),
+        changePassword(b.token, {
+          oldPassword: PASSWORD,
+          newPassword: passwords[1],
+        }),
+      ]);
+      expect(res.map((r) => r.status).sort()).toEqual([204, 400]);
+      const loser = res.find((r) => r.status === 400);
+      expect((loser?.body as { code: string }).code).toBe('OLD_PASSWORD_WRONG');
+
+      const winner = res.findIndex((r) => r.status === 204);
+      const other = 1 - winner;
+      await login('ana@example.com', passwords[other]).expect(401);
+      await login('ana@example.com', passwords[winner]).expect(200);
+    });
+
+    it('a concurrent change-password leaves no live refresh token from before the change', async () => {
+      await makeUser();
+      const a = await signIn();
+      const b = await signIn();
+      await Promise.all([
+        changePassword(a.token, {
+          oldPassword: PASSWORD,
+          newPassword: NEW_PASSWORD,
+        }),
+        changePassword(b.token, {
+          oldPassword: PASSWORD,
+          newPassword: 'another brand new passphrase',
+        }),
+      ]);
+      for (const old of [a.raw, b.raw]) await refresh(old).expect(401);
+      expect(
+        await prisma.refreshToken.count({ where: { revokedAt: null } }),
+      ).toBe(0);
+    });
+  });
+
   describe('authentication', () => {
     const routes: [string, string, object?][] = [
       ['get', '/api/v1/me'],

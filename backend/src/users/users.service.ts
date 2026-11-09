@@ -39,6 +39,14 @@ export class UsersService {
     code: 'OLD_PASSWORD_WRONG' | 'PASSWORD_WRONG',
   ): Promise<User> {
     const user = await this.load(id);
+    // The block list fails open, so the DB status is re-checked here: a blocked
+    // (or not yet verified) account must not change credentials or delete itself.
+    if (user.status === 'BLOCKED') {
+      throw new AppException(403, 'ACCOUNT_BLOCKED', 'This account is blocked');
+    }
+    if (user.status !== 'ACTIVE') {
+      throw new AppException(401, 'UNAUTHORIZED', 'Missing or malformed token');
+    }
     if (!(await this.passwords.verify(user.passwordHash, password))) {
       throw new AppException(400, code, 'Password is incorrect');
     }
@@ -60,14 +68,28 @@ export class UsersService {
     newPassword: string,
   ): Promise<void> {
     // The old password is checked before the (expensive) hash of the new one.
-    await this.authenticate(id, oldPassword, 'OLD_PASSWORD_WRONG');
+    const user = await this.authenticate(id, oldPassword, 'OLD_PASSWORD_WRONG');
     const passwordHash = await this.passwords.hash(newPassword);
     // One transaction: the user row stays locked until every session is revoked,
     // so a refresh in flight cannot slip a new token past the revoke-all.
     // The refresh cookie never reaches /me, so the current session cannot be
     // spared; the client logs out afterwards.
     await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({ where: { id }, data: { passwordHash } });
+      // Conditional on the hash the old password was verified against: of two
+      // concurrent calls the loser finds the hash already replaced, so its old
+      // password is no longer the current one (400 OLD_PASSWORD_WRONG).
+      const { count } = await tx.user.updateMany({
+        where: { id, passwordHash: user.passwordHash },
+        data: { passwordHash },
+      });
+      if (count !== 1) {
+        await this.load(id); // deleted meanwhile: 401
+        throw new AppException(
+          400,
+          'OLD_PASSWORD_WRONG',
+          'Password is incorrect',
+        );
+      }
       await this.sessions.revokeAll(id, tx);
     });
   }

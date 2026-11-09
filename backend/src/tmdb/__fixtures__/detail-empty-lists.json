@@ -1,0 +1,16 @@
+{
+  "id": 42,
+  "title": "Obscure Film",
+  "poster_path": null,
+  "backdrop_path": null,
+  "overview": "",
+  "tagline": "",
+  "release_date": "",
+  "runtime": 0,
+  "vote_average": 0,
+  "vote_count": 0,
+  "genres": [],
+  "credits": { "cast": [], "crew": [] },
+  "videos": { "results": [] },
+  "similar": { "results": [] }
+}

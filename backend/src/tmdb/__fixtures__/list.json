@@ -1,0 +1,50 @@
+{
+  "movie": {
+    "id": 603,
+    "media_type": "movie",
+    "title": "The Matrix",
+    "original_title": "The Matrix",
+    "overview": "A hacker learns the truth about his reality.",
+    "poster_path": "/matrix.jpg",
+    "backdrop_path": "/matrix-bg.jpg",
+    "release_date": "1999-03-30",
+    "vote_average": 8.2166,
+    "vote_count": 25000,
+    "genre_ids": [28, 878],
+    "adult": false
+  },
+  "tv": {
+    "id": 1396,
+    "media_type": "tv",
+    "name": "Breaking Bad",
+    "original_name": "Breaking Bad",
+    "overview": "A teacher turns to crime.",
+    "poster_path": "/bb.jpg",
+    "backdrop_path": "/bb-bg.jpg",
+    "first_air_date": "2008-01-20",
+    "vote_average": 8.9,
+    "vote_count": 13000,
+    "genre_ids": [18, 80]
+  },
+  "person": {
+    "id": 6384,
+    "media_type": "person",
+    "name": "Keanu Reeves",
+    "profile_path": "/keanu.jpg",
+    "known_for": []
+  },
+  "minimal": {
+    "id": 42,
+    "title": "Obscure Film",
+    "poster_path": null,
+    "backdrop_path": null,
+    "overview": "",
+    "release_date": "",
+    "vote_average": 0,
+    "vote_count": 0
+  },
+  "noRatingField": {
+    "id": 43,
+    "title": "No Votes Field"
+  }
+}

@@ -11,6 +11,7 @@ for (const [k, v] of Object.entries(vars)) {
   else process.env[k] ??= v;
 }
 
+// Also checked by scripts/migrate-test.js before migrations run; keep both in sync.
 const dbName = new URL(process.env.DATABASE_URL ?? '').pathname.slice(1);
 if (!dbName.endsWith('_test')) {
   throw new Error(

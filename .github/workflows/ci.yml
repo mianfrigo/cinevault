@@ -10,13 +10,13 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Static checks and build: no services needed.
   backend-quality:
     name: Backend quality (format, lint, types, audit, build)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
       run:
@@ -40,7 +40,7 @@ jobs:
   # Unit and e2e tests against the same postgres and redis as local dev (docker-compose.yml).
   backend-test:
     name: Backend tests (unit + e2e)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

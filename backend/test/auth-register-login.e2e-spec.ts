@@ -131,19 +131,21 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
         expect(res.body).toEqual(accepted);
       }
       expect(await prisma.user.count()).toBe(1);
-      expect(await prisma.user.findFirst()).toMatchObject({ name: 'Ana' });
+      await waitForMail(mail, 3);
+      await expectNoMoreMail(mail, 3);
     });
 
-    it('register again while PENDING sends a new verify email and keeps the original password hash', async () => {
+    it('register again while PENDING replaces name and password hash and sends a new verify email', async () => {
       await register(ana).expect(202);
       await waitForMail(mail, 1);
       const before = await prisma.user.findUniqueOrThrow({
         where: { email: 'ana@example.com' },
       });
+      const newPassword = 'a completely different password';
       const res = await register({
         ...ana,
-        name: 'Mallory',
-        password: 'a completely different password',
+        name: 'Ana Two',
+        password: newPassword,
       }).expect(202);
       expect(res.body).toEqual(accepted);
       await waitForMail(mail, 2);
@@ -152,11 +154,46 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
       const after = await prisma.user.findUniqueOrThrow({
         where: { email: 'ana@example.com' },
       });
-      expect(after.passwordHash).toBe(before.passwordHash);
-      expect(after.name).toBe('Ana');
+      expect(after.passwordHash).not.toBe(before.passwordHash);
+      expect(after.passwordHash).toMatch(/^\$argon2id\$/);
+      expect(after.name).toBe('Ana Two');
+      expect(after.status).toBe('PENDING');
       // The first link no longer works, the new one does.
       await verify(tokenOf(mail.sent[0])).expect(400);
       await verify(tokenOf(mail.sent[1])).expect(204);
+      // Only the latest submission's password works.
+      await login('ana@example.com', PASSWORD).expect(401);
+      await login('ana@example.com', newPassword).expect(200);
+    });
+
+    it('a PENDING account that became ACTIVE before the replacement is left untouched and gets no mail', async () => {
+      await register(ana).expect(202);
+      await waitForMail(mail, 1);
+      mail.reset();
+      const stale = await prisma.user.findUniqueOrThrow({
+        where: { email: 'ana@example.com' },
+      });
+      await prisma.user.update({
+        where: { id: stale.id },
+        data: { status: 'ACTIVE', emailVerifiedAt: new Date() },
+      });
+      // The lookup still sees the PENDING row, as if verification landed right after it.
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValueOnce(stale);
+      const res = await register({
+        ...ana,
+        name: 'Mallory',
+        password: 'a completely different password',
+      }).expect(202);
+      expect(res.body).toEqual(accepted);
+      await expectNoMoreMail(mail, 0);
+      const after = await prisma.user.findUniqueOrThrow({
+        where: { id: stale.id },
+      });
+      expect(after).toMatchObject({
+        name: 'Ana',
+        passwordHash: stale.passwordHash,
+        status: 'ACTIVE',
+      });
     });
 
     it('register with a verified email sends the already-registered email and no verify token', async () => {
@@ -193,7 +230,9 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
       expect(a.body).toEqual(accepted);
       expect(b.body).toEqual(accepted);
       expect(await prisma.user.count()).toBe(1);
+      // The loser either lost the create (no mail) or found the PENDING row (one more).
       await waitForMail(mail, 1);
+      await sleep(300);
     });
 
     it('losing the create race (unique violation) is a 202, sends no mail and creates no second user', async () => {
@@ -239,6 +278,8 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
       await register({ ...ana, name: 'n'.repeat(81) }).expect(400);
       await register({ ...ana, role: 'ADMIN' }).expect(400);
       await register({ ...ana, password: 'x'.repeat(128) }).expect(202);
+      await waitForMail(mail, 1);
+      await expectNoMoreMail(mail, 1);
     });
 
     it('does not trim the password', async () => {
@@ -344,6 +385,30 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
       ).toBe('ana.new@example.com');
     });
 
+    it('a CHANGE_EMAIL token for a BLOCKED or PENDING user is spent and fails with 400 TOKEN_INVALID, email unchanged', async () => {
+      const emailTokens = app.get(EmailTokensService);
+      for (const status of ['BLOCKED', 'PENDING'] as const) {
+        await resetDb(prisma);
+        await activeUser();
+        const user = await prisma.user.update({
+          where: { email: 'ana@example.com' },
+          data: { status },
+        });
+        const token = await emailTokens.issue(user.id, 'CHANGE_EMAIL', {
+          newEmail: 'ana.new@example.com',
+        });
+        const res = await verify(token).expect(400);
+        expect((res.body as { code: string }).code).toBe('TOKEN_INVALID');
+        expect(
+          (await prisma.user.findUniqueOrThrow({ where: { id: user.id } }))
+            .email,
+        ).toBe('ana@example.com');
+        expect(await prisma.emailToken.count({ where: { usedAt: null } })).toBe(
+          0,
+        );
+      }
+    });
+
     it('a token of another type (RESET_PASSWORD) is rejected and not consumed', async () => {
       await activeUser();
       const user = await prisma.user.findUniqueOrThrow({
@@ -423,6 +488,8 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
   describe('login', () => {
     it('login before verification is 403 EMAIL_NOT_VERIFIED', async () => {
       await register(ana).expect(202);
+      await waitForMail(mail, 1);
+      await expectNoMoreMail(mail, 1);
       const res = await login('ana@example.com').expect(403);
       expect(res.body).toMatchObject({
         statusCode: 403,
@@ -447,6 +514,8 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
 
     it('a wrong password never reveals PENDING or BLOCKED status', async () => {
       await register(ana).expect(202);
+      await waitForMail(mail, 1);
+      await expectNoMoreMail(mail, 1);
       const pending = await login('ana@example.com', 'wrong password!').expect(
         401,
       );

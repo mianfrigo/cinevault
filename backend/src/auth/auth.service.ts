@@ -70,8 +70,14 @@ export class AuthService {
         if (!isPrismaError(e, 'P2002')) throw e;
       }
     } else if (existing.status === 'PENDING') {
-      // Name and password of the first attempt are kept.
-      this.sendVerification(existing);
+      // The latest submission replaces name and password: an attacker who
+      // pre-registered a victim's address must not keep the password (takeover defence).
+      // Guarded by status so an account verified or blocked meanwhile is never overwritten.
+      const { count } = await this.prisma.user.updateMany({
+        where: { id: existing.id, status: 'PENDING' },
+        data: { name: dto.name, passwordHash },
+      });
+      if (count === 1) this.sendVerification(existing);
     } else {
       this.background('already-registered mail', () =>
         this.mail.sendAlreadyRegistered(existing.email, existing.name),
@@ -106,13 +112,17 @@ export class AuthService {
       throw new AppException(400, 'TOKEN_INVALID', 'Token is invalid');
     }
     try {
-      await this.prisma.user.update({
-        where: { id: t.userId },
+      // Only an ACTIVE user may change email; for anyone else the token is spent and refused.
+      const { count } = await this.prisma.user.updateMany({
+        where: { id: t.userId, status: 'ACTIVE' },
         data: { email: normalizeEmail(t.newEmail) },
       });
+      if (count !== 1) {
+        throw new AppException(400, 'TOKEN_INVALID', 'Token is invalid');
+      }
     } catch (e) {
-      // Address taken meanwhile (P2002) or account deleted meanwhile (P2025).
-      if (isPrismaError(e, 'P2002') || isPrismaError(e, 'P2025')) {
+      // Address taken meanwhile.
+      if (isPrismaError(e, 'P2002')) {
         throw new AppException(400, 'TOKEN_INVALID', 'Token is invalid');
       }
       throw e;

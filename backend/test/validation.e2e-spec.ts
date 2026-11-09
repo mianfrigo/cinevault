@@ -56,6 +56,31 @@ describe('Global pipe and filter (e2e)', () => {
     });
   });
 
+  it('malformed JSON gives 400 VALIDATION_ERROR without echoing the parser message', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/probe')
+      .set('Content-Type', 'application/json')
+      .send('{"name": "SECRET-TOKEN"')
+      .expect(400);
+    expect(res.body).toEqual({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+      message: 'Malformed request',
+    });
+  });
+
+  it('oversized body gives 413 ERROR', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/probe')
+      .send({ name: 'x'.repeat(200_000) })
+      .expect(413);
+    expect(res.body).toEqual({
+      statusCode: 413,
+      code: 'ERROR',
+      message: 'Payload too large',
+    });
+  });
+
   it('AppException keeps its code', async () => {
     const res = await request(app.getHttpServer())
       .get('/api/v1/probe/app')

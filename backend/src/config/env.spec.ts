@@ -46,14 +46,53 @@ describe('loadEnv', () => {
   });
 
   it('defaults COOKIE_SECURE to true in production', () => {
-    expect(loadEnv({ ...required, NODE_ENV: 'production' }).cookieSecure).toBe(
-      true,
-    );
+    const env = loadEnv({
+      ...required,
+      NODE_ENV: 'production',
+      JWT_ACCESS_SECRET: 'x'.repeat(32),
+    });
+    expect(env.cookieSecure).toBe(true);
   });
 
   it('reports invalid values', () => {
     expect(() =>
       loadEnv({ ...required, PORT: 'abc', FEATURE_DOWNLOAD_BUTTON: 'yes' }),
     ).toThrow(/PORT[\s\S]*FEATURE_DOWNLOAD_BUTTON/);
+  });
+
+  describe('JWT_ACCESS_SECRET length', () => {
+    const short = 'short-secret';
+    it('rejects a short secret in production without echoing it', () => {
+      let message = '';
+      try {
+        loadEnv({
+          ...required,
+          NODE_ENV: 'production',
+          JWT_ACCESS_SECRET: short,
+        });
+      } catch (e) {
+        message = (e as Error).message;
+      }
+      expect(message).toContain('JWT_ACCESS_SECRET');
+      expect(message).not.toContain(short);
+    });
+
+    it('accepts 32 characters in production', () => {
+      expect(() =>
+        loadEnv({
+          ...required,
+          NODE_ENV: 'production',
+          JWT_ACCESS_SECRET: 'x'.repeat(32),
+        }),
+      ).not.toThrow();
+    });
+
+    it('accepts a short secret in test and development', () => {
+      for (const NODE_ENV of ['test', 'development']) {
+        expect(() =>
+          loadEnv({ ...required, NODE_ENV, JWT_ACCESS_SECRET: short }),
+        ).not.toThrow();
+      }
+    });
   });
 });

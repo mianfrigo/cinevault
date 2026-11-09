@@ -1,10 +1,12 @@
 import { createClient } from '@keyv/redis';
 
+const open = () => createClient({ url: process.env.REDIS_URL });
+
 /** Runs `fn` on a short-lived client of the test Redis (setup-env.ts guarantees it is not db 0). */
 async function withTestRedis<T>(
-  fn: (client: ReturnType<typeof createClient>) => Promise<T>,
+  fn: (client: ReturnType<typeof open>) => Promise<T>,
 ): Promise<T> {
-  const client = createClient({ url: process.env.REDIS_URL });
+  const client = open();
   client.on('error', () => undefined);
   await client.connect();
   try {

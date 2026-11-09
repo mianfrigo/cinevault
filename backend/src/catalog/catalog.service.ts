@@ -4,6 +4,7 @@ import type { Cache } from 'cache-manager';
 import { AppException } from '../common/app.exception';
 import { paged, type Paged } from '../common/paged';
 import { cached } from '../cache/cached';
+import { TMDB_MAX_PAGE } from './catalog.dto';
 import { TmdbClient } from '../tmdb/tmdb.client';
 import { mapDetail, mapSeason, mapSummary } from '../tmdb/tmdb.mapper';
 import type {
@@ -19,7 +20,6 @@ import type {
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const TTL = { day: 24 * HOUR, list: HOUR, search: 10 * MINUTE };
-const MAX_PAGES = 500; // TMDB serves at most 500 pages
 
 export type ListKind = 'trending' | 'popular' | 'top-rated' | 'new';
 
@@ -50,7 +50,7 @@ const toPaged = (
   paged(
     (raw.results ?? []).flatMap((r) => mapSummary(r, fallbackType) ?? []),
     page,
-    Math.min(raw.total_pages ?? 1, MAX_PAGES),
+    Math.min(raw.total_pages ?? 1, TMDB_MAX_PAGE),
     raw.total_results ?? 0,
   );
 
@@ -62,24 +62,27 @@ export class CatalogService {
   ) {}
 
   /** Cache key `tmdb:<route>:<sorted query>`; the cached value is the mapped DTO. */
-  private fetch<R>(
+  private fetch<Raw, R>(
     path: string,
     query: Record<string, string | number>,
     ttlMs: number,
-    map: (raw: any) => R,
+    map: (raw: Raw) => R,
   ): Promise<R> {
     const sorted = Object.entries(query)
       .map(([k, v]) => [k, String(v)])
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
     const key = `tmdb:${path}:${new URLSearchParams(sorted)}`;
     return cached(this.cache, key, ttlMs, async () =>
-      map(await this.tmdb.get(path, query)),
+      map(await this.tmdb.get<Raw>(path, query)),
     );
   }
 
   list(kind: ListKind, type: MediaTypeParam, page: number) {
-    return this.fetch(listPath(kind, type), { page }, TTL.list, (raw) =>
-      toPaged(raw as TmdbPage, page, type),
+    return this.fetch(
+      listPath(kind, type),
+      { page },
+      TTL.list,
+      (raw: TmdbPage) => toPaged(raw, page, type),
     );
   }
 
@@ -98,14 +101,17 @@ export class CatalogService {
       `/discover/${type}`,
       { with_genres: genreId, page },
       TTL.list,
-      (raw) => toPaged(raw as TmdbPage, page, type),
+      (raw: TmdbPage) => toPaged(raw, page, type),
     );
   }
 
   /** Movies and series only: people and anything else are dropped by the mapper. */
   search(q: string, page: number) {
-    return this.fetch('/search/multi', { query: q, page }, TTL.search, (raw) =>
-      toPaged(raw as TmdbPage, page),
+    return this.fetch(
+      '/search/multi',
+      { query: q, page },
+      TTL.search,
+      (raw: TmdbPage) => toPaged(raw, page),
     );
   }
 
@@ -114,13 +120,16 @@ export class CatalogService {
       `/${type}/${id}`,
       { append_to_response: 'credits,videos,similar' },
       TTL.day,
-      (raw) => mapDetail(raw as TmdbDetail, type),
+      (raw: TmdbDetail) => mapDetail(raw, type),
     );
   }
 
   season(tvId: number, n: number): Promise<SeasonDetail> {
-    return this.fetch(`/tv/${tvId}/season/${n}`, {}, TTL.day, (raw) =>
-      mapSeason(raw as TmdbSeason),
+    return this.fetch(
+      `/tv/${tvId}/season/${n}`,
+      {},
+      TTL.day,
+      (raw: TmdbSeason) => mapSeason(raw),
     );
   }
 

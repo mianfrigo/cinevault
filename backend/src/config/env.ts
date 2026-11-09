@@ -56,6 +56,17 @@ export function loadEnv(raw: Raw): Env {
     }
   }
 
+  const jwtAccessSecret = str('JWT_ACCESS_SECRET');
+  if (
+    nodeEnv === 'production' &&
+    jwtAccessSecret &&
+    jwtAccessSecret.length < 32
+  ) {
+    problems.push(
+      'JWT_ACCESS_SECRET must be at least 32 characters in production',
+    );
+  }
+
   const env: Env = {
     nodeEnv,
     port,
@@ -66,7 +77,7 @@ export function loadEnv(raw: Raw): Env {
       /\/+$/,
       '',
     ),
-    jwtAccessSecret: str('JWT_ACCESS_SECRET'),
+    jwtAccessSecret,
     webOrigin: url('WEB_ORIGIN').replace(/\/+$/, ''),
     cookieSecure: bool('COOKIE_SECURE', nodeEnv === 'production'),
     mailFrom: str('MAIL_FROM', 'Cinevault <no-reply@cinevault.local>'),

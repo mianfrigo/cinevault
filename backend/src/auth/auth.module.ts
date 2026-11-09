@@ -3,8 +3,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { MailModule } from '../mail/mail.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { BlockListService } from './blocklist.service';
 import { EmailTokensService } from './email-tokens.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { PasswordService } from './password.service';
+import { RolesGuard } from './roles.guard';
 import { SessionsService } from './sessions.service';
 import { TokensService } from './tokens.service';
 
@@ -18,6 +21,9 @@ import { TokensService } from './tokens.service';
     TokensService,
     EmailTokensService,
     SessionsService,
+    BlockListService,
+    JwtAuthGuard,
+    RolesGuard,
   ],
   exports: [
     AuthService,
@@ -25,6 +31,9 @@ import { TokensService } from './tokens.service';
     TokensService,
     EmailTokensService,
     SessionsService,
+    BlockListService,
+    JwtAuthGuard,
+    RolesGuard,
   ],
 })
 export class AuthModule {}

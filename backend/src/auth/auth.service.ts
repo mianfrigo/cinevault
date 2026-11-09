@@ -167,4 +167,75 @@ export class AuthService {
       session: await this.sessions.create(user.id),
     };
   }
+  /** Only an ACTIVE account gets a reset mail; every other case answers the same. */
+  async forgotPassword(dto: EmailDto): Promise<typeof ACCEPTED> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizeEmail(dto.email) },
+    });
+    if (user?.status === 'ACTIVE') {
+      this.background('reset mail', async () => {
+        const token = await this.emailTokens.issue(user.id, 'RESET_PASSWORD');
+        await this.mail.sendResetPassword(user.email, user.name, token);
+      });
+    }
+    return ACCEPTED;
+  }
+
+  async resetPassword(raw: string, newPassword: string): Promise<void> {
+    const t = await this.emailTokens.consume(raw, ['RESET_PASSWORD']);
+    // Only an ACTIVE user may reset; for anyone else the token is spent and refused.
+    const { count } = await this.prisma.user.updateMany({
+      where: { id: t.userId, status: 'ACTIVE' },
+      data: { passwordHash: await this.passwords.hash(newPassword) },
+    });
+    if (count !== 1) {
+      throw new AppException(400, 'TOKEN_INVALID', 'Token is invalid');
+    }
+    await this.sessions.revokeAll(t.userId);
+  }
+
+  /** Rotates the refresh token and re-checks the account, since the DB is the source of truth. */
+  async refresh(raw: string | undefined): Promise<{
+    accessToken: string;
+    user: UserDto;
+    session: { raw: string; expiresAt: Date };
+  }> {
+    if (!raw) {
+      throw new AppException(
+        401,
+        'REFRESH_INVALID',
+        'Invalid or expired session',
+      );
+    }
+    const session = await this.sessions.rotate(raw);
+    const user = await this.prisma.user.findUnique({
+      where: { id: session.userId },
+    });
+    if (user?.status !== 'ACTIVE') {
+      // The rotation just minted a token; kill it along with all the others.
+      await this.sessions.revokeAll(session.userId);
+      if (user?.status === 'BLOCKED') {
+        throw new AppException(
+          403,
+          'ACCOUNT_BLOCKED',
+          'This account is blocked',
+        );
+      }
+      throw new AppException(
+        401,
+        'REFRESH_INVALID',
+        'Invalid or expired session',
+      );
+    }
+    return {
+      accessToken: await this.tokens.signAccess(user),
+      user: toUserDto(user),
+      session,
+    };
+  }
+
+  /** Idempotent: an absent or unknown token is not an error. */
+  async logout(raw: string | undefined): Promise<void> {
+    if (raw) await this.sessions.revoke(raw);
+  }
 }

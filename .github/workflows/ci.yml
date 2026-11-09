@@ -8,14 +8,48 @@ on:
 permissions:
   contents: read
 
+# PRs share one group per ref and cancel superseded runs; every push to main keeps its own run.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Decides which areas a change touches, so docs-only or frontend-only changes skip the rest.
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'docker-compose.yml'
+              - 'infra/**'
+              - '.nvmrc'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - 'e2e/**'
+              - '.nvmrc'
+              - '.github/workflows/ci.yml'
+
   # Static checks and build: no services needed.
   backend-quality:
     name: Backend quality (format, lint, types, audit, build)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
@@ -40,6 +74,8 @@ jobs:
   # Unit and e2e tests against the same postgres and redis as local dev (docker-compose.yml).
   backend-test:
     name: Backend tests (unit + e2e)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -65,3 +101,55 @@ jobs:
       - name: Infra logs on failure
         if: failure()
         run: docker compose logs --no-color postgres redis
+
+  # Secrets (passwords, keys, tokens) can land in any file, docs included, so this always runs.
+  # Scans the full git history; takes seconds at this repo size. Config: .gitleaks.toml.
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: gitleaks
+        run: >
+          docker run --rm -v "$PWD:/repo"
+          ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git /repo --redact --no-banner -v
+
+  # Static analysis for vulnerabilities (injection, unsafe deserialization, weak crypto...) in JS/TS.
+  codeql:
+    name: CodeQL (JavaScript/TypeScript)
+    needs: changes
+    # Dependabot PRs get a read-only token, which cannot upload code scanning results.
+    if: (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true') && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          category: /language:javascript-typescript
+
+  # Single required check for branch protection: skipped jobs count as success, failures and cancels do not.
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [changes, backend-quality, backend-test, secrets, codeql]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fail if any needed job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

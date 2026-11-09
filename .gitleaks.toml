@@ -1,0 +1,14 @@
+# Secret scanning config (gitleaks). Default rules stay on; only committed placeholders and
+# dummy test values are allowed, matched by value so a real secret in the same files is still caught.
+title = "cinevault gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholders in .env.example and dummy values in .env.test"
+regexes = [
+  '''replace-me[A-Za-z0-9-]*''',
+  '''test-token''',
+  '''test-secret[A-Za-z0-9-]*''',
+]

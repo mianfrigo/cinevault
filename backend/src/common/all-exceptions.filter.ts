@@ -5,6 +5,7 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
+import { ThrottlerException } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { AppException } from './app.exception';
 
@@ -27,6 +28,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
         statusCode: 500,
         code: 'ERROR',
         message: 'Internal server error',
+      });
+      return;
+    }
+
+    if (exception instanceof ThrottlerException) {
+      // The guard already set Retry-After on the response; keep it.
+      res.status(429).json({
+        statusCode: 429,
+        code: 'RATE_LIMITED',
+        message: 'Too many requests, try again later.',
       });
       return;
     }

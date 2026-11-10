@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AppException } from '../common/app.exception';
+import { AuthThrottle } from '../common/throttle';
 import { ENV, type Env } from '../config/env';
 import type { UserDto } from '../users/user.dto';
 import {
@@ -31,6 +32,7 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(202)
+  @AuthThrottle()
   register(@Body() dto: RegisterDto): Promise<typeof ACCEPTED> {
     return this.auth.register(dto);
   }
@@ -43,12 +45,14 @@ export class AuthController {
 
   @Post('resend-verification')
   @HttpCode(202)
+  @AuthThrottle()
   resend(@Body() dto: EmailDto): Promise<typeof ACCEPTED> {
     return this.auth.resendVerification(dto);
   }
 
   @Post('login')
   @HttpCode(200)
+  @AuthThrottle()
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -112,6 +116,7 @@ export class AuthController {
 
   @Post('forgot-password')
   @HttpCode(202)
+  @AuthThrottle()
   forgotPassword(@Body() dto: EmailDto): Promise<typeof ACCEPTED> {
     return this.auth.forgotPassword(dto);
   }

@@ -15,6 +15,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { TmdbClient } from '../src/tmdb/tmdb.client';
 import { resetDb } from './helpers/db';
 import { flushTestRedis } from './helpers/redis';
+import { sleep } from './helpers/wait';
 
 const fx = (name: string) =>
   JSON.parse(
@@ -23,7 +24,6 @@ const fx = (name: string) =>
       'utf8',
     ),
   ) as object;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Serves a detail for any `/movie/<n>` or `/tv/<n>` unless listed in `missing`. */
 class FakeTmdb {

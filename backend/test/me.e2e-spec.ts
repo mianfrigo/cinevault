@@ -11,6 +11,7 @@ import { MAIL_TRANSPORT } from '../src/mail/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { resetDb } from './helpers/db';
 import { flushTestRedis } from './helpers/redis';
+import { sleep, waitForMail } from './helpers/wait';
 
 interface Sent {
   to: string;
@@ -27,14 +28,6 @@ class MailRecorder {
   reset() {
     this.sent = [];
   }
-}
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-async function waitForMail(rec: MailRecorder, count: number, timeoutMs = 3000) {
-  const end = Date.now() + timeoutMs;
-  while (rec.sent.length < count && Date.now() < end) await sleep(10);
-  expect(rec.sent.length).toBeGreaterThanOrEqual(count);
 }
 
 async function expectNoMail(rec: MailRecorder) {

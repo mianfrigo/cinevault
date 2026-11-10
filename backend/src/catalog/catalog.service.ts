@@ -6,7 +6,12 @@ import { paged, type Paged } from '../common/paged';
 import { cached } from '../cache/cached';
 import { TmdbClient } from '../tmdb/tmdb.client';
 import { TMDB_MAX_PAGE } from '../tmdb/tmdb.constants';
-import { mapDetail, mapSeason, mapSummary } from '../tmdb/tmdb.mapper';
+import {
+  mapDetail,
+  mapSeason,
+  mapSummary,
+  toCardSummary,
+} from '../tmdb/tmdb.mapper';
 import type {
   MediaTypeParam,
   SeasonDetail,
@@ -20,6 +25,34 @@ import type {
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const TTL = { day: 24 * HOUR, list: HOUR, search: 10 * MINUTE };
+
+/** Parallel TMDB detail loads per `summaries` call, so a page of favorites cannot flood TMDB. */
+const SUMMARY_CONCURRENCY = 5;
+
+/** `Promise.all(items.map(fn))` with at most `limit` running; stops starting new work after a failure. */
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      try {
+        out[i] = await fn(items[i]);
+      } catch (e) {
+        next = items.length;
+        throw e;
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
+  return out;
+}
 
 export type ListKind = 'trending' | 'popular' | 'top-rated' | 'new';
 
@@ -134,31 +167,24 @@ export class CatalogService {
   }
 
   /**
-   * Summaries through the detail cache. `null` where TMDB says NOT_FOUND;
-   * TMDB_UNAVAILABLE propagates (502).
+   * Card summaries through the detail cache, at most `SUMMARY_CONCURRENCY` TMDB loads
+   * at a time, in input order. `null` where TMDB says NOT_FOUND; TMDB_UNAVAILABLE
+   * propagates (502).
    */
   summaries(
     refs: { mediaType: MediaTypeParam; tmdbId: number }[],
   ): Promise<(TitleSummary | null)[]> {
-    return Promise.all(
-      refs.map(async ({ mediaType, tmdbId }) => {
+    return mapLimit(
+      refs,
+      SUMMARY_CONCURRENCY,
+      async ({ mediaType, tmdbId }) => {
         try {
-          const d = await this.detail(mediaType, tmdbId);
-          return {
-            tmdbId: d.tmdbId,
-            mediaType: d.mediaType,
-            title: d.title,
-            year: d.year,
-            rating: d.rating,
-            posterUrl: d.posterUrl,
-            backdropUrl: d.backdropUrl,
-            overview: d.overview,
-          };
+          return toCardSummary(await this.detail(mediaType, tmdbId));
         } catch (e) {
           if (e instanceof AppException && e.code === 'NOT_FOUND') return null;
           throw e;
         }
-      }),
+      },
     );
   }
 }

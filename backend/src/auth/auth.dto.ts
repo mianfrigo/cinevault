@@ -2,9 +2,9 @@ import { Transform } from 'class-transformer';
 import { IsEmail, IsString, Length, MaxLength } from 'class-validator';
 import { normalizeEmail } from './email';
 
-const trim = ({ value }: { value: unknown }) =>
+export const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
-const email = ({ value }: { value: unknown }) =>
+export const email = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? normalizeEmail(value) : value;
 
 export class RegisterDto {

@@ -9,6 +9,7 @@ import { runInBackground } from '../common/background';
 import type { User } from '../generated/prisma/client';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { lockActiveAdmins } from './admin-lock';
 import { toUserDto, type UserDto } from './user.dto';
 
 @Injectable()
@@ -122,11 +123,9 @@ export class UsersService {
   async deleteAccount(id: string, password: string): Promise<void> {
     await this.authenticate(id, password, 'PASSWORD_WRONG');
     await this.prisma.$transaction(async (tx) => {
-      // Locks every active admin (in id order, so two deleters cannot deadlock) until
-      // commit: of two admins deleting themselves at once, the second waits, then
+      // Of two admins deleting themselves at once, the second waits here, then
       // sees only itself left. Locked for any user, so a role change cannot race.
-      const admins = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM users WHERE role = 'ADMIN' AND status = 'ACTIVE' ORDER BY id FOR UPDATE`;
+      const admins = await lockActiveAdmins(tx);
       if (admins.length === 1 && admins[0].id === id) {
         throw new AppException(
           409,
@@ -136,12 +135,6 @@ export class UsersService {
       }
       // Favorites and tokens go with the user (ON DELETE CASCADE).
       await tx.user.deleteMany({ where: { id } });
-    });
-  }
-
-  async countActiveAdmins(): Promise<number> {
-    return this.prisma.user.count({
-      where: { role: 'ADMIN', status: 'ACTIVE' },
     });
   }
 }

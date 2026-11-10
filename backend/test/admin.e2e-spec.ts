@@ -4,6 +4,8 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { AdminService } from '../src/admin/admin.service';
+import { BlockListService } from '../src/auth/blocklist.service';
 import { PasswordService } from '../src/auth/password.service';
 import type { Role, UserStatus } from '../src/generated/prisma/client';
 import { MAIL_TRANSPORT } from '../src/mail/mail.service';
@@ -73,6 +75,8 @@ describe('Admin endpoints (e2e)', () => {
     prisma.user.create({
       data: {
         email,
+        // Only a PENDING account has never verified its email.
+        emailVerifiedAt: o.status === 'PENDING' ? null : new Date(),
         name: o.name ?? 'Ana',
         passwordHash,
         role: o.role ?? 'USER',
@@ -157,6 +161,27 @@ describe('Admin endpoints (e2e)', () => {
       expect(
         await prisma.user.findUnique({ where: { id: target.id } }),
       ).toMatchObject({ status: 'ACTIVE' });
+    });
+
+    it('a demoted or deleted admin (token still says ADMIN) gets 403 on both GETs, a current admin 200', async () => {
+      const a = await admin();
+      const gone = await admin('gone@example.com');
+      await list(a.token).expect(200);
+      await overview(a.token).expect(200);
+      await prisma.user.update({
+        where: { id: a.user.id },
+        data: { role: 'USER' },
+      });
+      await prisma.user.delete({ where: { id: gone.user.id } });
+      for (const t of [a.token, gone.token]) {
+        for (const call of [() => list(t), () => overview(t)]) {
+          const res = await call().expect(403);
+          expect(res.body).toMatchObject({ code: 'FORBIDDEN' });
+        }
+      }
+      const root = await admin('root@example.com');
+      await list(root.token).expect(200);
+      await overview(root.token).expect(200);
     });
 
     it('an admin blocked in the DB (token and block list unaware) gets 403 on PATCH and DELETE', async () => {
@@ -330,8 +355,8 @@ describe('Admin endpoints (e2e)', () => {
       const res = await me(s1.token).expect(403);
       expect(res.body).toMatchObject({ code: 'ACCOUNT_BLOCKED' });
       for (const s of [s1, s2]) {
-        const r = await refresh(s.raw);
-        expect([401, 403]).toContain(r.status);
+        const r = await refresh(s.raw).expect(401);
+        expect(r.body).toMatchObject({ code: 'REFRESH_INVALID' });
       }
     });
 
@@ -347,6 +372,47 @@ describe('Admin endpoints (e2e)', () => {
       await me(s.token).expect(200);
       const again = await signIn('ana@example.com');
       await me(again.token).expect(200);
+    });
+
+    it('blocking then unblocking a PENDING user leaves them PENDING (still cannot log in)', async () => {
+      const a = await admin();
+      const pending = await makeUser('p@example.com', { status: 'PENDING' });
+      const blocked = await patch(a.token, pending.id, {
+        status: 'BLOCKED',
+      }).expect(200);
+      expect(blocked.body).toMatchObject({ status: 'BLOCKED' });
+      const unblocked = await patch(a.token, pending.id, {
+        status: 'ACTIVE',
+      }).expect(200);
+      expect(unblocked.body).toMatchObject({ status: 'PENDING' });
+      expect(
+        await prisma.user.findUnique({ where: { id: pending.id } }),
+      ).toMatchObject({ status: 'PENDING', emailVerifiedAt: null });
+      const res = await login('p@example.com').expect(403);
+      expect(res.body).toMatchObject({ code: 'EMAIL_NOT_VERIFIED' });
+      expect(await redisPttl(`blocked:${pending.id}`)).toBe(-2);
+    });
+
+    it('blocking then unblocking a verified user returns them to ACTIVE and login works', async () => {
+      const a = await admin();
+      const ana = await makeUser('ana@example.com');
+      await patch(a.token, ana.id, { status: 'BLOCKED' }).expect(200);
+      const res = await patch(a.token, ana.id, { status: 'ACTIVE' }).expect(
+        200,
+      );
+      expect(res.body).toMatchObject({ status: 'ACTIVE' });
+      await login('ana@example.com').expect(200);
+    });
+
+    it('promoting a PENDING or a BLOCKED user to ADMIN is 400', async () => {
+      const a = await admin();
+      const pending = await makeUser('p@example.com', { status: 'PENDING' });
+      const blocked = await makeUser('b@example.com', { status: 'BLOCKED' });
+      for (const id of [pending.id, blocked.id]) {
+        const res = await patch(a.token, id, { role: 'ADMIN' }).expect(400);
+        expect(res.body).toMatchObject({ code: 'VALIDATION_ERROR' });
+      }
+      expect(await prisma.user.count({ where: { role: 'ADMIN' } })).toBe(1);
     });
 
     it('rejects an empty patch, unknown keys and invalid values with 400 VALIDATION_ERROR', async () => {
@@ -512,6 +578,29 @@ describe('Admin endpoints (e2e)', () => {
           }),
         ).toBe(1);
       }
+    });
+  });
+
+  describe('block list reconcile', () => {
+    it('the block list is rewritten from the DB status, whatever the request intended', async () => {
+      const ana = await makeUser('ana@example.com');
+      const svc = app.get(AdminService);
+      const blocklist = app.get(BlockListService);
+      // DB says BLOCKED but the cache lost the key (a concurrent unblock wrote last).
+      await prisma.user.update({
+        where: { id: ana.id },
+        data: { status: 'BLOCKED' },
+      });
+      await blocklist.unblock(ana.id);
+      await svc.syncBlockList(ana.id);
+      expect(await redisPttl(`blocked:${ana.id}`)).toBeGreaterThan(0);
+      // DB says ACTIVE but a stale key is left behind.
+      await prisma.user.update({
+        where: { id: ana.id },
+        data: { status: 'ACTIVE' },
+      });
+      await svc.syncBlockList(ana.id);
+      expect(await redisPttl(`blocked:${ana.id}`)).toBe(-2);
     });
   });
 

@@ -15,6 +15,8 @@ const NEWEST_FIRST = [{ createdAt: 'desc' }, { id: 'desc' }] as const;
 const invalid = (message: string) =>
   new AppException(400, 'VALIDATION_ERROR', message);
 const notFound = () => new AppException(404, 'NOT_FOUND', 'User not found');
+const forbidden = () =>
+  new AppException(403, 'FORBIDDEN', 'Insufficient permissions');
 const selfAction = () =>
   new AppException(409, 'SELF_ACTION', 'Admins cannot do this to themselves');
 
@@ -88,7 +90,7 @@ export class AdminService {
       );
     }
     if (!admins.some((a) => a.id === actorId)) {
-      throw new AppException(403, 'FORBIDDEN', 'Insufficient permissions');
+      throw forbidden();
     }
     if (!target) throw notFound();
     return target;
@@ -118,27 +120,62 @@ export class AdminService {
       if (status === 'BLOCKED' && target.status === 'BLOCKED') {
         throw invalid('The user is already blocked');
       }
-      // Known edge: a user blocked before ever verifying their email goes back
-      // to ACTIVE here (per spec); only a PENDING user is refused.
       if (status === 'ACTIVE' && target.status !== 'BLOCKED') {
         throw invalid('Only a blocked user can be set to ACTIVE');
+      }
+      // Unblocking restores the account to what it was: a user who never
+      // verified their email goes back to PENDING, not ACTIVE, so a block cycle
+      // cannot skip email verification.
+      const nextStatus =
+        status === 'ACTIVE'
+          ? target.emailVerifiedAt
+            ? 'ACTIVE'
+            : 'PENDING'
+          : (status ?? target.status);
+      // An unverified or blocked account can never become an admin.
+      if (role === 'ADMIN' && nextStatus !== 'ACTIVE') {
+        throw invalid('Only an active, verified user can be made an admin');
       }
       // The user row is updated before its tokens, the same lock order as
       // reset-password and a refresh rotation.
       const { count } = await tx.user.updateMany({
         where: { id },
-        data: { role, status },
+        data: { role, status: nextStatus },
       });
       if (count !== 1) throw notFound(); // self-deleted meanwhile
       if (status === 'BLOCKED') await this.sessions.revokeAll(id, tx);
       return tx.user.findUniqueOrThrow({ where: { id } });
     });
 
-    // After commit, so the block list never gets ahead of the DB. A failed write
-    // is swallowed and logged by BlockListService (accepted degradation).
-    if (status === 'BLOCKED') await this.blocklist.block(id);
-    if (status === 'ACTIVE') await this.blocklist.unblock(id);
+    if (status !== undefined) await this.syncBlockList(id);
     return toUserDto(user);
+  }
+
+  /**
+   * Writes the block list from the DB status as it is NOW, not from what this
+   * request intended, so concurrent block/unblock calls cannot leave the cache
+   * disagreeing with the DB. Runs after commit, so it never gets ahead of the DB.
+   * A failed write is swallowed and logged by BlockListService (accepted degradation).
+   */
+  async syncBlockList(id: string): Promise<void> {
+    const row = await this.prisma.user.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+    if (row?.status === 'BLOCKED') await this.blocklist.block(id);
+    else await this.blocklist.unblock(id);
+  }
+
+  /**
+   * The JWT role is trusted for up to 10 minutes, so the read-only routes check
+   * the actor in the DB too (the mutations do it inside their transaction).
+   */
+  async requireActiveAdmin(actorId: string): Promise<void> {
+    const actor = await this.prisma.user.findFirst({
+      where: { id: actorId, role: 'ADMIN', status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (!actor) throw forbidden();
   }
 
   async deleteUser(actorId: string, id: string): Promise<void> {

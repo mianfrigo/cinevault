@@ -23,7 +23,8 @@ export class AdminController {
   constructor(private readonly admin: AdminService) {}
 
   @Get('users')
-  list(@Query() q: UsersQuery) {
+  async list(@CurrentUser() actor: AuthUser, @Query() q: UsersQuery) {
+    await this.admin.requireActiveAdmin(actor.id);
     return this.admin.listUsers(q.q, q.page);
   }
 
@@ -46,7 +47,8 @@ export class AdminController {
   }
 
   @Get('overview')
-  overview() {
+  async overview(@CurrentUser() actor: AuthUser) {
+    await this.admin.requireActiveAdmin(actor.id);
     return this.admin.overview();
   }
 }

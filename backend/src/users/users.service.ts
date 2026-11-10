@@ -137,10 +137,4 @@ export class UsersService {
       await tx.user.deleteMany({ where: { id } });
     });
   }
-
-  async countActiveAdmins(): Promise<number> {
-    return this.prisma.user.count({
-      where: { role: 'ADMIN', status: 'ACTIVE' },
-    });
-  }
 }

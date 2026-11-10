@@ -78,6 +78,21 @@ export function mapDetail(raw: TmdbDetail, type: MediaTypeParam): TitleDetail {
   };
 }
 
+/** A cached detail as a list card: summary fields only, poster back at the card size. */
+export function toCardSummary(d: TitleDetail): TitleSummary {
+  return {
+    tmdbId: d.tmdbId,
+    mediaType: d.mediaType,
+    title: d.title,
+    year: d.year,
+    rating: d.rating,
+    posterUrl:
+      d.posterUrl?.replace(`/${IMG.posterLarge}/`, `/${IMG.poster}/`) ?? null,
+    backdropUrl: d.backdropUrl,
+    overview: d.overview,
+  };
+}
+
 export function mapSeason(raw: TmdbSeason): SeasonDetail {
   return {
     number: raw.season_number,

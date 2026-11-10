@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { imageUrl } from './tmdb.constants';
-import { mapDetail, mapSeason, mapSummary } from './tmdb.mapper';
-import type { TmdbListItem, TmdbSeason } from './tmdb.types';
+import { mapDetail, mapSeason, mapSummary, toCardSummary } from './tmdb.mapper';
+import type { TmdbDetail, TmdbListItem, TmdbSeason } from './tmdb.types';
 
 const fx = <T>(name: string) =>
   JSON.parse(readFileSync(join(__dirname, '__fixtures__', name), 'utf8')) as T;
@@ -154,6 +154,23 @@ describe('mapSeason', () => {
         },
       ],
     });
+  });
+});
+
+describe('toCardSummary', () => {
+  it('keeps only summary fields and uses the card poster size', () => {
+    const card = toCardSummary(
+      mapDetail(fx<TmdbDetail>('movie-detail.json'), 'movie'),
+    );
+    expect(Object.keys(card)).toHaveLength(8);
+    expect(card.posterUrl).toBe('https://image.tmdb.org/t/p/w342/matrix.jpg');
+    expect(card).toMatchObject({ tmdbId: 603, title: 'The Matrix' });
+    expect(card).not.toHaveProperty('seasonList');
+  });
+
+  it('keeps a missing poster null', () => {
+    const detail = mapDetail({ id: 1, title: 'x' }, 'movie');
+    expect(toCardSummary(detail).posterUrl).toBeNull();
   });
 });
 

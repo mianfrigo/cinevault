@@ -4,11 +4,11 @@ import { IsIn, IsInt, IsString, Length, Max, Min } from 'class-validator';
 import { TMDB_MAX_PAGE } from '../tmdb/tmdb.constants';
 import type { MediaTypeParam } from '../tmdb/tmdb.types';
 
-const MEDIA_TYPES: MediaTypeParam[] = ['movie', 'tv'];
-const MAX_ID = 2_147_483_647;
+export const MEDIA_TYPES: MediaTypeParam[] = ['movie', 'tv'];
+export const MAX_ID = 2_147_483_647;
 
 /** Query/path integers arrive as strings: convert, then require a whole number in range. */
-const IntBetween = (min: number, max: number) =>
+export const IntBetween = (min: number, max: number) =>
   applyDecorators(
     Type(() => Number),
     IsInt(),

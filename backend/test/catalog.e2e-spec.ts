@@ -6,6 +6,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
+import { CatalogService } from '../src/catalog/catalog.service';
 import { AppException } from '../src/common/app.exception';
 import { TmdbClient } from '../src/tmdb/tmdb.client';
 import type { TmdbListItem } from '../src/tmdb/tmdb.types';
@@ -34,8 +35,25 @@ const listing = (
 class FakeTmdb {
   calls: string[] = [];
   failWith?: AppException;
+  /** When set, every `/movie/<n>` is served from the Matrix fixture, after this delay. */
+  anyMovieDelayMs?: number;
+  inFlight = 0;
+  maxInFlight = 0;
 
-  get(path: string, query: Record<string, string | number> = {}) {
+  async get(path: string, query: Record<string, string | number> = {}) {
+    this.inFlight++;
+    this.maxInFlight = Math.max(this.maxInFlight, this.inFlight);
+    try {
+      if (this.anyMovieDelayMs) {
+        await new Promise((r) => setTimeout(r, this.anyMovieDelayMs));
+      }
+      return await this.serve(path, query);
+    } finally {
+      this.inFlight--;
+    }
+  }
+
+  private serve(path: string, query: Record<string, string | number>) {
     this.calls.push(
       `${path}?${new URLSearchParams(query as Record<string, string>)}`,
     );
@@ -46,6 +64,13 @@ class FakeTmdb {
       );
     }
     if (path === '/movie/603') return Promise.resolve(fx('movie-detail.json'));
+    const any = /^\/movie\/(\d+)$/.exec(path);
+    if (this.anyMovieDelayMs && any && any[1] !== '999999') {
+      return Promise.resolve({
+        ...fx<object>('movie-detail.json'),
+        id: Number(any[1]),
+      });
+    }
     if (path === '/tv/1396') return Promise.resolve(fx('tv-detail.json'));
     if (path === '/tv/1396/season/1') {
       return Promise.resolve(fx('season.json'));
@@ -241,6 +266,58 @@ describe('Catalog (e2e)', () => {
     tmdb.failWith = undefined;
     await get('/api/v1/catalog/popular').expect(200);
     expect(tmdb.calls).toHaveLength(2);
+  });
+
+  describe('summaries (used by favorites)', () => {
+    const refs = (ids: number[]) =>
+      ids.map((tmdbId) => ({ mediaType: 'movie' as const, tmdbId }));
+
+    it('loads at most 5 details at once, keeps input order and reuses the detail cache', async () => {
+      tmdb.anyMovieDelayMs = 10;
+      const catalog = app.get(CatalogService);
+      const ids = Array.from({ length: 20 }, (_, i) => 2000 + i);
+      const out = await catalog.summaries(refs(ids));
+      expect(out.map((s) => s?.tmdbId)).toEqual(ids);
+      expect(tmdb.calls).toHaveLength(20);
+      expect(tmdb.maxInFlight).toBeGreaterThan(1);
+      expect(tmdb.maxInFlight).toBeLessThanOrEqual(5);
+      await catalog.summaries(refs(ids));
+      expect(tmdb.calls).toHaveLength(20);
+    });
+
+    it('returns only summary fields with the card-size poster, leaving the cached detail intact', async () => {
+      const catalog = app.get(CatalogService);
+      const [s] = await catalog.summaries(refs([603]));
+      expect(Object.keys(s ?? {}).sort()).toEqual(
+        [
+          'backdropUrl',
+          'mediaType',
+          'overview',
+          'posterUrl',
+          'rating',
+          'title',
+          'tmdbId',
+          'year',
+        ].sort(),
+      );
+      expect(s?.posterUrl).toBe('https://image.tmdb.org/t/p/w342/matrix.jpg');
+      const detail = await get('/api/v1/catalog/movie/603').expect(200);
+      expect(json(detail).posterUrl).toBe(
+        'https://image.tmdb.org/t/p/w500/matrix.jpg',
+      );
+      expect(tmdb.calls).toHaveLength(1);
+    });
+
+    it('maps NOT_FOUND to null and propagates TMDB_UNAVAILABLE', async () => {
+      const catalog = app.get(CatalogService);
+      const out = await catalog.summaries(refs([603, 999999]));
+      expect(out[0]?.tmdbId).toBe(603);
+      expect(out[1]).toBeNull();
+      tmdb.failWith = new AppException(502, 'TMDB_UNAVAILABLE', 'down');
+      await expect(catalog.summaries(refs([603, 5]))).rejects.toMatchObject({
+        code: 'TMDB_UNAVAILABLE',
+      });
+    });
   });
 
   it('with an unreachable Redis URL the endpoint still returns 200', async () => {

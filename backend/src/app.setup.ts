@@ -19,8 +19,9 @@ function validationMessage(errors: ValidationError[]): string {
 export function configureApp(app: NestExpressApplication): void {
   const env = app.get<Env>(ENV);
 
-  if (env.trustProxy) {
-    app.set('trust proxy', true);
+  // A hop count (not true) so a client-supplied X-Forwarded-For entry is never taken as req.ip.
+  if (env.trustProxy !== false) {
+    app.set('trust proxy', env.trustProxy);
   }
   app.setGlobalPrefix('api/v1');
   app.use(helmet());

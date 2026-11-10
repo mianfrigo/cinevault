@@ -10,6 +10,7 @@ import { TokensService } from '../src/auth/tokens.service';
 import { MAIL_TRANSPORT } from '../src/mail/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { resetDb } from './helpers/db';
+import { expectNoMoreMail, sleep, waitForMail } from './helpers/wait';
 
 interface Sent {
   to: string;
@@ -30,21 +31,6 @@ class MailRecorder {
     this.sent = [];
     this.failWith = undefined;
   }
-}
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/** Mail is sent fire-and-forget, so poll until `count` messages arrived. */
-async function waitForMail(rec: MailRecorder, count: number, timeoutMs = 3000) {
-  const end = Date.now() + timeoutMs;
-  while (rec.sent.length < count && Date.now() < end) await sleep(10);
-  expect(rec.sent.length).toBeGreaterThanOrEqual(count);
-}
-
-/** Asserts that no further mail arrives after a short settle wait. */
-async function expectNoMoreMail(rec: MailRecorder, count: number) {
-  await sleep(300);
-  expect(rec.sent).toHaveLength(count);
 }
 
 const tokenOf = (m: Sent) => /token=([\w-]+)/.exec(m.text)?.[1] as string;

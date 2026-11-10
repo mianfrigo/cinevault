@@ -1,7 +1,6 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { AppException } from '../common/app.exception';
 import { ENV, type Env } from '../config/env';
-import { TMDB_CLIENT_OPTIONS } from './tmdb.constants';
 
 export interface TmdbClientOptions {
   timeoutMs?: number;
@@ -25,9 +24,7 @@ export class TmdbClient {
 
   constructor(
     @Inject(ENV) private readonly env: Env,
-    @Optional()
-    @Inject(TMDB_CLIENT_OPTIONS)
-    options: TmdbClientOptions = {},
+    @Optional() options: TmdbClientOptions = {},
   ) {
     this.timeoutMs = options.timeoutMs ?? 5000;
     this.retryDelayMs = options.retryDelayMs ?? 300;

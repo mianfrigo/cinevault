@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BlockListService } from '../auth/blocklist.service';
 import { SessionsService } from '../auth/sessions.service';
 import { AppException } from '../common/app.exception';
-import { paged, type Paged } from '../common/paged';
+import type { Paged } from '../common/paged';
 import type { Prisma, Role, User } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { lockActiveAdmins } from '../users/admin-lock';
@@ -53,12 +53,12 @@ export class AdminService {
       }),
       this.prisma.user.count({ where }),
     ]);
-    return paged(
-      users.map(toUserDto),
+    return {
+      items: users.map(toUserDto),
       page,
-      Math.ceil(total / ADMIN_PAGE_SIZE),
-      total,
-    );
+      totalPages: Math.ceil(total / ADMIN_PAGE_SIZE),
+      totalItems: total,
+    };
   }
 
   /**

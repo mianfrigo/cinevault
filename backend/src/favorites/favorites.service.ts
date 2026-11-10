@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AppException } from '../common/app.exception';
-import { paged, type Paged } from '../common/paged';
+import type { Paged } from '../common/paged';
 import { CatalogService } from '../catalog/catalog.service';
 import { MediaType, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -124,6 +124,11 @@ export class FavoritesService {
             unavailable: true,
           };
     });
-    return paged(items, page, Math.ceil(total / PAGE_SIZE), total);
+    return {
+      items,
+      page,
+      totalPages: Math.ceil(total / PAGE_SIZE),
+      totalItems: total,
+    };
   }
 }

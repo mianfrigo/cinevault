@@ -12,7 +12,8 @@ export interface Env {
   smtpUrl: string;
   featureDownloadButton: boolean;
   throttleDisabled: boolean;
-  trustProxy: boolean;
+  /** Express `trust proxy`: false, a hop count (0..10) or true (trusts the whole X-Forwarded-For chain). */
+  trustProxy: boolean | number;
 }
 
 export const ENV = Symbol('ENV');
@@ -36,6 +37,16 @@ export function loadEnv(raw: Raw): Env {
     if (v === 'true' || v === 'false') return v === 'true';
     problems.push(`${name} must be "true" or "false"`);
     return fallback;
+  };
+  const proxyHops = (name: string): boolean | number => {
+    const v = raw[name]?.trim();
+    if (blank(v) || v === 'false') return false;
+    if (v === 'true') return true;
+    if (/^[0-9]+$/.test(v!) && Number(v) <= 10) return Number(v);
+    problems.push(
+      `${name} must be "false", "true" or a hop count from 0 to 10`,
+    );
+    return false;
   };
   const url = (name: string, fallback?: string): string => {
     const v = str(name, fallback);
@@ -84,8 +95,12 @@ export function loadEnv(raw: Raw): Env {
     smtpUrl: url('SMTP_URL', 'smtp://localhost:1025'),
     featureDownloadButton: bool('FEATURE_DOWNLOAD_BUTTON', false),
     throttleDisabled: bool('THROTTLE_DISABLED', false),
-    trustProxy: bool('TRUST_PROXY', false),
+    trustProxy: proxyHops('TRUST_PROXY'),
   };
+
+  if (env.throttleDisabled && nodeEnv === 'production') {
+    problems.push('THROTTLE_DISABLED must not be true in production');
+  }
 
   if (problems.length) {
     throw new Error(`Invalid environment:\n- ${problems.join('\n- ')}`);

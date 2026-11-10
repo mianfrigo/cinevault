@@ -18,7 +18,12 @@ const seedEnv = { SEED_ADMIN_EMAIL: 'admin@example.com' };
 
 /** Builds the real app; env flags are read when the module compiles, then restored. */
 async function buildApp(
-  flags: { THROTTLE_DISABLED?: string; FEATURE_DOWNLOAD_BUTTON?: string } = {},
+  flags: Partial<
+    Record<
+      'THROTTLE_DISABLED' | 'FEATURE_DOWNLOAD_BUTTON' | 'TRUST_PROXY',
+      string
+    >
+  > = {},
 ): Promise<NestExpressApplication> {
   const set = { THROTTLE_DISABLED: 'false', ...flags };
   const saved = Object.keys(set).map((k) => [k, process.env[k]] as const);
@@ -111,6 +116,18 @@ describe('Hardening (e2e)', () => {
         .set('X-Forwarded-For', '10.0.0.99')
         .send(body.login)
         .expect(429);
+    });
+
+    it('with TRUST_PROXY=1 client-supplied X-Forwarded-For entries cannot mint new buckets', async () => {
+      await start({ TRUST_PROXY: '1' });
+      // The proxy appends the real peer last; everything left of it is client-controlled.
+      const login = (i: number) =>
+        http
+          .post('/api/v1/auth/login')
+          .set('X-Forwarded-For', `198.51.100.${i}, 203.0.113.9`)
+          .send(body.login);
+      for (let i = 0; i < 5; i++) await login(i).expect(401);
+      await login(99).expect(429);
     });
 
     it.each(['register', 'forgot-password', 'resend-verification'] as const)(
@@ -210,42 +227,99 @@ describe('Hardening (e2e)', () => {
       expect(after.emailVerifiedAt).toEqual(before.emailVerifiedAt);
     });
 
-    it('seed promotes an existing user to a verified active ADMIN without touching the password', async () => {
+    it('seed takes over an unverified pre-registered user: seed password replaces theirs and old tokens are gone', async () => {
+      const passwords = app.get(PasswordService);
+      const user = await prisma.user.create({
+        data: {
+          email: 'admin@example.com',
+          name: 'Bob',
+          passwordHash: await passwords.hash('squatter-password-1'),
+          status: UserStatus.PENDING,
+        },
+      });
+      await prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: 'r'.repeat(64),
+          expiresAt: new Date(Date.now() + 1e9),
+        },
+      });
+      const mk = (tokenHash: string, usedAt: Date | null) =>
+        prisma.emailToken.create({
+          data: {
+            userId: user.id,
+            type: 'VERIFY_EMAIL',
+            tokenHash,
+            expiresAt: new Date(Date.now() + 1e9),
+            usedAt,
+          },
+        });
+      await mk('a'.repeat(64), null);
+      await mk('b'.repeat(64), new Date());
+
+      await seed();
+
+      const after = await prisma.user.findUniqueOrThrow({
+        where: { email: 'admin@example.com' },
+      });
+      expect(after).toMatchObject({
+        name: 'Bob',
+        role: Role.ADMIN,
+        status: UserStatus.ACTIVE,
+      });
+      expect(after.emailVerifiedAt).toBeInstanceOf(Date);
+      await expect(prisma.refreshToken.count()).resolves.toBe(0);
+      // Unused tokens are deleted; already-used ones are history and stay.
+      await expect(
+        prisma.emailToken.findMany({ select: { tokenHash: true } }),
+      ).resolves.toEqual([{ tokenHash: 'b'.repeat(64) }]);
+      await http
+        .post('/api/v1/auth/login')
+        .send({ email: 'admin@example.com', password: 'squatter-password-1' })
+        .expect(401);
+      await http
+        .post('/api/v1/auth/login')
+        .send({ email: 'admin@example.com', password: SEED_PASSWORD })
+        .expect(200);
+
+      // Now verified: a second run with another password changes nothing.
+      await seed({ SEED_ADMIN_PASSWORD: 'a-different-password' });
+      const again = await prisma.user.findUniqueOrThrow({
+        where: { email: 'admin@example.com' },
+      });
+      expect(again.passwordHash).toBe(after.passwordHash);
+      expect(again.emailVerifiedAt).toEqual(after.emailVerifiedAt);
+    });
+
+    it('seed promotes a verified existing user keeping its password, name and verification date', async () => {
       const passwordHash = await app
         .get(PasswordService)
         .hash('old-password-1');
+      const verifiedAt = new Date('2024-01-02T03:04:05.000Z');
       await prisma.user.create({
         data: {
           email: 'admin@example.com',
           name: 'Bob',
           passwordHash,
-          status: UserStatus.PENDING,
+          status: UserStatus.BLOCKED,
+          emailVerifiedAt: verifiedAt,
         },
       });
       await seed();
-      const pending = await prisma.user.findUniqueOrThrow({
+      const after = await prisma.user.findUniqueOrThrow({
         where: { email: 'admin@example.com' },
       });
-      expect(pending).toMatchObject({
+      expect(after).toMatchObject({
         name: 'Bob',
         passwordHash,
         role: Role.ADMIN,
         status: UserStatus.ACTIVE,
       });
-      expect(pending.emailVerifiedAt).toBeInstanceOf(Date);
-
-      // An earlier verification date is kept, and a blocked admin is reactivated.
-      const verifiedAt = new Date('2024-01-02T03:04:05.000Z');
-      await prisma.user.update({
-        where: { email: 'admin@example.com' },
-        data: { status: UserStatus.BLOCKED, emailVerifiedAt: verifiedAt },
-      });
-      await seed();
-      const again = await prisma.user.findUniqueOrThrow({
-        where: { email: 'admin@example.com' },
-      });
-      expect(again.status).toBe(UserStatus.ACTIVE);
-      expect(again.emailVerifiedAt).toEqual(verifiedAt);
+      expect(after.emailVerifiedAt).toEqual(verifiedAt);
+      await http
+        .post('/api/v1/auth/login')
+        .send({ email: 'admin@example.com', password: 'old-password-1' })
+        .expect(200);
     });
 
     it('seed rejects missing or invalid input without echoing the password', async () => {

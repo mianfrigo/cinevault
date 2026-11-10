@@ -60,6 +60,54 @@ describe('loadEnv', () => {
     ).toThrow(/PORT[\s\S]*FEATURE_DOWNLOAD_BUTTON/);
   });
 
+  describe('TRUST_PROXY', () => {
+    const trust = (TRUST_PROXY?: string) =>
+      loadEnv({ ...required, TRUST_PROXY }).trustProxy;
+    it('parses false, true and hop counts', () => {
+      expect(trust()).toBe(false);
+      expect(trust('false')).toBe(false);
+      expect(trust('true')).toBe(true);
+      expect(trust('1')).toBe(1);
+      expect(trust(' 2 ')).toBe(2);
+      expect(trust('0')).toBe(0);
+      expect(trust('10')).toBe(10);
+    });
+    it.each(['-1', '11', '1.5', '1e1', 'yes', '0x1', '192.168.0.1'])(
+      'rejects %s naming the variable and not the value',
+      (value) => {
+        let message = '';
+        try {
+          trust(value);
+        } catch (e) {
+          message = (e as Error).message;
+        }
+        expect(message).toContain('TRUST_PROXY');
+        expect(message).not.toContain(value);
+      },
+    );
+  });
+
+  describe('THROTTLE_DISABLED', () => {
+    it('is rejected in production, naming the variable', () => {
+      expect(() =>
+        loadEnv({
+          ...required,
+          NODE_ENV: 'production',
+          JWT_ACCESS_SECRET: 'x'.repeat(32),
+          THROTTLE_DISABLED: 'true',
+        }),
+      ).toThrow(/THROTTLE_DISABLED/);
+    });
+    it('is allowed in test and development', () => {
+      for (const NODE_ENV of ['test', 'development']) {
+        expect(
+          loadEnv({ ...required, NODE_ENV, THROTTLE_DISABLED: 'true' })
+            .throttleDisabled,
+        ).toBe(true);
+      }
+    });
+  });
+
   describe('JWT_ACCESS_SECRET length', () => {
     const short = 'short-secret';
     it('rejects a short secret in production without echoing it', () => {

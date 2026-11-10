@@ -16,7 +16,9 @@ npm run db:seed               # create the admin from SEED_ADMIN_EMAIL / SEED_AD
 npm run start:dev             # http://localhost:3000/api/v1/health
 ```
 
-The seed is safe to re-run: if the email already exists it is promoted to a verified, active ADMIN and its password is left untouched. Choose a strong `SEED_ADMIN_PASSWORD` (10 to 128 characters) and never commit it.
+The seed is safe to re-run: an existing verified account with that email is promoted to ADMIN (active) and keeps its password. An unverified one (someone registered that address first) is taken over: it gets the seed password and its sessions and pending email tokens are deleted. Choose a strong `SEED_ADMIN_PASSWORD` (10 to 128 characters) and never commit it.
+
+Behind a reverse proxy set `TRUST_PROXY=1` (the number of proxies in front of the API) so rate limits use the real client IP. Do not use `TRUST_PROXY=true` in production: it trusts the whole `X-Forwarded-For` header, so a client can fake its IP and dodge the limits.
 
 Tests (use `backend/.env.test`, no real secrets):
 

@@ -12,8 +12,9 @@ class SeedInputError extends Error {}
 
 /**
  * Creates the admin from SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD, or promotes the existing
- * user with that email. An existing user keeps its password hash, name and verification
- * date: re-running the seed must never reset a live admin's password.
+ * user with that email. A verified user keeps its password hash, name and verification
+ * date: re-running the seed must never reset a live admin's password. An unverified one
+ * (pre-registered by someone else) gets the seed password and loses its tokens.
  * Errors name the variable only, never a value.
  */
 export async function runSeed(raw: Raw, prisma: PrismaClient): Promise<void> {
@@ -34,22 +35,40 @@ export async function runSeed(raw: Raw, prisma: PrismaClient): Promise<void> {
 
   const now = new Date();
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
+  if (existing?.emailVerifiedAt) {
+    // A verified account is live: keep its password, name and verification date.
     await prisma.user.update({
       where: { email },
-      data: {
-        role: Role.ADMIN,
-        status: UserStatus.ACTIVE,
-        emailVerifiedAt: existing.emailVerifiedAt ?? now,
-      },
+      data: { role: Role.ADMIN, status: UserStatus.ACTIVE },
     });
+    return;
+  }
+  const passwordHash = await new PasswordService().hash(password);
+  if (existing) {
+    // Never verified: whoever registered this address before the seed ran does not own it.
+    // Replace their password and drop everything issued to them (name is kept).
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { email },
+        data: {
+          passwordHash,
+          role: Role.ADMIN,
+          status: UserStatus.ACTIVE,
+          emailVerifiedAt: now,
+        },
+      }),
+      prisma.refreshToken.deleteMany({ where: { userId: existing.id } }),
+      prisma.emailToken.deleteMany({
+        where: { userId: existing.id, usedAt: null },
+      }),
+    ]);
     return;
   }
   await prisma.user.create({
     data: {
       email,
       name: 'Admin',
-      passwordHash: await new PasswordService().hash(password),
+      passwordHash,
       role: Role.ADMIN,
       status: UserStatus.ACTIVE,
       emailVerifiedAt: now,

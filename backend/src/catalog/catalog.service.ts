@@ -2,7 +2,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
 import { AppException } from '../common/app.exception';
-import { paged, type Paged } from '../common/paged';
+import type { Paged } from '../common/paged';
 import { cached } from '../cache/cached';
 import { TmdbClient } from '../tmdb/tmdb.client';
 import { TMDB_MAX_PAGE } from '../tmdb/tmdb.constants';
@@ -79,13 +79,12 @@ const toPaged = (
   raw: TmdbPage,
   page: number,
   fallbackType?: MediaTypeParam,
-): Paged<TitleSummary> =>
-  paged(
-    (raw.results ?? []).flatMap((r) => mapSummary(r, fallbackType) ?? []),
-    page,
-    Math.min(raw.total_pages ?? 1, TMDB_MAX_PAGE),
-    raw.total_results ?? 0,
-  );
+): Paged<TitleSummary> => ({
+  items: (raw.results ?? []).flatMap((r) => mapSummary(r, fallbackType) ?? []),
+  page,
+  totalPages: Math.min(raw.total_pages ?? 1, TMDB_MAX_PAGE),
+  totalItems: raw.total_results ?? 0,
+});
 
 @Injectable()
 export class CatalogService {

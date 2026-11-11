@@ -5,7 +5,7 @@ const legalNote = 'Placeholder page. The owner will supply the final text.';
 
 // Route map: docs/app-flow.md section 1. Each placeholder is replaced by its real screen in a later task.
 export const routes: Routes = [
-  { path: '', title: 'Cinevault', loadComponent: placeholder, data: { heading: 'Home' } },
+  { path: '', title: 'Cinevault', loadComponent: () => import('./features/home/home.page') },
   { path: 'movies', title: 'Movies', loadComponent: placeholder, data: { heading: 'Movies' } },
   { path: 'tv', title: 'TV Shows', loadComponent: placeholder, data: { heading: 'TV Shows' } },
   {

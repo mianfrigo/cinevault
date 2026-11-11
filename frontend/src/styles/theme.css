@@ -69,11 +69,88 @@
   /* motion */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* tonal fields of the genre tiles: background and text pair per tone (mockup PAL) */
+  --color-tone-dusk: #3b3a5a;
+  --color-tone-dusk-fg: #ecebf5;
+  --color-tone-clay: #85452f;
+  --color-tone-clay-fg: #f6e8dd;
+  --color-tone-plum: #4d3649;
+  --color-tone-plum-fg: #f1e6ec;
+  --color-tone-sage: #3a4e43;
+  --color-tone-sage-fg: #e9eee2;
+  --color-tone-slate: #2f4056;
+  --color-tone-slate-fg: #e6ecf3;
+  --color-tone-ochre: #6f5330;
+  --color-tone-ochre-fg: #f1e8d3;
+  --color-tone-teal: #2a5052;
+  --color-tone-teal-fg: #e4f0ee;
+  --color-tone-bone: #2c3038;
+  --color-tone-bone-fg: #eeeae0;
+
+  /* hero: the progress bar fills over the 7 s autoplay interval, the copy rises in */
+  --animate-hero-fill: hero-fill 7s linear forwards;
+  --animate-hero-rise: hero-rise 800ms var(--ease-out-expo) both;
+  @keyframes hero-fill {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   /* layout */
   --container-site: 1520px;
+  /* all breakpoints in px: Tailwind orders mixed units wrongly, so the default 40rem sm would override md/xl */
+  --breakpoint-sm: 640px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1200px;
+}
+
+/*
+ * Hero scrim (mockup .slide::before): the text column always sits on at least 85% ink and the
+ * gradient fades out across the art. A multi-stop gradient with alpha stops has no Tailwind utility.
+ */
+@utility hero-scrim {
+  --ink: var(--color-surface-1);
+  background: linear-gradient(
+    to top,
+    var(--ink) 0%,
+    color-mix(in srgb, var(--ink) 90%, transparent) 22%,
+    color-mix(in srgb, var(--ink) 55%, transparent) 44%,
+    color-mix(in srgb, var(--ink) 12%, transparent) 70%,
+    transparent 100%
+  );
+
+  @media (min-width: 768px) {
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--ink) 96%, transparent) 0%,
+        color-mix(in srgb, var(--ink) 90%, transparent) 24%,
+        color-mix(in srgb, var(--ink) 72%, transparent) 40%,
+        color-mix(in srgb, var(--ink) 40%, transparent) 56%,
+        color-mix(in srgb, var(--ink) 12%, transparent) 72%,
+        transparent 88%
+      ),
+      linear-gradient(
+        to top,
+        var(--ink) 0%,
+        color-mix(in srgb, var(--ink) 60%, transparent) 14%,
+        transparent 38%
+      );
+  }
 }
 
 @layer base {

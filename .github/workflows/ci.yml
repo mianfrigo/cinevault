@@ -102,6 +102,32 @@ jobs:
         if: failure()
         run: docker compose logs --no-color postgres redis
 
+  # Static checks, unit tests (Vitest + jsdom, no browser or services needed) and the SSR build.
+  frontend-quality:
+    name: Frontend quality (format, lint, unit tests, audit, build)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm test -- --watch=false
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run build
+
   # Secrets (passwords, keys, tokens) can land in any file, docs included, so this always runs.
   # Scans the full git history; takes seconds at this repo size. Config: .gitleaks.toml.
   secrets:
@@ -147,7 +173,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [changes, backend-quality, backend-test, secrets, codeql]
+    needs: [changes, backend-quality, backend-test, frontend-quality, secrets, codeql]
     runs-on: ubuntu-24.04
     steps:
       - name: Fail if any needed job failed or was cancelled

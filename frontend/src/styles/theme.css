@@ -1,0 +1,167 @@
+/*
+ * Cinevault design tokens. Values mirror the :root block of the approved mockup
+ * (docs/design/directions/a2-streamline-premium.html). Keep in sync with
+ * src/app/theme/cinevault-preset.ts (PrimeNG). Dark only.
+ * `static` keeps every variable in the output so PrimeNG and `pt` can read them.
+ */
+@theme static {
+  /* surfaces: --c-bg-0..4 */
+  --color-surface-0: #0a0b0e;
+  --color-surface-1: #0e1014;
+  --color-surface-2: #14161b;
+  --color-surface-3: #1a1d23;
+  --color-surface-4: #22262d;
+
+  /* hairlines and hover fills */
+  --color-line: rgb(255 255 255 / 0.1);
+  --color-line-soft: rgb(255 255 255 / 0.06);
+  --color-line-strong: rgb(255 255 255 / 0.2);
+  --color-hover: rgb(255 255 255 / 0.05);
+  --color-hover-2: rgb(255 255 255 / 0.08);
+
+  /* text */
+  --color-fg: #ecedf0;
+  --color-fg-2: #a7abb6;
+  --color-fg-3: #8d92a0;
+
+  /* single accent */
+  --color-accent: #4c60c8;
+  --color-accent-hover: #5a6ed3;
+  --color-accent-text: #9daaf2;
+  --color-on-accent: #f7f8ff;
+  --color-focus: #a9b5f6;
+  --color-selection: #34438f;
+
+  /* status */
+  --color-ok: #7dc7a3;
+  --color-warn: #d6b170;
+  --color-danger: #e58b8b;
+  --color-danger-solid: #b3424b;
+  --color-danger-hover: #9c3640;
+
+  /* type: one family, mixed case */
+  --font-sans:
+    'Schibsted Grotesk', 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Helvetica,
+    sans-serif;
+  --text-micro: 0.75rem;
+  --text-micro--line-height: 1.4;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.4;
+  --text-h2: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+  --text-h2--line-height: 1.15;
+  --text-h2--letter-spacing: -0.02em;
+  --text-h1: clamp(1.75rem, 1.4rem + 1.4vw, 2.5rem);
+  --text-h1--line-height: 1.15;
+  --text-h1--letter-spacing: -0.03em;
+  --text-title: clamp(2.25rem, 1.6rem + 2.8vw, 3.75rem);
+  --text-title--line-height: 1.05;
+  --text-title--letter-spacing: -0.035em;
+  --text-hero: clamp(2.5rem, 1.7rem + 3.6vw, 4.5rem);
+  --text-hero--line-height: 1.02;
+  --text-hero--letter-spacing: -0.035em;
+  --tracking-micro: 0.08em;
+
+  /* radius: 4 / 6 / 8 only */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* layout */
+  --container-site: 1520px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1200px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 5rem; /* sticky nav (64px) + 16px */
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--color-surface-1);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.55;
+    letter-spacing: -0.005em;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    accent-color: var(--color-accent);
+    caret-color: var(--color-accent-text);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: var(--color-selection);
+    color: var(--color-on-accent);
+  }
+
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* skip link: visible only while focused */
+  .skip-link {
+    position: fixed;
+    left: 1rem;
+    top: -4rem;
+    z-index: 400;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: var(--color-accent);
+    color: var(--color-on-accent);
+    font-weight: 500;
+    transition: top 150ms var(--ease-out-expo);
+  }
+
+  .skip-link:focus {
+    top: 1rem;
+  }
+
+  /* reduced motion: nothing moves, transitions fall back to opacity only */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      transition-property: opacity !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/*
+ * Touch targets: the preset sizes controls at 40px (laptop). Below 1024px they grow to 44px.
+ * Unlayered so it beats the primeng layer that declares these variables.
+ */
+@media (max-width: 1023px) {
+  :root {
+    --p-button-padding-y: 0.65625rem;
+    --p-form-field-padding-y: 0.5625rem;
+  }
+}

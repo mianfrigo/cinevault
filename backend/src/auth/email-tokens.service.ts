@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { AppException } from '../common/app.exception';
-import type { EmailToken, EmailTokenType } from '../generated/prisma/client';
+import type {
+  EmailToken,
+  EmailTokenType,
+  Prisma,
+} from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TokensService } from './tokens.service';
 
@@ -63,5 +67,25 @@ export class EmailTokensService {
     });
     if (count !== 1) throw invalid();
     return row;
+  }
+
+  /**
+   * Voids every unused RESET_PASSWORD and CHANGE_EMAIL token of the user: they
+   * carry credentials, so a credential or email change must not leave one
+   * redeemable. VERIFY_EMAIL is kept (a PENDING user still needs it).
+   * Pass a transaction client to make it part of that transaction.
+   */
+  async voidCredentialTokens(
+    userId: string,
+    db: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    await db.emailToken.updateMany({
+      where: {
+        userId,
+        usedAt: null,
+        type: { in: ['RESET_PASSWORD', 'CHANGE_EMAIL'] },
+      },
+      data: { usedAt: new Date() },
+    });
   }
 }

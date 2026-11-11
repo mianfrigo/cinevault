@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppException } from '../common/app.exception';
 import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailTokensService } from './email-tokens.service';
 import { TokensService } from './tokens.service';
 
 export const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -14,6 +15,7 @@ export class SessionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokens: TokensService,
+    private readonly emailTokens: EmailTokensService,
   ) {}
 
   /** Opens a session; the raw token goes to the cookie, only its hash is stored. */
@@ -74,7 +76,12 @@ export class SessionsService {
     });
   }
 
-  /** Transactional only when `db` is a transaction client; by default it runs on its own. */
+  /**
+   * Revokes every refresh token and voids the user's unused RESET_PASSWORD and
+   * CHANGE_EMAIL tokens (password reset/change, block, replay), so nothing
+   * minted before the event survives it. Transactional only when `db` is a
+   * transaction client; by default it runs on its own.
+   */
   async revokeAll(
     userId: string,
     db: Prisma.TransactionClient = this.prisma,
@@ -83,5 +90,6 @@ export class SessionsService {
       where: { userId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    await this.emailTokens.voidCredentialTokens(userId, db);
   }
 }

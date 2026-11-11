@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AuthStore } from '../core/auth/auth.store';
 import { UserDto } from '../core/models';
@@ -89,19 +89,33 @@ describe('NavComponent', () => {
     });
   });
 
-  it('navigates to /search?q= when the search form is submitted (Enter)', () => {
-    const { el, router } = setup();
-    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+  async function submitSearch(
+    fixture: ComponentFixture<NavComponent>,
+    el: HTMLElement,
+    text: string,
+  ): Promise<Event> {
     const input = el.querySelector<HTMLInputElement>('input[type="search"]')!;
-    input.value = ' dune ';
-    input.closest('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    input.value = text;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    const submit = new Event('submit', { cancelable: true });
+    input.closest('form')!.dispatchEvent(submit);
+    await fixture.whenStable();
+    return submit;
+  }
+
+  it('navigates to /search?q= with the trimmed query when the search form is submitted', async () => {
+    const { fixture, el, router } = setup();
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const submit = await submitSearch(fixture, el, ' dune ');
+    expect(submit.defaultPrevented).toBe(true);
     expect(navigate).toHaveBeenCalledWith(['/search'], { queryParams: { q: 'dune' } });
   });
 
-  it('does not navigate for an empty query', () => {
-    const { el, router } = setup();
+  it('does not navigate for an empty or blank query', async () => {
+    const { fixture, el, router } = setup();
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
-    el.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    await submitSearch(fixture, el, '');
+    await submitSearch(fixture, el, '   ');
     expect(navigate).not.toHaveBeenCalled();
   });
 

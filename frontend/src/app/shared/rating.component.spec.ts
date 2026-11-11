@@ -20,4 +20,9 @@ describe('RatingComponent', () => {
   it('renders nothing for null', () => {
     expect(render(null).textContent?.trim()).toBe('');
   });
+
+  it('renders nothing for undefined and NaN', () => {
+    expect(render(undefined as unknown as null).textContent?.trim()).toBe('');
+    expect(render(NaN).textContent?.trim()).toBe('');
+  });
 });

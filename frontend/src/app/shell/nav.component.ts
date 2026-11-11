@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -47,9 +57,10 @@ interface NavLink {
           severity="secondary"
           size="large"
           [text]="true"
-          aria-label="Search titles"
-          [attr.aria-expanded]="searchOpen()"
-          (onClick)="searchOpen.set(!searchOpen())"
+          #toggle
+          ariaLabel="Search titles"
+          [pt]="toggleAttrs()"
+          (onClick)="toggleSearch()"
         />
         <form
           role="search"
@@ -57,6 +68,7 @@ interface NavLink {
           class="absolute inset-x-0 top-full border-b border-line-soft bg-surface-1 px-6 pt-2 pb-4 md:px-8 lg:static lg:ml-auto lg:block lg:w-80 lg:border-0 lg:bg-transparent lg:p-0"
           [class.hidden]="!searchOpen()"
           (submit)="search($event, q.value)"
+          (keydown.escape)="closeSearch()"
         >
           <label for="nav-search" class="sr-only">Search movies and shows</label>
           <p-iconfield class="block">
@@ -96,8 +108,16 @@ interface NavLink {
 })
 export class NavComponent {
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly toggle = viewChild.required('toggle', { read: ElementRef });
+  private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('q');
 
   protected readonly searchOpen = signal(false);
+
+  // p-button only forwards ariaLabel; aria-expanded reaches the inner <button> through pt.
+  protected readonly toggleAttrs = computed(() => ({
+    root: { 'aria-expanded': String(this.searchOpen()) },
+  }));
 
   // My List goes to /login?next= for visitors once auth exists (Task 13).
   protected readonly links: NavLink[] = [
@@ -107,6 +127,21 @@ export class NavComponent {
     { label: 'New & Popular', path: '/new', exact: false },
     { label: 'My List', path: '/dashboard/favorites', exact: false },
   ];
+
+  protected toggleSearch(): void {
+    if (this.searchOpen()) return this.closeSearch();
+    this.searchOpen.set(true);
+    afterNextRender(() => this.input().nativeElement.focus(), { injector: this.injector });
+  }
+
+  /** Closes the mobile panel; focus goes back to the toggle only if it was inside the panel. */
+  protected closeSearch(): void {
+    if (!this.searchOpen()) return;
+    this.searchOpen.set(false);
+    afterNextRender(() => this.toggle().nativeElement.querySelector('button')?.focus(), {
+      injector: this.injector,
+    });
+  }
 
   protected search(event: Event, value: string): void {
     event.preventDefault();

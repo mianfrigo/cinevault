@@ -4,17 +4,17 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   selector: 'cv-rating',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (value() !== null) {
-      <span class="inline-flex items-center font-medium text-fg tabular-nums"
-        >★ {{ formatted() }}</span
-      >
+    @if (formatted(); as text) {
+      <span class="inline-flex items-center font-medium text-fg tabular-nums">★ {{ text }}</span>
     }
   `,
 })
 export class RatingComponent {
   readonly value = input<number | null>(null);
 
+  /** Empty string (renders nothing) for null, undefined and non-finite values. */
   protected formatted(): string {
-    return (this.value() ?? 0).toFixed(1);
+    const v = this.value();
+    return v != null && Number.isFinite(v) ? v.toFixed(1) : '';
   }
 }

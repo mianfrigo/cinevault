@@ -1,59 +1,18 @@
-# Frontend
+# Cinevault frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.8.
+Angular 22 (SSR) with PrimeNG 22 and Tailwind CSS v4. Design tokens live in `src/styles/theme.css` and `src/app/theme/cinevault-preset.ts`; keep them in sync.
 
-## Development server
+## Scripts
 
-To start a local development server, run:
+| Command          | What it does                                                                   |
+| ---------------- | ------------------------------------------------------------------------------ |
+| `npm start`      | Dev server on http://localhost:4200, `/api` proxied to `http://localhost:3000` |
+| `npm run build`  | Production SSR build into `dist/frontend`                                      |
+| `npm test`       | Unit tests (Vitest through `ng test`)                                          |
+| `npm run lint`   | ESLint (angular-eslint)                                                        |
+| `npm run format` | Prettier write (`npm run format:check` to verify)                              |
 
-```bash
-ng serve
-```
+## Notes
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Running the built server (`node dist/frontend/server/server.mjs`) needs the allowed hosts set, for example `NG_ALLOWED_HOSTS=localhost`. Production must set it to the real host name.
+- PrimeNG 22 needs a PrimeUI license key (the free Community License is available). Without one the console warns and a "Invalid PrimeUI License" badge shows on every page. The key is passed as `license` to `providePrimeNG` in `src/app/app.config.ts`; it has not been configured yet.

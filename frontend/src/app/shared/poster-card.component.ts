@@ -11,7 +11,7 @@ import { TitleSummary } from '../core/models';
     <div class="group relative">
       <a [routerLink]="['/title', title().mediaType, title().tmdbId]" class="block">
         <div
-          class="relative aspect-[2/3] overflow-hidden rounded-md bg-surface-2 ring-1 ring-white/10 ring-inset transition duration-200 ease-out-expo group-focus-within:scale-[1.02] group-focus-within:brightness-110 group-hover:scale-[1.02] group-hover:brightness-110"
+          class="relative aspect-[2/3] overflow-hidden rounded-md bg-surface-2 ring-1 ring-line ring-inset transition duration-200 ease-out-expo group-focus-within:scale-[1.02] group-focus-within:brightness-110 group-hover:scale-[1.02] group-hover:brightness-110"
         >
           @if (title().posterUrl; as src) {
             <img [src]="src" [alt]="alt()" loading="lazy" class="size-full object-cover" />

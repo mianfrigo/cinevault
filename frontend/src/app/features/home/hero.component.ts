@@ -138,8 +138,8 @@ const SWIPE_PX = 50;
                 <span
                   data-fill
                   class="absolute inset-x-0 top-1/2 -mt-px h-0.5 origin-left rounded-[1px] bg-fg"
-                  [class.scale-x-0]="i > current()"
-                  [class.scale-x-100]="i < current() || (i === current() && !playing())"
+                  [class.scale-x-0]="i > current() || (i === current() && motion() === 'unknown')"
+                  [class.scale-x-100]="i < current() || (i === current() && activeFull())"
                   [class.animate-hero-fill]="i === current() && playing()"
                   [style.animation-play-state]="held() ? 'paused' : 'running'"
                   (animationend)="onBarEnd(i)"
@@ -164,7 +164,7 @@ const SWIPE_PX = 50;
               ariaLabel="Next slide"
               (onClick)="step(1)"
             />
-            @if (playing()) {
+            @if (showPause()) {
               <p-button
                 [icon]="paused() ? 'pi pi-play' : 'pi pi-pause'"
                 severity="secondary"
@@ -191,9 +191,20 @@ export class HeroComponent {
   private readonly index = signal(0);
   protected readonly current = computed(() => Math.min(this.index(), this.slides().length - 1));
 
-  /** True once the browser rendered and prefers-reduced-motion does not match; never true on the server. */
-  private readonly motionOk = signal(false);
-  protected readonly playing = computed(() => this.motionOk() && this.slides().length > 1);
+  /**
+   * What the browser says about prefers-reduced-motion. 'unknown' on the server and until the first
+   * browser render: the markup then matches the autoplay start (empty bar, pause button present), so
+   * hydration does not make the bar jump from full to empty or the controls shift.
+   */
+  protected readonly motion = signal<'unknown' | 'ok' | 'reduced'>('unknown');
+  protected readonly playing = computed(() => this.motion() === 'ok' && this.slides().length > 1);
+  protected readonly showPause = computed(
+    () => this.motion() !== 'reduced' && this.slides().length > 1,
+  );
+  /** The active bar is a static full bar when nothing counts down (reduced motion, one slide). */
+  protected readonly activeFull = computed(
+    () => this.motion() === 'reduced' || (this.motion() === 'ok' && this.slides().length < 2),
+  );
 
   private readonly hovering = signal(false);
   protected readonly focused = signal(false);
@@ -215,7 +226,7 @@ export class HeroComponent {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
       const query = win?.matchMedia?.('(prefers-reduced-motion: reduce)');
-      const sync = () => this.motionOk.set(!query?.matches);
+      const sync = () => this.motion.set(query?.matches ? 'reduced' : 'ok');
       sync();
       query?.addEventListener('change', sync);
       destroyRef.onDestroy(() => query?.removeEventListener('change', sync));

@@ -32,15 +32,19 @@ function stubReducedMotion(matches: boolean): void {
   }));
 }
 
-async function render(items: TitleSummary[]) {
+/** `settled: false` stops after the first render, like the server HTML before the browser's first render. */
+async function render(items: TitleSummary[], settled = true) {
+  if (!settled) vi.stubGlobal('ngServerMode', true); // afterNextRender is skipped on the server
   TestBed.configureTestingModule({
     providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
   });
   const fixture = TestBed.createComponent(HeroComponent);
   fixture.componentRef.setInput('items', items);
   fixture.detectChanges();
-  await fixture.whenStable(); // lets afterNextRender (the autoplay set-up) run
-  fixture.detectChanges();
+  if (settled) {
+    await fixture.whenStable(); // lets afterNextRender (the autoplay set-up) run
+    fixture.detectChanges();
+  }
   const el = fixture.nativeElement as HTMLElement;
   const activeSlide = () =>
     el.querySelector<HTMLElement>('[aria-roledescription="slide"]:not([aria-hidden="true"])');
@@ -94,6 +98,8 @@ describe('HeroComponent', () => {
 
     // No timed animation is running, and a stray animationend must not move the slide.
     expect(activeFill()?.classList.contains('animate-hero-fill')).toBe(false);
+    expect(activeFill()?.classList.contains('scale-x-100')).toBe(true); // static: nothing is counting down
+    expect(fixture.nativeElement.querySelector('button[aria-label*="automatic"]')).toBeNull();
     activeFill()?.dispatchEvent(new Event('animationend', { bubbles: true }));
     fixture.detectChanges();
     expect(activeSlide()?.getAttribute('aria-label')).toBe('1 of 3');
@@ -111,6 +117,13 @@ describe('HeroComponent', () => {
     expect(activeFill()?.style.animationPlayState).toBe('running');
     expect(activeSlide()?.getAttribute('aria-label')).toBe('1 of 3');
     expect(fixture.nativeElement.querySelector('button[aria-pressed]')).not.toBeNull();
+  });
+
+  it('before the browser decides about motion (server render) keeps the active bar empty and reserves the pause button, so hydration does not shift them', async () => {
+    const { activeFill, el } = await render(three, false);
+    expect(activeFill()?.classList.contains('scale-x-0')).toBe(true);
+    expect(activeFill()?.classList.contains('scale-x-100')).toBe(false);
+    expect(el.querySelector('button[aria-label="Pause automatic slide change"]')).not.toBeNull();
   });
 
   it('omits items without backdropUrl and renders nothing when none have one', async () => {

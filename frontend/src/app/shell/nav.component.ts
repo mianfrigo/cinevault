@@ -1,0 +1,163 @@
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { form, FormField, FormRoot, validate, requiredError } from '@angular/forms/signals';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputTextModule } from 'primeng/inputtext';
+import { LogoComponent } from './logo.component';
+
+interface NavLink {
+  label: string;
+  path: string;
+  exact: boolean;
+}
+
+@Component({
+  selector: 'cv-nav',
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    FormField,
+    FormRoot,
+    ButtonModule,
+    IconFieldModule,
+    InputIconModule,
+    InputTextModule,
+    LogoComponent,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'sticky top-0 z-100 block' },
+  template: `
+    <header class="relative border-b border-line-soft bg-surface-1/85 backdrop-blur-lg">
+      <div class="mx-auto flex h-16 max-w-site items-center gap-2 px-6 md:px-8 lg:gap-8 xl:px-12">
+        <cv-logo />
+        <nav aria-label="Primary" class="hidden gap-1 self-stretch lg:flex">
+          @for (link of links; track link.path) {
+            <a
+              [routerLink]="link.path"
+              routerLinkActive="text-fg after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:bg-accent-text"
+              [routerLinkActiveOptions]="{ exact: link.exact }"
+              ariaCurrentWhenActive="page"
+              class="relative flex items-center px-3 text-sm font-medium text-fg-2 transition-colors duration-150 hover:text-fg focus-visible:-outline-offset-4"
+              >{{ link.label }}</a
+            >
+          }
+        </nav>
+        <p-button
+          class="ml-auto lg:hidden"
+          icon="pi pi-search"
+          severity="secondary"
+          size="large"
+          [text]="true"
+          #toggle
+          ariaLabel="Search titles"
+          [pt]="toggleAttrs()"
+          (onClick)="toggleSearch()"
+        />
+        <form
+          role="search"
+          autocomplete="off"
+          class="absolute inset-x-0 top-full border-b border-line-soft bg-surface-1 px-6 pt-2 pb-4 md:px-8 lg:static lg:ml-auto lg:block lg:w-80 lg:border-0 lg:bg-transparent lg:p-0"
+          [class.hidden]="!searchOpen()"
+          [formRoot]="searchForm"
+          (keydown.escape)="closeSearch()"
+        >
+          <label for="nav-search" class="sr-only">Search movies and shows</label>
+          <p-iconfield class="block">
+            <p-inputicon class="pi pi-search" />
+            <input
+              #q
+              id="nav-search"
+              [formField]="searchForm.q"
+              pInputText
+              type="search"
+              class="w-full"
+              placeholder="Search movies and shows"
+              enterkeyhint="search"
+            />
+          </p-iconfield>
+        </form>
+        <div class="flex flex-none items-center gap-1 md:gap-2">
+          <ng-content select="[auth]" />
+        </div>
+      </div>
+      <nav
+        aria-label="Primary (small screens)"
+        class="flex gap-1 overflow-x-auto border-t border-line-soft px-3 md:px-5 lg:hidden"
+      >
+        @for (link of links; track link.path) {
+          <a
+            [routerLink]="link.path"
+            routerLinkActive="text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-accent-text"
+            [routerLinkActiveOptions]="{ exact: link.exact }"
+            ariaCurrentWhenActive="page"
+            class="relative flex min-h-11 flex-none items-center px-3 text-sm font-medium text-fg-2 transition-colors duration-150 hover:text-fg focus-visible:-outline-offset-4"
+            >{{ link.label }}</a
+          >
+        }
+      </nav>
+    </header>
+  `,
+})
+export class NavComponent {
+  private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
+  private readonly toggle = viewChild.required('toggle', { read: ElementRef });
+  private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('q');
+
+  protected readonly searchOpen = signal(false);
+
+  private readonly searchModel = signal({ q: '' });
+  protected readonly searchForm = form(
+    this.searchModel,
+    (path) => validate(path.q, ({ value }) => (value().trim() ? undefined : requiredError())),
+    {
+      submission: {
+        action: async (f) => {
+          this.searchOpen.set(false);
+          await this.router.navigate(['/search'], { queryParams: { q: f.q().value().trim() } });
+        },
+      },
+    },
+  );
+
+  // p-button only forwards ariaLabel; aria-expanded reaches the inner <button> through pt.
+  protected readonly toggleAttrs = computed(() => ({
+    root: { 'aria-expanded': String(this.searchOpen()) },
+  }));
+
+  // My List goes to /login?next= for visitors once auth exists (Task 13).
+  protected readonly links: NavLink[] = [
+    { label: 'Home', path: '/', exact: true },
+    { label: 'TV Shows', path: '/tv', exact: false },
+    { label: 'Movies', path: '/movies', exact: false },
+    { label: 'New & Popular', path: '/new', exact: false },
+    { label: 'My List', path: '/dashboard/favorites', exact: false },
+  ];
+
+  protected toggleSearch(): void {
+    if (this.searchOpen()) return this.closeSearch();
+    this.searchOpen.set(true);
+    afterNextRender(() => this.input().nativeElement.focus(), { injector: this.injector });
+  }
+
+  /** Closes the mobile panel; focus goes back to the toggle only if it was inside the panel. */
+  protected closeSearch(): void {
+    if (!this.searchOpen()) return;
+    this.searchOpen.set(false);
+    afterNextRender(() => this.toggle().nativeElement.querySelector('button')?.focus(), {
+      injector: this.injector,
+    });
+  }
+}

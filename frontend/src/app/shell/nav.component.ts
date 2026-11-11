@@ -15,11 +15,14 @@ import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
+import { AuthStore } from '../core/auth/auth.store';
 import { LogoComponent } from './logo.component';
+import { UserMenuComponent } from './user-menu.component';
 
 interface NavLink {
   label: string;
   path: string;
+  query?: Record<string, string>;
   exact: boolean;
 }
 
@@ -35,6 +38,7 @@ interface NavLink {
     InputIconModule,
     InputTextModule,
     LogoComponent,
+    UserMenuComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'sticky top-0 z-100 block' },
@@ -43,9 +47,10 @@ interface NavLink {
       <div class="mx-auto flex h-16 max-w-site items-center gap-2 px-6 md:px-8 lg:gap-8 xl:px-12">
         <cv-logo />
         <nav aria-label="Primary" class="hidden gap-1 self-stretch lg:flex">
-          @for (link of links; track link.path) {
+          @for (link of links(); track link.label) {
             <a
               [routerLink]="link.path"
+              [queryParams]="link.query"
               routerLinkActive="text-fg after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:bg-accent-text"
               [routerLinkActiveOptions]="{ exact: link.exact }"
               ariaCurrentWhenActive="page"
@@ -89,16 +94,26 @@ interface NavLink {
           </p-iconfield>
         </form>
         <div class="flex flex-none items-center gap-1 md:gap-2">
-          <ng-content select="[auth]" />
+          @if (auth.ready()) {
+            @if (auth.isLoggedIn()) {
+              @defer (on immediate) {
+                <cv-user-menu />
+              }
+            } @else {
+              <p-button label="Log in" severity="secondary" [text]="true" routerLink="/login" />
+              <p-button label="Register" class="hidden sm:block" routerLink="/register" />
+            }
+          }
         </div>
       </div>
       <nav
         aria-label="Primary (small screens)"
         class="flex gap-1 overflow-x-auto border-t border-line-soft px-3 md:px-5 lg:hidden"
       >
-        @for (link of links; track link.path) {
+        @for (link of links(); track link.label) {
           <a
             [routerLink]="link.path"
+            [queryParams]="link.query"
             routerLinkActive="text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-accent-text"
             [routerLinkActiveOptions]="{ exact: link.exact }"
             ariaCurrentWhenActive="page"
@@ -111,6 +126,7 @@ interface NavLink {
   `,
 })
 export class NavComponent {
+  protected readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly toggle = viewChild.required('toggle', { read: ElementRef });
@@ -137,14 +153,16 @@ export class NavComponent {
     root: { 'aria-expanded': String(this.searchOpen()) },
   }));
 
-  // My List goes to /login?next= for visitors once auth exists (Task 13).
-  protected readonly links: NavLink[] = [
+  // My List goes to /login?next= for visitors (app-flow section 2).
+  protected readonly links = computed<NavLink[]>(() => [
     { label: 'Home', path: '/', exact: true },
     { label: 'TV Shows', path: '/tv', exact: false },
     { label: 'Movies', path: '/movies', exact: false },
     { label: 'New & Popular', path: '/new', exact: false },
-    { label: 'My List', path: '/dashboard/favorites', exact: false },
-  ];
+    this.auth.isLoggedIn()
+      ? { label: 'My List', path: '/dashboard/favorites', exact: false }
+      : { label: 'My List', path: '/login', query: { next: '/dashboard/favorites' }, exact: false },
+  ]);
 
   protected toggleSearch(): void {
     if (this.searchOpen()) return this.closeSearch();

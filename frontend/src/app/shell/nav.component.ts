@@ -9,6 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { form, FormField, FormRoot, validate, requiredError } from '@angular/forms/signals';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -27,6 +28,8 @@ interface NavLink {
   imports: [
     RouterLink,
     RouterLinkActive,
+    FormField,
+    FormRoot,
     ButtonModule,
     IconFieldModule,
     InputIconModule,
@@ -67,7 +70,7 @@ interface NavLink {
           autocomplete="off"
           class="absolute inset-x-0 top-full border-b border-line-soft bg-surface-1 px-6 pt-2 pb-4 md:px-8 lg:static lg:ml-auto lg:block lg:w-80 lg:border-0 lg:bg-transparent lg:p-0"
           [class.hidden]="!searchOpen()"
-          (submit)="search($event, q.value)"
+          [formRoot]="searchForm"
           (keydown.escape)="closeSearch()"
         >
           <label for="nav-search" class="sr-only">Search movies and shows</label>
@@ -76,6 +79,7 @@ interface NavLink {
             <input
               #q
               id="nav-search"
+              [formField]="searchForm.q"
               pInputText
               type="search"
               class="w-full"
@@ -114,6 +118,20 @@ export class NavComponent {
 
   protected readonly searchOpen = signal(false);
 
+  private readonly searchModel = signal({ q: '' });
+  protected readonly searchForm = form(
+    this.searchModel,
+    (path) => validate(path.q, ({ value }) => (value().trim() ? undefined : requiredError())),
+    {
+      submission: {
+        action: async (f) => {
+          this.searchOpen.set(false);
+          await this.router.navigate(['/search'], { queryParams: { q: f.q().value().trim() } });
+        },
+      },
+    },
+  );
+
   // p-button only forwards ariaLabel; aria-expanded reaches the inner <button> through pt.
   protected readonly toggleAttrs = computed(() => ({
     root: { 'aria-expanded': String(this.searchOpen()) },
@@ -141,13 +159,5 @@ export class NavComponent {
     afterNextRender(() => this.toggle().nativeElement.querySelector('button')?.focus(), {
       injector: this.injector,
     });
-  }
-
-  protected search(event: Event, value: string): void {
-    event.preventDefault();
-    const q = value.trim();
-    if (!q) return;
-    this.searchOpen.set(false);
-    void this.router.navigate(['/search'], { queryParams: { q } });
   }
 }

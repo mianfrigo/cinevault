@@ -1,4 +1,5 @@
-import { computed, effect, inject, untracked } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { computed, effect, inject, PLATFORM_ID, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   patchState,
@@ -23,6 +24,7 @@ export const FavoritesStore = signalStore(
     const api = inject(ApiClient);
     const auth = inject(AuthStore);
     const router = inject(Router);
+    const browser = isPlatformBrowser(inject(PLATFORM_ID));
 
     // Toggles made while a load is in flight, per load: the response is older than they are, so they win.
     const overlays = new Set<Map<string, boolean>>();
@@ -55,6 +57,8 @@ export const FavoritesStore = signalStore(
 
       /** Optimistic: flips the key at once, undoes only that key and rethrows if the API fails. */
       async toggle(type: MediaTypeParam, id: number): Promise<void> {
+        // A click before the session restore finished must not be taken for a visitor (bounded by the 3 s timeout).
+        if (browser && !auth.ready()) await auth.whenReady();
         if (!auth.isLoggedIn()) {
           await router.navigate(['/login'], { queryParams: { next: router.url } });
           return;

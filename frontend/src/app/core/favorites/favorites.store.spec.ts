@@ -40,6 +40,13 @@ describe('FavoritesStore', () => {
 
   afterEach(() => http.verify());
 
+  /** Finishes the session restore as a visitor (the refresh is refused), like the app initializer does. */
+  async function sessionReady() {
+    void auth.restoreSession();
+    http.expectOne('/api/v1/auth/refresh').flush(null, { status: 401, statusText: 'Unauthorized' });
+    await auth.whenReady();
+  }
+
   /** Logs in and answers the favorites load that the login triggers. */
   async function loginWith(ids: { mediaType: 'movie' | 'tv'; tmdbId: number }[]) {
     auth.setUser(user);
@@ -60,6 +67,7 @@ describe('FavoritesStore', () => {
   });
 
   it('toggle adds the key optimistically and removes it when the API fails', async () => {
+    await sessionReady();
     await loginWith([{ mediaType: 'movie', tmdbId: 1 }]);
 
     const done = store.toggle('movie', 603);
@@ -74,6 +82,7 @@ describe('FavoritesStore', () => {
   });
 
   it('toggle removes an existing favorite and restores it when the API fails', async () => {
+    await sessionReady();
     await loginWith([{ mediaType: 'tv', tmdbId: 1399 }]);
 
     const ok = store.toggle('tv', 1399);
@@ -91,6 +100,7 @@ describe('FavoritesStore', () => {
   });
 
   it('a toggle made while the load is in flight survives the load response', async () => {
+    await sessionReady();
     auth.setUser(user);
     TestBed.tick();
     const load = http.expectOne('/api/v1/me/favorites/ids');
@@ -105,6 +115,7 @@ describe('FavoritesStore', () => {
   });
 
   it('an optimistic toggle still pending when the load arrives is kept, then rolled back on failure', async () => {
+    await sessionReady();
     auth.setUser(user);
     TestBed.tick();
     const load = http.expectOne('/api/v1/me/favorites/ids');
@@ -119,7 +130,27 @@ describe('FavoritesStore', () => {
     expect(store.isFavorite('movie', 603)).toBe(false);
   });
 
+  it('toggle waits for the session restore before deciding the user is a visitor', async () => {
+    void auth.restoreSession();
+    const refresh = http.expectOne('/api/v1/auth/refresh');
+
+    const done = store.toggle('movie', 603);
+    await Promise.resolve();
+    expect(router.url).toBe('/'); // not redirected while the restore is still running
+
+    refresh.flush({ accessToken: 't', user });
+    await vi.waitFor(() => expect(auth.isLoggedIn()).toBe(true));
+    const put = await vi.waitFor(() => http.expectOne('/api/v1/me/favorites/movie/603'));
+    expect(put.request.method).toBe('PUT');
+    put.flush(null, { status: 204, statusText: 'No Content' });
+    await done;
+    TestBed.tick();
+    http.expectOne('/api/v1/me/favorites/ids').flush([{ mediaType: 'movie', tmdbId: 603 }]);
+    await vi.waitFor(() => expect(store.keys()).toEqual(['movie:603']));
+  });
+
   it('toggle as a visitor navigates to /login and makes no API call', async () => {
+    await sessionReady();
     await router.navigateByUrl('/title/movie/603');
     await store.toggle('movie', 603);
     http.expectNone('/api/v1/me/favorites/movie/603');

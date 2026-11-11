@@ -16,6 +16,7 @@ Angular 22 (SSR) with PrimeNG 22 and Tailwind CSS v4. Design tokens live in `src
 
 - Running the built server (`node dist/frontend/server/server.mjs`) needs the allowed hosts set, for example `NG_ALLOWED_HOSTS=localhost`. Production must set it to the real host name.
 - PrimeNG 22 needs a PrimeUI license key (the free Community License is available). Without one the console warns and a "Invalid PrimeUI License" badge shows on every page. The key is passed as `license` to `providePrimeNG` in `src/app/app.config.ts`; it has not been configured yet.
+- SSR HTTP transfer cache: the browser calls the API on its own origin (`/api/v1`, made absolute in `app.config.ts`), the server on `API_INTERNAL_URL`. `HTTP_TRANSFER_CACHE_ORIGIN_MAP` (server config only) maps the internal origin to the origin the page was requested on, so the browser reuses the server's responses. Manual check: load `/` through the public origin with the browser devtools Network tab open; no `/api/v1/catalog/*` GET may appear (only `POST /auth/refresh`).
 
 ## Conventions
 

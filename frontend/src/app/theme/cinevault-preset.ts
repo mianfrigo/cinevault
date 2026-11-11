@@ -32,6 +32,11 @@ export default definePreset(Aura, {
         },
       },
     },
+    // The mockup's single score star: 12px, quiet (text-2), not the accent.
+    rating: {
+      root: { gap: '0.25rem' },
+      icon: { size: '0.75rem', activeColor: '#A7ABB6', color: '#A7ABB6' },
+    },
     button: {
       root: { fontSize: '0.875rem', paddingX: '1.25rem', paddingY: '0.53125rem' },
       colorScheme: {

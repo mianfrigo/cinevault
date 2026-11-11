@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { FavoritesStore } from '../core/favorites/favorites.store';
 import { TitleSummary } from '../core/models';
 
 @Component({
   selector: 'cv-poster-card',
-  imports: [RouterLink],
+  imports: [RouterLink, ButtonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   template: `
@@ -28,19 +30,51 @@ import { TitleSummary } from '../core/models';
           <p class="mt-0.5 text-label text-fg-3 tabular-nums">{{ title().year }}</p>
         }
       </a>
-      <div
-        class="absolute top-0 right-0 z-10 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
-      >
-        <ng-content select="[heart]" />
-      </div>
+      <!-- The button is the 44px target (top-right corner); only the 32px chip inside is drawn. -->
+      <p-button
+        class="absolute top-0 right-0 z-10 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+        [class.opacity-0]="!saved()"
+        [text]="true"
+        severity="secondary"
+        [icon]="saved() ? 'pi pi-heart-fill' : 'pi pi-heart'"
+        [ariaLabel]="
+          (saved() ? 'Remove ' : 'Add ') + title().title + (saved() ? ' from' : ' to') + ' My List'
+        "
+        [pt]="heartAttrs()"
+        (onClick)="toggle()"
+      />
     </div>
   `,
 })
 export class PosterCardComponent {
+  private readonly favorites = inject(FavoritesStore);
+
   readonly title = input.required<TitleSummary>();
+
+  protected readonly saved = computed(() =>
+    this.favorites.isFavorite(this.title().mediaType, this.title().tmdbId),
+  );
 
   protected readonly alt = computed(() => {
     const t = this.title();
     return t.year === null ? t.title : `${t.title} (${t.year})`;
   });
+
+  // p-button only forwards ariaLabel; aria-pressed and the sizing reach the inner <button> through pt.
+  protected readonly heartAttrs = computed(() => ({
+    root: {
+      'aria-pressed': String(this.saved()),
+      class: 'size-11 !p-0',
+    },
+    icon: {
+      class:
+        'grid size-8 place-items-center rounded-md border border-line-strong bg-surface-1/60 text-fg backdrop-blur-sm',
+    },
+  }));
+
+  protected toggle(): void {
+    const t = this.title();
+    // A failed API call is already undone by the store; the heart flipping back is the signal.
+    this.favorites.toggle(t.mediaType, t.tmdbId).catch(() => undefined);
+  }
 }

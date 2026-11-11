@@ -101,14 +101,20 @@ export class AuthService {
       throw new AppException(400, 'TOKEN_INVALID', 'Token is invalid');
     }
     try {
-      // Only an ACTIVE user may change email; for anyone else the token is spent and refused.
-      const { count } = await this.prisma.user.updateMany({
-        where: { id: t.userId, status: 'ACTIVE' },
-        data: { email: normalizeEmail(t.newEmail) },
+      // One transaction: the new address and the voiding of every other
+      // reset/change token land together, so none outlives the old address.
+      const newEmail = normalizeEmail(t.newEmail);
+      await this.prisma.$transaction(async (tx) => {
+        // Only an ACTIVE user may change email; for anyone else the token is spent and refused.
+        const { count } = await tx.user.updateMany({
+          where: { id: t.userId, status: 'ACTIVE' },
+          data: { email: newEmail },
+        });
+        if (count !== 1) {
+          throw new AppException(400, 'TOKEN_INVALID', 'Token is invalid');
+        }
+        await this.emailTokens.voidCredentialTokens(t.userId, tx);
       });
-      if (count !== 1) {
-        throw new AppException(400, 'TOKEN_INVALID', 'Token is invalid');
-      }
     } catch (e) {
       // Address taken meanwhile.
       if (isPrismaError(e, 'P2002')) {
@@ -182,10 +188,7 @@ export class AuthService {
         data: { passwordHash },
       });
       if (count !== 1) return false;
-      await tx.refreshToken.updateMany({
-        where: { userId: t.userId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
+      await this.sessions.revokeAll(t.userId, tx);
       return true;
     });
     if (!changed) {

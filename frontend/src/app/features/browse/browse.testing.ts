@@ -1,5 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -25,12 +26,13 @@ export const paged = (items: TitleSummary[], page = 1, totalPages = 1): Paged<Ti
 });
 
 /** Spec helper: the real route table with the app's input binding, so specs cover the route wiring too. */
-export async function setup(url: string) {
+export async function setup(url: string, extraProviders: Provider[] = []) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter(routes, withComponentInputBinding()),
       provideHttpClient(),
       provideHttpClientTesting(),
+      ...extraProviders,
     ],
   });
   const http = TestBed.inject(HttpTestingController);

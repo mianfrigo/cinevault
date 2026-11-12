@@ -8,6 +8,7 @@ import {
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 
 import cinevaultPreset from './theme/cinevault-preset';
@@ -21,6 +22,7 @@ import { AuthStore } from './core/auth/auth.store';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    MessageService,
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideClientHydration(withEventReplay()),

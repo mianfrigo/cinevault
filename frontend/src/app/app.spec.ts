@@ -1,9 +1,14 @@
+import { Location } from '@angular/common';
+import { provideLocationMocks } from '@angular/common/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { App } from './app';
 import { routes } from './app.routes';
+import { AuthStore } from './core/auth/auth.store';
 
 @Component({ selector: 'cv-test-page', template: '<h1>Page</h1>' })
 class TestPage {}
@@ -64,5 +69,68 @@ describe('App', () => {
         'verify-email',
       ].sort(),
     );
+  });
+});
+
+describe('App with the real route table', () => {
+  /** The address bar is already at `url` when the app boots, as on a hard reload; the router has not navigated yet. */
+  async function boot(url: string) {
+    TestBed.configureTestingModule({
+      imports: [App],
+      providers: [
+        provideRouter(routes, withComponentInputBinding()),
+        provideLocationMocks(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        MessageService,
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const restored = TestBed.inject(AuthStore).restoreSession();
+    http.expectOne('/api/v1/auth/refresh').flush({}, { status: 401, statusText: 'Unauthorized' });
+    await restored;
+    TestBed.inject(Location).go(url);
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const chrome = () => [!!el.querySelector('cv-nav'), !!el.querySelector('cv-footer')];
+    const visit = async (to: string) => {
+      await TestBed.inject(Router).navigateByUrl(to);
+      await fixture.whenStable();
+    };
+    return { fixture, chrome, visit };
+  }
+
+  it('renders no nav or footer in the very first frame of every auth route, before any navigation ends', async () => {
+    for (const url of [
+      '/login',
+      '/register',
+      '/forgot-password',
+      '/check-email?email=a@b.c',
+      '/verify-email?token=t',
+      '/reset-password?token=t',
+    ]) {
+      const { chrome } = await boot(url);
+      expect(chrome(), url).toEqual([false, false]);
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('renders the nav and footer in the first frame of other routes', async () => {
+    for (const url of ['/', '/movies', '/terms']) {
+      const { chrome } = await boot(url);
+      expect(chrome(), url).toEqual([true, true]);
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('keeps the chrome off on /login, brings it back on /terms and hides it again on /login', async () => {
+    const { chrome, visit } = await boot('/login');
+    await visit('/login');
+    expect(chrome()).toEqual([false, false]);
+    await visit('/terms');
+    expect(chrome()).toEqual([true, true]);
+    await visit('/login');
+    expect(chrome()).toEqual([false, false]);
   });
 });

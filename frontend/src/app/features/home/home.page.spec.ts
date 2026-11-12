@@ -30,6 +30,26 @@ const genres: Genre[] = [
   { id: 878, name: 'Science Fiction' },
   { id: 28, name: 'Action' },
 ];
+// TMDB's movie genre list comes back alphabetical, so the curated order must not follow API order.
+const manyGenres: Genre[] = [
+  'Action',
+  'Adventure',
+  'Animation',
+  'Comedy',
+  'Crime',
+  'Documentary',
+  'Drama',
+  'Family',
+  'Fantasy',
+  'History',
+  'Horror',
+  'Music',
+  'Mystery',
+  'Romance',
+  'Science Fiction',
+  'Thriller',
+  'War',
+].map((name, i) => ({ id: 100 + i, name }));
 
 describe('HomePage', () => {
   let http: HttpTestingController;
@@ -67,7 +87,7 @@ describe('HomePage', () => {
     return fixture;
   }
 
-  it('renders three rows when all requests succeed', async () => {
+  it('renders every row when all requests succeed', async () => {
     const fixture = load();
     request('trending', 'movie').flush(trending);
     request('new', 'tv').flush(newTv);
@@ -78,11 +98,13 @@ describe('HomePage', () => {
 
     const el = fixture.nativeElement as HTMLElement;
     const headings = Array.from(el.querySelectorAll('cv-poster-row h2')).map((h) => h.textContent);
-    expect(headings).toEqual(['Trending movies', 'New release TV shows', 'Top rated films']);
+    expect(headings).toEqual([
+      'Trending movies',
+      'New release TV shows',
+      'Popular genres',
+      'Top rated films',
+    ]);
     expect(el.querySelector('cv-hero [aria-label="1 of 3"]')?.textContent).toContain('Trending 1');
-    expect(el.querySelector('a[href="/genre/movie/878"]')?.textContent).toContain(
-      'Science Fiction',
-    );
     expect(el.querySelector('[role="alert"]')).toBeNull();
   });
 
@@ -101,6 +123,7 @@ describe('HomePage', () => {
     expect(retryButtons().length).toBe(1);
     expect(Array.from(el.querySelectorAll('cv-poster-row h2')).map((h) => h.textContent)).toEqual([
       'Trending movies',
+      'Popular genres',
       'Top rated films',
     ]);
     expect(el.textContent).toContain('New release TV shows'); // the failed row keeps its heading
@@ -112,6 +135,136 @@ describe('HomePage', () => {
     fixture.detectChanges();
 
     expect(el.querySelector('[role="alert"]')).toBeNull();
-    expect(el.querySelectorAll('cv-poster-row').length).toBe(3);
+    expect(el.querySelectorAll('cv-poster-row').length).toBe(4);
+  });
+
+  describe('Popular genres', () => {
+    async function loadGenres(response: Genre[]) {
+      const fixture = load();
+      request('trending', 'movie').flush(trending);
+      request('new', 'tv').flush(newTv);
+      request('top-rated', 'movie').flush(topRated);
+      request('genres', 'movie').flush(response);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+    const region = (el: HTMLElement) =>
+      el.querySelector('[role="region"][aria-label="Popular genres"]');
+    const tiles = (el: HTMLElement) =>
+      Array.from(region(el)?.querySelectorAll<HTMLAnchorElement>('a') ?? []);
+    const text = (a: HTMLAnchorElement) => a.textContent?.replace(/\s+/g, ' ').trim();
+
+    it('shows "Popular genres" and no "Browse genres" grid', async () => {
+      const el = await loadGenres(manyGenres);
+      const headings = Array.from(el.querySelectorAll('h2')).map((h) => h.textContent?.trim());
+      expect(headings).toContain('Popular genres');
+      expect(headings).not.toContain('Browse genres');
+      expect(el.textContent).not.toContain('Browse genres');
+    });
+
+    it('shows at most 10 tiles in curated order, labelling Science Fiction "Sci-Fi"', async () => {
+      const el = await loadGenres(manyGenres);
+      const row = tiles(el);
+      expect(row.map(text)).toEqual([
+        'Sci-FiScience Fiction', // visible short label plus the real name for assistive tech
+        'Action',
+        'Drama',
+        'Fantasy',
+        'Thriller',
+        'Comedy',
+        'Adventure',
+        'Animation',
+        'Horror',
+        'Romance',
+      ]);
+      expect(row[0].querySelector('[aria-hidden="true"]')?.textContent).toBe('Sci-Fi');
+      expect(row[0].querySelector('.sr-only')?.textContent).toBe('Science Fiction');
+    });
+
+    it('links each tile to its genre page', async () => {
+      const el = await loadGenres(manyGenres);
+      const hrefs = tiles(el).map((a) => a.getAttribute('href'));
+      expect(hrefs[0]).toBe('/genre/movie/114'); // Science Fiction
+      expect(hrefs[1]).toBe('/genre/movie/100'); // Action
+      expect(hrefs.every((h) => /^\/genre\/movie\/\d+$/.test(h ?? ''))).toBe(true);
+    });
+
+    it('links "See all" to the Movies page, which lists every genre', async () => {
+      const el = await loadGenres(manyGenres);
+      const seeAll = Array.from(
+        region(el)?.closest('section')?.querySelectorAll<HTMLAnchorElement>('a') ?? [],
+      ).find((a) => a.textContent?.includes('See all'));
+      expect(seeAll?.getAttribute('href')).toBe('/movies');
+    });
+
+    it('skips curated names the API does not have', async () => {
+      const el = await loadGenres(
+        manyGenres.filter((g) => !['Drama', 'Thriller', 'Horror'].includes(g.name)),
+      );
+      const labels = tiles(el).map(text);
+      expect(labels.slice(0, 4)).toEqual(['Sci-FiScience Fiction', 'Action', 'Fantasy', 'Comedy']);
+      expect(labels).not.toContain('Drama');
+    });
+
+    it('falls back to the first genres in API order when fewer than 6 curated names match', async () => {
+      const el = await loadGenres([
+        { id: 1, name: 'Zeta' },
+        { id: 2, name: 'Action' },
+        { id: 3, name: 'Alpha' },
+        { id: 4, name: 'Drama' },
+      ]);
+      expect(tiles(el).map((a) => a.getAttribute('href'))).toEqual([
+        '/genre/movie/1',
+        '/genre/movie/2',
+        '/genre/movie/3',
+        '/genre/movie/4',
+      ]);
+    });
+
+    it('shows the heading and a skeleton row while the genres load', () => {
+      const fixture = load(); // nothing flushed yet
+      const el = fixture.nativeElement as HTMLElement;
+      const section = Array.from(el.querySelectorAll('section')).find((s) =>
+        s.querySelector('h2')?.textContent?.includes('Popular genres'),
+      );
+      expect(section?.querySelector('[role="status"][aria-busy="true"]')).not.toBeNull();
+      expect(section?.querySelectorAll('p-skeleton').length).toBeGreaterThanOrEqual(4);
+      expect(tiles(el).length).toBe(0);
+      // settle the pending requests so http.verify() is happy
+      request('trending', 'movie');
+      request('new', 'tv');
+      request('top-rated', 'movie');
+      request('genres', 'movie');
+    });
+
+    it('shows an error block with Retry when genres fail and the rest of Home still renders', async () => {
+      const fixture = load();
+      request('trending', 'movie').flush(trending);
+      request('new', 'tv').flush(newTv);
+      request('top-rated', 'movie').flush(topRated);
+      request('genres', 'movie').flush(null, { status: 500, statusText: 'Server Error' });
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+
+      const retry = () =>
+        Array.from(el.querySelectorAll('button')).filter((b) => b.textContent?.includes('Retry'));
+      expect(retry().length).toBe(1);
+      expect(el.textContent).toContain('Could not load genres');
+      expect(el.textContent).toContain('Popular genres');
+      expect(Array.from(el.querySelectorAll('cv-poster-row h2')).map((h) => h.textContent)).toEqual(
+        ['Trending movies', 'New release TV shows', 'Top rated films'],
+      );
+
+      retry()[0].click();
+      fixture.detectChanges();
+      request('genres', 'movie').flush(manyGenres);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(el.querySelector('[role="alert"]')).toBeNull();
+      expect(tiles(el).length).toBe(10);
+    });
   });
 });

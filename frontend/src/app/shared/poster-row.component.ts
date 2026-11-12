@@ -1,10 +1,12 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  contentChild,
   ElementRef,
   inject,
   input,
+  TemplateRef,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -18,10 +20,13 @@ import { PosterCardComponent } from './poster-card.component';
  * a native scroll-snap track (`autoSize` keeps the fixed poster widths of the UX brief), which is
  * the mockup's row behaviour. Its legacy `numVisible` mode (deprecated in PrimeNG 22) pages by
  * transform and cannot scroll continuously or fade at the edges.
+ *
+ * Give it an `<ng-template let-item>` child to render something other than a poster (the Home
+ * genre tiles); the template receives each item as `$implicit`.
  */
 @Component({
   selector: 'cv-poster-row',
-  imports: [RouterLink, ButtonModule, CarouselModule, PosterCardComponent],
+  imports: [NgTemplateOutlet, RouterLink, ButtonModule, CarouselModule, PosterCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
@@ -69,9 +74,13 @@ import { PosterCardComponent } from './poster-card.component';
           role="region"
           [attr.aria-label]="heading()"
         >
-          @for (t of items(); track t.mediaType + t.tmdbId) {
+          @for (t of items(); track $index) {
             <p-carousel-item class="pr-4 lg:pr-5">
-              <cv-poster-card [title]="t" class="w-35 md:w-40 lg:w-44 xl:w-46" />
+              @if (itemTemplate(); as tpl) {
+                <ng-container *ngTemplateOutlet="tpl; context: { $implicit: t }" />
+              } @else {
+                <cv-poster-card [title]="$any(t)" class="w-35 md:w-40 lg:w-44 xl:w-46" />
+              }
             </p-carousel-item>
           }
         </p-carousel-content>
@@ -79,9 +88,10 @@ import { PosterCardComponent } from './poster-card.component';
     </section>
   `,
 })
-export class PosterRowComponent {
+export class PosterRowComponent<T = TitleSummary> {
   readonly heading = input.required<string>();
-  readonly items = input.required<TitleSummary[]>();
+  readonly items = input.required<readonly T[]>();
+  readonly itemTemplate = contentChild(TemplateRef);
   readonly seeAllLink = input<string[]>();
 
   private readonly track = viewChild.required('track', { read: ElementRef });

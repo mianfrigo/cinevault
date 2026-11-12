@@ -84,10 +84,11 @@ describe('App', () => {
     expect(el.querySelector('cv-nav')).not.toBeNull();
   });
 
-  it('marks exactly the six auth pages and the dashboard chromeless', () => {
+  it('marks exactly the six auth pages, the dashboard and the admin pages chromeless', () => {
     const chromeless = routes.filter((r) => r.data?.['chromeless']).map((r) => r.path);
     expect(chromeless.sort()).toEqual(
       [
+        'admin',
         'check-email',
         'dashboard',
         'forgot-password',

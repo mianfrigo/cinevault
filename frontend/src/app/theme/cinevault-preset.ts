@@ -37,6 +37,47 @@ export default definePreset(Aura, {
       root: { gap: '0.25rem' },
       icon: { size: '0.75rem', activeColor: '#A7ABB6', color: '#A7ABB6' },
     },
+    // Season panels (mockup .seasons): flat rows between hairlines, 56px headers, no fills.
+    accordion: {
+      panel: { borderColor: line },
+      header: {
+        padding: '1rem 0',
+        fontWeight: '500',
+        color: '#ECEDF0',
+        hoverColor: '#ECEDF0',
+        activeColor: '#ECEDF0',
+        activeHoverColor: '#ECEDF0',
+        background: 'transparent',
+        hoverBackground: 'transparent',
+        activeBackground: 'transparent',
+        activeHoverBackground: 'transparent',
+        toggleIcon: { color: '#8D92A0', hoverColor: '#ECEDF0', activeColor: '#8D92A0' },
+        focusRing: { offset: '2px' },
+      },
+      content: { background: 'transparent', padding: '0 0 0.5rem 0' },
+    },
+    // Cast initials (mockup .avatar): neutral surface, quiet text, 36px.
+    avatar: {
+      root: {
+        width: '2.25rem',
+        height: '2.25rem',
+        fontSize: '0.75rem',
+        fontWeight: '500',
+        background: '#22262D',
+        color: '#A7ABB6',
+      },
+    },
+    // Toast (mockup .toast): raised surface, strong hairline, no shadow.
+    toast: {
+      root: { width: '32.5rem', borderRadius: '8px' },
+      secondary: {
+        background: '#22262D',
+        borderColor: lineStrong,
+        color: '#ECEDF0',
+        detailColor: '#A7ABB6',
+        shadow: 'none',
+      },
+    },
     button: {
       root: { fontSize: '0.875rem', paddingX: '1.25rem', paddingY: '0.53125rem' },
       colorScheme: {

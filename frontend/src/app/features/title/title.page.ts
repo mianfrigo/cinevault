@@ -1,0 +1,386 @@
+import { ViewportScroller } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  untracked,
+  viewChild,
+} from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
+import { MessageService } from 'primeng/api';
+import { AvatarModule } from 'primeng/avatar';
+import { ButtonModule } from 'primeng/button';
+import { SkeletonModule } from 'primeng/skeleton';
+import { CatalogService } from '../../core/catalog/catalog.service';
+import { ConfigService } from '../../core/config/config.service';
+import { FavoritesStore } from '../../core/favorites/favorites.store';
+import { MediaTypeParam, TitleDetail } from '../../core/models';
+import NotFoundComponent from '../../pages/not-found.component';
+import { PosterRowComponent } from '../../shared/poster-row.component';
+import { ScoreComponent } from '../../shared/score.component';
+import { StateBlockComponent } from '../../shared/state-block.component';
+import { SeasonsComponent } from './seasons.component';
+
+/** The HTTP status behind a resource error (the resource may wrap the original error). */
+function httpStatus(error: unknown): number | undefined {
+  if (error instanceof HttpErrorResponse) return error.status;
+  return error instanceof Error && error.cause ? httpStatus(error.cause) : undefined;
+}
+
+/** 136 -> "2h 16m", 45 -> "45m". */
+function formatRuntime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+/** "Keanu Reeves" -> "KR", "Cher" -> "C". */
+function initials(name: string): string {
+  const words = name.split(/\s+/).filter(Boolean);
+  const letters = [words[0], words.length > 1 ? words[words.length - 1] : ''];
+  return letters
+    .map((w) => w?.[0] ?? '')
+    .join('')
+    .toUpperCase();
+}
+
+/** "en" -> "English"; the code itself when it has no name. */
+function languageName(code: string): string {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/** /title/:type/:id. The route supplies `type` and `id` through component input binding. */
+@Component({
+  selector: 'cv-title',
+  imports: [
+    RouterLink,
+    AvatarModule,
+    ButtonModule,
+    SkeletonModule,
+    NotFoundComponent,
+    PosterRowComponent,
+    ScoreComponent,
+    SeasonsComponent,
+    StateBlockComponent,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <!-- Stable focus target: after Retry the button is gone, so focus moves here instead of to the body. -->
+    <div #page tabindex="-1">
+      @if (!request()) {
+        <cv-not-found />
+      } @else if (detail.hasValue()) {
+        @let t = detail.value();
+        <article>
+          <div class="relative isolate">
+            <div
+              aria-hidden="true"
+              class="absolute inset-x-0 top-0 -z-10 h-90 overflow-hidden md:h-130"
+            >
+              @if (t.backdropUrl) {
+                <img [src]="t.backdropUrl" alt="" class="size-full object-cover opacity-80" />
+              }
+              <div class="title-scrim absolute inset-0"></div>
+            </div>
+            <div class="mx-auto max-w-site px-6 md:px-8 xl:px-12">
+              <div
+                class="grid grid-cols-[7rem_1fr] items-end gap-4 pt-32 md:grid-cols-[14.5rem_1fr] md:grid-rows-[auto_auto] md:gap-x-8 md:gap-y-0 md:pt-56"
+              >
+                <div
+                  class="relative aspect-[2/3] overflow-hidden rounded-md bg-surface-2 md:col-start-1 md:row-span-2 md:row-start-1 md:self-end"
+                >
+                  @if (t.posterUrl) {
+                    <img
+                      [src]="t.posterUrl"
+                      [alt]="alt(t)"
+                      fetchpriority="high"
+                      class="size-full object-cover"
+                    />
+                  } @else {
+                    <div
+                      class="grid size-full place-items-center bg-surface-3 p-3 text-center text-sm font-medium text-fg-2"
+                    >
+                      {{ t.title }}
+                    </div>
+                  }
+                  <div
+                    aria-hidden="true"
+                    class="absolute inset-0 rounded-[inherit] ring-1 ring-line ring-inset"
+                  ></div>
+                </div>
+
+                <div class="min-w-0 md:col-start-2 md:row-start-1 md:self-end">
+                  <h1 class="text-title font-semibold text-fg">{{ t.title }}</h1>
+                  <div data-testid="meta" class="meta-row mt-3 md:mt-4 md:text-base">
+                    @if (t.rating !== null) {
+                      <cv-score [value]="t.rating" />
+                    }
+                    @if (t.year !== null) {
+                      <span>{{ t.year }}</span>
+                    }
+                    @if (length(t); as len) {
+                      <span>{{ len }}</span>
+                    }
+                    <span>{{ typeName(t) }}</span>
+                  </div>
+                  @if (t.genres.length) {
+                    <ul class="meta-row mt-1 md:text-base">
+                      @for (g of t.genres; track g.id) {
+                        <li>
+                          <a
+                            [routerLink]="['/genre', t.mediaType, g.id]"
+                            class="text-fg-2 underline decoration-transparent underline-offset-4 transition-colors duration-150 hover:text-fg hover:decoration-current"
+                            >{{ g.name }}</a
+                          >
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+
+                <div
+                  class="col-span-2 mt-2 grid grid-cols-2 items-start gap-2 md:col-span-1 md:col-start-2 md:row-start-2 md:mt-6 md:flex md:flex-wrap md:self-start"
+                >
+                  @if (t.trailerUrl) {
+                    <a
+                      pButton
+                      [href]="t.trailerUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="w-full md:w-auto"
+                    >
+                      <i class="pi pi-play" aria-hidden="true"></i>
+                      <span>Watch trailer<span class="sr-only"> (opens in a new tab)</span></span>
+                    </a>
+                  }
+                  <p-button
+                    [label]="saved() ? 'In My List' : 'Add to My List'"
+                    [icon]="saved() ? 'pi pi-heart-fill' : 'pi pi-heart'"
+                    severity="secondary"
+                    variant="outlined"
+                    [pt]="listPt()"
+                    (onClick)="toggleSaved(t)"
+                  />
+                  @if (downloadEnabled()) {
+                    <div class="col-span-2 grid gap-2 md:col-auto md:justify-items-start">
+                      <p-button
+                        label="Download"
+                        icon="pi pi-download"
+                        severity="secondary"
+                        variant="outlined"
+                        [pt]="downloadPt"
+                        (onClick)="downloadSoon()"
+                      />
+                      <small id="download-note" class="text-micro text-fg-3"
+                        >Hidden in production</small
+                      >
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="mx-auto mt-12 grid max-w-site gap-12 px-6 md:px-8 lg:mt-16 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16 xl:px-12"
+          >
+            <div class="min-w-0 [&>section+section]:mt-12">
+              <section>
+                <h2 class="mb-4 text-h2 text-fg">Overview</h2>
+                <p class="max-w-[66ch] text-lg leading-[1.65] text-fg-2">
+                  {{ t.overview || 'No overview available.' }}
+                </p>
+              </section>
+
+              @if (t.cast.length) {
+                <section>
+                  <h2 class="mb-4 text-h2 text-fg">Top cast</h2>
+                  <ul data-testid="cast" class="grid gap-x-8 sm:grid-cols-2">
+                    @for (c of t.cast; track $index) {
+                      <li class="flex items-center gap-3 border-t border-line-soft py-3">
+                        <p-avatar [label]="initials(c.name)" shape="circle" aria-hidden="true" />
+                        <span class="min-w-0">
+                          <b class="block text-sm leading-snug font-medium">{{ c.name }}</b>
+                          @if (c.character) {
+                            <small class="block text-label leading-snug text-fg-3">{{
+                              c.character
+                            }}</small>
+                          }
+                        </span>
+                      </li>
+                    }
+                  </ul>
+                </section>
+              }
+
+              @if (t.mediaType === 'tv' && t.seasonList.length) {
+                <section>
+                  <h2 class="mb-4 text-h2 text-fg">Seasons &amp; episodes</h2>
+                  <cv-seasons [tvId]="t.tmdbId" [seasons]="t.seasonList" />
+                </section>
+              }
+            </div>
+
+            <aside>
+              <h2 class="sr-only">Facts</h2>
+              <dl data-testid="facts" class="self-start border-b border-line-soft">
+                @for (f of facts(t); track f[0]) {
+                  <div class="flex justify-between gap-4 border-t border-line-soft py-3 text-sm">
+                    <dt class="text-fg-3">{{ f[0] }}</dt>
+                    <dd class="text-right text-fg tabular-nums">{{ f[1] }}</dd>
+                  </div>
+                }
+              </dl>
+            </aside>
+          </div>
+
+          @if (t.similar.length) {
+            <div class="mx-auto mt-12 max-w-site px-6 pb-6 md:px-8 lg:mt-16 xl:px-12">
+              <cv-poster-row heading="More like this" [items]="t.similar" />
+            </div>
+          }
+        </article>
+      } @else if (notFound()) {
+        <cv-not-found />
+      } @else if (detail.error()) {
+        <section class="mx-auto max-w-site px-6 py-16 md:px-8 xl:px-12">
+          <cv-state
+            kind="error"
+            message="Could not load this title. Check your connection and try again."
+            (retry)="retry()"
+          />
+        </section>
+      } @else {
+        <section
+          role="status"
+          aria-busy="true"
+          class="mx-auto grid max-w-site grid-cols-[7rem_1fr] items-end gap-4 px-6 pt-32 md:grid-cols-[14.5rem_1fr] md:gap-x-8 md:px-8 md:pt-56 xl:px-12"
+        >
+          <span class="sr-only">Loading</span>
+          <p-skeleton class="aspect-[2/3]" height="auto" />
+          <div class="grid gap-3">
+            <p-skeleton width="70%" height="2.5rem" />
+            <p-skeleton width="45%" height="1rem" />
+          </div>
+          <div class="col-span-2 grid gap-3 pt-6 md:col-span-1 md:col-start-2">
+            <p-skeleton height="1rem" />
+            <p-skeleton width="80%" height="1rem" />
+          </div>
+        </section>
+      }
+    </div>
+  `,
+})
+export default class TitlePage {
+  private readonly catalog = inject(CatalogService);
+  private readonly favorites = inject(FavoritesStore);
+  private readonly messages = inject(MessageService);
+  private readonly scroller = inject(ViewportScroller);
+  private readonly config = inject(ConfigService);
+  private readonly page = viewChild.required<ElementRef<HTMLElement>>('page');
+
+  // Route inputs. They come from the URL, so they are untrusted and validated in `request`.
+  readonly type = input<unknown>();
+  readonly id = input<unknown>();
+
+  /** What to ask the API for, or undefined for a route that names no such title (no request is made). */
+  protected readonly request = computed(() => {
+    const type = this.type();
+    if (type !== 'movie' && type !== 'tv') return undefined;
+    const raw = this.id();
+    const id = typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : 0;
+    return Number.isSafeInteger(id) && id >= 1 ? { type: type as MediaTypeParam, id } : undefined;
+  });
+
+  // Not kept between titles: another title replaces the whole page, so a skeleton shows meanwhile.
+  protected readonly detail = rxResource({
+    params: this.request,
+    stream: ({ params }) => this.catalog.detail(params.type, params.id),
+  });
+
+  // value() throws while the resource is in error, so it is only read behind hasValue().
+  protected readonly notFound = computed(() => httpStatus(this.detail.error()) === 404);
+  protected readonly downloadEnabled = computed(() => this.config.features().downloadButton);
+
+  protected readonly saved = computed(() => {
+    const req = this.request();
+    return !!req && this.favorites.isFavorite(req.type, req.id);
+  });
+
+  // p-button only forwards ariaLabel; aria-pressed and the width reach the inner <button> through pt.
+  protected readonly listPt = computed(() => ({
+    root: { 'aria-pressed': String(this.saved()), class: 'w-full md:w-auto' },
+  }));
+  // The dashed border and muted text need `!`: the PrimeNG layer is declared after the utilities.
+  protected readonly downloadPt = {
+    root: {
+      'aria-describedby': 'download-note',
+      class: 'w-full md:w-auto !border-dashed !text-fg-2',
+    },
+  };
+
+  constructor() {
+    // Another title (a "More like this" poster) starts at the top, not where the last page was scrolled.
+    effect(() => {
+      this.request();
+      untracked(() => this.scroller.scrollToPosition([0, 0]));
+    });
+  }
+
+  protected readonly initials = initials;
+
+  protected alt(t: TitleDetail): string {
+    return t.year === null ? t.title : `${t.title} (${t.year})`;
+  }
+
+  protected typeName(t: TitleDetail): string {
+    return t.mediaType === 'tv' ? 'Series' : 'Movie';
+  }
+
+  /** Runtime for a movie, "N seasons" for a series; empty when unknown. */
+  protected length(t: TitleDetail): string {
+    if (t.mediaType === 'tv') {
+      return t.seasons ? `${t.seasons} ${t.seasons === 1 ? 'season' : 'seasons'}` : '';
+    }
+    return t.runtimeMinutes ? formatRuntime(t.runtimeMinutes) : '';
+  }
+
+  /** The facts list; a fact TMDB has no value for is left out. */
+  protected facts(t: TitleDetail): [string, string][] {
+    const tv = t.mediaType === 'tv';
+    const rows: [string, string | null][] = [
+      ['Type', this.typeName(t)],
+      [tv ? 'Created by' : 'Director', t.director],
+      ['Original language', t.originalLanguage ? languageName(t.originalLanguage) : null],
+      ['Status', t.status],
+      [tv ? 'First aired' : 'Release year', t.year === null ? null : String(t.year)],
+      [tv ? 'Seasons' : 'Runtime', this.length(t) || null],
+      ['TMDB score', t.rating === null ? null : `${t.rating.toFixed(1)} / 10`],
+    ];
+    return rows.filter((r): r is [string, string] => r[1] !== null);
+  }
+
+  protected toggleSaved(t: TitleDetail): void {
+    // A failed API call is already undone by the store; the label flipping back is the signal.
+    this.favorites.toggle(t.mediaType, t.tmdbId).catch(() => undefined);
+  }
+
+  protected downloadSoon(): void {
+    this.messages.add({ severity: 'secondary', summary: 'Download is coming soon', life: 4000 });
+  }
+
+  protected retry(): void {
+    this.page().nativeElement.focus();
+    this.detail.reload();
+  }
+}

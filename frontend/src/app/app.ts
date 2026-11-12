@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { Toast } from 'primeng/toast';
 import { FooterComponent } from './shell/footer.component';
 import { NavComponent } from './shell/nav.component';
 
 @Component({
   selector: 'cv-root',
-  imports: [RouterOutlet, NavComponent, FooterComponent],
+  imports: [RouterOutlet, Toast, NavComponent, FooterComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex min-h-screen flex-col' },
   template: `
@@ -15,6 +16,11 @@ import { NavComponent } from './shell/nav.component';
       <router-outlet />
     </main>
     <cv-footer />
+    <!-- The one toast host: any page shows a message through MessageService (provided in app.config).
+         Deferred so PrimeNG Toast stays out of the initial bundle; it loads right after bootstrap. -->
+    @defer (on immediate) {
+      <p-toast position="bottom-center" />
+    }
   `,
 })
 export class App {}

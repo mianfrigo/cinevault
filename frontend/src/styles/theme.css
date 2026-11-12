@@ -153,6 +153,45 @@
   }
 }
 
+/*
+ * Title page backdrop scrim (mockup .t-back::after): the art fades into the page ink towards the
+ * bottom. A multi-stop gradient with alpha stops has no Tailwind utility.
+ */
+@utility title-scrim {
+  --ink: var(--color-surface-1);
+  background: linear-gradient(
+    to top,
+    var(--ink) 0%,
+    color-mix(in srgb, var(--ink) 82%, transparent) 26%,
+    color-mix(in srgb, var(--ink) 50%, transparent) 58%,
+    color-mix(in srgb, var(--ink) 30%, transparent) 100%
+  );
+}
+
+/* Quiet metadata line (mockup .meta): items separated by thin dots, no separator before the first. */
+@utility meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.5rem;
+  row-gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--color-fg-2);
+  font-variant-numeric: tabular-nums;
+
+  & > * + *::before {
+    content: '';
+    display: inline-block;
+    width: 2px;
+    height: 2px;
+    margin-right: 0.5rem;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+    vertical-align: middle;
+  }
+}
+
 @layer base {
   html {
     color-scheme: dark;

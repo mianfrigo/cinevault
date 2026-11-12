@@ -24,8 +24,7 @@ export const routes: Routes = [
   {
     path: 'title/:type/:id',
     title: 'Title',
-    loadComponent: placeholder,
-    data: { heading: 'Title' },
+    loadComponent: () => import('./features/title/title.page'),
   },
   { path: 'login', title: 'Log in', loadComponent: placeholder, data: { heading: 'Log in' } },
   {

@@ -183,6 +183,39 @@ describe('Catalog (e2e)', () => {
     expect(res.body).toEqual([{ id: 28, name: 'Action' }]);
   });
 
+  it('GET /catalog/genre-covers returns {id,name,coverUrl}[] with w780 backdrops, cached 24 h', async () => {
+    const res = await get('/api/v1/catalog/genre-covers?type=movie').expect(
+      200,
+    );
+    expect(res.body).toEqual([
+      {
+        id: 28,
+        name: 'Action',
+        coverUrl: 'https://image.tmdb.org/t/p/w780/matrix-bg.jpg',
+      },
+    ]);
+    expect(tmdb.calls).toHaveLength(2);
+    expect(tmdb.calls[0]).toMatch(/^\/genre\/movie\/list\?/);
+    expect(tmdb.calls[1]).toContain('/discover/movie?');
+    expect(tmdb.calls[1]).toContain('with_genres=28');
+    expect(tmdb.calls[1]).toContain('sort_by=popularity.desc');
+    await get('/api/v1/catalog/genre-covers?type=movie').expect(200);
+    expect(tmdb.calls).toHaveLength(2);
+    expect(await redisPttl('tmdb:/genre-covers/movie:')).toBeGreaterThan(
+      24 * 3_600_000 - 5000,
+    );
+  });
+
+  it('genre-covers rejects an unknown type with 400 and surfaces a genre-list outage as 502', async () => {
+    const bad = await get('/api/v1/catalog/genre-covers?type=person').expect(
+      400,
+    );
+    expect(json(bad).code).toBe('VALIDATION_ERROR');
+    tmdb.failWith = new AppException(502, 'TMDB_UNAVAILABLE', 'down');
+    const res = await get('/api/v1/catalog/genre-covers?type=tv').expect(502);
+    expect(json(res).code).toBe('TMDB_UNAVAILABLE');
+  });
+
   it('search keeps only movies and series and caps totalPages at 500', async () => {
     const res = await get('/api/v1/catalog/search?q=%20matrix%20').expect(200);
     const list = json(res).items as { mediaType: string }[];

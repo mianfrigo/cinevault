@@ -39,6 +39,11 @@ export class CatalogController {
     return this.catalog.genres(q.type);
   }
 
+  @Get('genre-covers')
+  genreCovers(@Query() q: TypeQuery) {
+    return this.catalog.genreCovers(q.type);
+  }
+
   @Get('discover')
   discover(@Query() q: DiscoverQuery) {
     return this.catalog.discover(q.type, q.genre, q.page);

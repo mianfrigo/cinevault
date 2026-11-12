@@ -70,8 +70,18 @@ describe('PaginatorComponent', () => {
     }
   });
 
-  it('keeps the current page inside 1..totalPages', () => {
-    expect(tokens(render(99, 3).el)).toEqual(['1', '2', '3']);
-    expect(render(99, 3).el.querySelector('[aria-current="page"]')?.textContent?.trim()).toBe('3');
+  it('beyond the last page highlights nothing, disables Next and sends Prev to the last page', () => {
+    const { el, emitted } = render(99, 3);
+    expect(tokens(el)).toEqual(['1', '2', '3']);
+    expect(el.querySelector('[aria-current="page"]')).toBeNull();
+    expect(next(el).disabled).toBe(true);
+    prev(el).click();
+    expect(emitted).toEqual([3]);
+  });
+
+  it('treats a page below 1 as page 1', () => {
+    const { el } = render(0, 3);
+    expect(el.querySelector('[aria-current="page"]')?.textContent?.trim()).toBe('1');
+    expect(prev(el).disabled).toBe(true);
   });
 });

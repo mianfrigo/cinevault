@@ -93,6 +93,45 @@ describe('Browse pages', () => {
     expect(url()).toBe('/movies'); // page 1 leaves the param out
   });
 
+  it('keeps the grid and the focused paginator button while the next page loads', async () => {
+    const { el, settle, request, next } = await setup('/movies');
+    request('popular', { type: 'movie', page: '1' }).flush(paged([title(1), title(2)], 1, 9));
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+
+    const button = el.querySelector<HTMLButtonElement>('[aria-label="Page 2"]')!;
+    button.focus();
+    button.click();
+    const second = await next('popular', { type: 'movie', page: '2' });
+    // the previous page stays on screen (dimmed, busy) and the focused button is not replaced
+    expect(el.querySelectorAll('cv-poster-card')).toHaveLength(2);
+    expect(el.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(document.activeElement).toBe(button);
+    expect(button.isConnected).toBe(true);
+
+    second.flush(paged([title(3), title(4), title(5)], 2, 9));
+    await settle();
+    expect(el.querySelectorAll('cv-poster-card')).toHaveLength(3);
+    expect(el.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(document.activeElement).toBe(button);
+    expect(button.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('drops the previous page and shows the error when the next page fails', async () => {
+    const { el, settle, request, next } = await setup('/movies');
+    request('popular', { type: 'movie', page: '1' }).flush(paged([title(1)], 1, 9));
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+    el.querySelector<HTMLButtonElement>('[aria-label="Page 2"]')!.click();
+    (await next('popular', { type: 'movie', page: '2' })).flush(null, {
+      status: 500,
+      statusText: 'Server Error',
+    });
+    await settle();
+    expect(el.querySelector('[role="alert"]')).not.toBeNull();
+    expect(el.querySelectorAll('cv-poster-card')).toHaveLength(0);
+  });
+
   it('shows an error with Retry that reloads the list', async () => {
     const { el, settle, request, next } = await setup('/movies');
     request('popular', { type: 'movie', page: '1' }).flush(null, {
@@ -101,6 +140,7 @@ describe('Browse pages', () => {
     });
     request('genres', { type: 'movie' }).flush(genres);
     await settle();
+    expect(el.querySelector('[role="alert"]')).not.toBeNull();
     const retry = Array.from(el.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Retry'),
     )!;
@@ -124,6 +164,18 @@ describe('Browse pages', () => {
       expect(el.querySelectorAll('cv-poster-card')).toHaveLength(1);
       expect(el.querySelector('a[href="/genre/tv/18"]')?.getAttribute('aria-current')).toBe('page');
       http.verify();
+    });
+
+    it('still renders the grid with the fallback heading when only the genres request fails', async () => {
+      const { el, settle, request } = await setup('/genre/tv/18');
+      request('discover', { type: 'tv', genre: '18', page: '1' }).flush(
+        paged([title(7, 'The Wire')], 1, 5),
+      );
+      request('genres', { type: 'tv' }).flush(null, { status: 500, statusText: 'Server Error' });
+      await settle();
+      expect(el.querySelector('h1')?.textContent).toContain('Genre');
+      expect(el.querySelectorAll('cv-poster-card')).toHaveLength(1);
+      expect(el.querySelector('nav[aria-label="Genres"]')).toBeNull();
     });
 
     it('makes no request for an unknown media type or a non-numeric genre id', async () => {

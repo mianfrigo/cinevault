@@ -24,7 +24,7 @@ const WINDOW = 5;
           aria-label="Previous page"
           [class]="btn"
           [disabled]="current() === 1"
-          (click)="go(current() - 1)"
+          (click)="go(prevPage())"
         >
           <i class="pi pi-angle-left" aria-hidden="true"></i>
           <span class="max-sm:hidden">Prev</span>
@@ -54,7 +54,7 @@ const WINDOW = 5;
           type="button"
           aria-label="Next page"
           [class]="btn"
-          [disabled]="current() === total()"
+          [disabled]="current() >= total()"
           (click)="go(current() + 1)"
         >
           <span class="max-sm:hidden">Next</span>
@@ -80,9 +80,11 @@ export class PaginatorComponent {
     return Number.isFinite(t) && t > 0 ? t : 0;
   });
 
-  protected readonly current = computed(() =>
-    Math.min(Math.max(Math.trunc(this.page()) || 1, 1), Math.max(this.total(), 1)),
-  );
+  /** The requested page; it may lie beyond the last page (then no button is highlighted). */
+  protected readonly current = computed(() => Math.max(Math.trunc(this.page()) || 1, 1));
+
+  /** One back, or the last page when the requested page lies beyond it. */
+  protected readonly prevPage = computed(() => Math.min(this.current() - 1, this.total()));
 
   protected readonly items = computed<Item[]>(() => {
     const total = this.total();

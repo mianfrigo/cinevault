@@ -49,6 +49,38 @@ describe('Search page', () => {
     http.verify();
   });
 
+  it('cuts a long query at a code point boundary within 100 UTF-16 units', async () => {
+    const { el, settle, request } = await setup(`/search?q=${encodeURIComponent('😀'.repeat(80))}`);
+    request('search', { q: '😀'.repeat(50), page: '1' }).flush(paged([title(1)]));
+    await settle();
+    expect(el.querySelector('h1')?.classList.contains('break-words')).toBe(true);
+  });
+
+  it('beyond the last page shows neutral copy, not "No titles match", and highlights no page', async () => {
+    const { el, settle, request } = await setup('/search?q=heat&page=50');
+    request('search', { q: 'heat', page: '50' }).flush(paged([], 50, 6));
+    await settle();
+    expect(el.textContent).not.toContain('No titles match');
+    expect(el.textContent).toContain('No titles on this page');
+    expect(el.querySelector('nav [aria-current="page"]')).toBeNull();
+    expect(el.querySelector<HTMLButtonElement>('[aria-label="Next page"]')!.disabled).toBe(true);
+  });
+
+  it('keeps the previous results and the focused paginator button while the next page loads', async () => {
+    const { el, settle, request, next } = await setup('/search?q=heat');
+    request('search', { q: 'heat', page: '1' }).flush(paged([title(1), title(2)], 1, 4));
+    await settle();
+    const button = el.querySelector<HTMLButtonElement>('[aria-label="Page 2"]')!;
+    button.focus();
+    button.click();
+    const second = await next('search', { q: 'heat', page: '2' });
+    expect(el.querySelectorAll('cv-poster-card')).toHaveLength(2);
+    expect(document.activeElement).toBe(button);
+    second.flush(paged([title(3)], 2, 4));
+    await settle();
+    expect(document.activeElement).toBe(button);
+  });
+
   it('puts the page in the URL and keeps q when the paginator is used', async () => {
     const { el, settle, request, next, url } = await setup('/search?q=heat');
     request('search', { q: 'heat', page: '1' }).flush(paged([title(1)], 1, 4));

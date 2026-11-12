@@ -1,12 +1,23 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { CatalogService } from '../../core/catalog/catalog.service';
+import { latestValue } from '../../shared/latest-value';
 import { injectPageNavigator, MAX_PAGE, normalisePage } from '../../shared/page-param';
 import { StateBlockComponent } from '../../shared/state-block.component';
 import { PosterGridComponent } from './poster-grid.component';
 
 /** The backend rejects a longer query with 400. */
 const MAX_QUERY = 100;
+
+/** At most `max` UTF-16 units of `text`, cut between code points so no surrogate pair is split. */
+function cutUnits(text: string, max: number): string {
+  let out = '';
+  for (const ch of text) {
+    if (out.length + ch.length > max) break;
+    out += ch;
+  }
+  return out;
+}
 
 /** /search?q=&page=. The search box in the nav is the only input; this page just reads the URL. */
 @Component({
@@ -16,7 +27,7 @@ const MAX_QUERY = 100;
   template: `
     <section class="mx-auto max-w-site px-6 py-8 md:px-8 lg:py-10 xl:px-12">
       <header class="mb-6 md:mb-8">
-        <h1 class="text-h1 text-fg">
+        <h1 class="text-h1 break-words text-fg">
           @if (term(); as t) {
             Results for “{{ t }}”
           } @else {
@@ -32,21 +43,30 @@ const MAX_QUERY = 100;
 
       @if (!term()) {
         <cv-state kind="empty" message="Type a title in the search box to find movies and shows." />
-      } @else if (results.hasValue()) {
-        @if (results.value().items.length === 0) {
-          <cv-state
-            kind="empty"
-            [message]="
-              'No titles match “' + term() + '”. Check the spelling or try another search.'
-            "
+      } @else if (shown(); as data) {
+        <!-- While the next page loads, the previous one stays (dimmed) so keyboard focus is not lost. -->
+        <div
+          [attr.aria-busy]="results.isLoading()"
+          class="transition-opacity duration-150"
+          [class.opacity-60]="results.isLoading()"
+        >
+          @if (data.items.length === 0) {
+            <cv-state
+              kind="empty"
+              [message]="
+                data.totalPages === 0
+                  ? 'No titles match “' + term() + '”. Check the spelling or try another search.'
+                  : 'No titles on this page.'
+              "
+            />
+          }
+          <cv-poster-grid
+            [items]="data.items"
+            [page]="currentPage()"
+            [totalPages]="totalPages()"
+            (pageChange)="goTo($event)"
           />
-        }
-        <cv-poster-grid
-          [items]="results.value().items"
-          [page]="currentPage()"
-          [totalPages]="totalPages()"
-          (pageChange)="goTo($event)"
-        />
+        </div>
       } @else if (results.error()) {
         <cv-state
           kind="error"
@@ -70,9 +90,10 @@ export default class SearchPage {
   private readonly raw = computed(() =>
     typeof this.q() === 'string' ? (this.q() as string).trim() : '',
   );
-  protected readonly truncated = computed(() => this.raw().length > MAX_QUERY);
+  private readonly cut = computed(() => cutUnits(this.raw(), MAX_QUERY));
+  protected readonly truncated = computed(() => this.cut() !== this.raw());
   /** The query that is searched: trimmed and cut to 100 characters (longer ones are not sent as-is). Empty means no search. */
-  protected readonly term = computed(() => this.raw().slice(0, MAX_QUERY).trim());
+  protected readonly term = computed(() => this.cut().trim());
   protected readonly currentPage = computed(() => normalisePage(this.page()));
 
   // An empty term gives undefined params, so the resource stays idle and sends nothing.
@@ -81,7 +102,7 @@ export default class SearchPage {
     stream: ({ params }) => this.catalog.search(params.q, params.page),
   });
 
-  protected readonly totalPages = computed(() =>
-    Math.min(this.results.value()?.totalPages ?? 0, MAX_PAGE),
-  );
+  protected readonly shown = latestValue(this.results, this.term);
+
+  protected readonly totalPages = computed(() => Math.min(this.shown()?.totalPages ?? 0, MAX_PAGE));
 }

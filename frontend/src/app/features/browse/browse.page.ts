@@ -3,6 +3,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CatalogService } from '../../core/catalog/catalog.service';
 import { MediaTypeParam } from '../../core/models';
+import { latestValue } from '../../shared/latest-value';
 import { injectPageNavigator, MAX_PAGE, normalisePage } from '../../shared/page-param';
 import { StateBlockComponent } from '../../shared/state-block.component';
 import { PosterGridComponent } from './poster-grid.component';
@@ -49,16 +50,23 @@ import { PosterGridComponent } from './poster-grid.component';
 
       @if (!request()) {
         <cv-state kind="empty" message="This genre does not exist." />
-      } @else if (titles.hasValue()) {
-        @if (titles.value().items.length === 0) {
-          <cv-state kind="empty" message="No titles to show here." />
-        }
-        <cv-poster-grid
-          [items]="titles.value().items"
-          [page]="currentPage()"
-          [totalPages]="totalPages()"
-          (pageChange)="goTo($event)"
-        />
+      } @else if (shown(); as data) {
+        <!-- While the next page loads, the previous one stays (dimmed) so keyboard focus is not lost. -->
+        <div
+          [attr.aria-busy]="titles.isLoading()"
+          class="transition-opacity duration-150"
+          [class.opacity-60]="titles.isLoading()"
+        >
+          @if (data.items.length === 0) {
+            <cv-state kind="empty" message="No titles to show here." />
+          }
+          <cv-poster-grid
+            [items]="data.items"
+            [page]="currentPage()"
+            [totalPages]="totalPages()"
+            (pageChange)="goTo($event)"
+          />
+        </div>
       } @else if (titles.error()) {
         <cv-state
           kind="error"
@@ -112,15 +120,22 @@ export default class BrowsePage {
     stream: ({ params }) => this.catalog.genres(params),
   });
 
+  protected readonly shown = latestValue(this.titles, () => {
+    const req = this.request();
+    return `${req?.type}/${req?.genre}`;
+  });
+
   /** The API serves at most 500 pages; an empty list reports 0. */
-  protected readonly totalPages = computed(() =>
-    Math.min(this.titles.value()?.totalPages ?? 0, MAX_PAGE),
-  );
+  protected readonly totalPages = computed(() => Math.min(this.shown()?.totalPages ?? 0, MAX_PAGE));
 
   protected readonly heading = computed(() => {
     const req = this.request();
     if (req?.genre !== undefined) {
-      return this.genreList.value()?.find((g) => g.id === req.genre)?.name ?? 'Genre';
+      // value() throws while the genres request is in error, so read it only behind hasValue().
+      const name = this.genreList.hasValue()
+        ? this.genreList.value().find((g) => g.id === req.genre)?.name
+        : undefined;
+      return name ?? 'Genre';
     }
     return req?.type === 'tv' ? 'TV Shows' : req ? 'Movies' : 'Genre';
   });

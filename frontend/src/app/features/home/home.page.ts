@@ -2,14 +2,15 @@ import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { SkeletonModule } from 'primeng/skeleton';
 import { CatalogService } from '../../core/catalog/catalog.service';
-import { PosterRowComponent } from '../../shared/poster-row.component';
+import { PosterRowComponent, RowItemDirective } from '../../shared/poster-row.component';
 import { StateBlockComponent } from '../../shared/state-block.component';
 import { HeroComponent } from './hero.component';
 
 const HERO_SLIDES = 3;
 
-// Tonal fields for the genre tiles, cycled by position; full class names so Tailwind finds them.
+// Tonal fields for the genre tiles, cycled by position (mockup order); full class names so Tailwind finds them.
 const TONES = [
   'bg-tone-dusk text-tone-dusk-fg',
   'bg-tone-clay text-tone-clay-fg',
@@ -21,9 +22,40 @@ const TONES = [
   'bg-tone-bone text-tone-bone-fg',
 ];
 
+// Tile size shared by the real tiles and the skeleton so the row never shifts (mockup: 5:3, 168-224px wide).
+const TILE_WIDTH = 'clamp(10.5rem, 44vw, 14rem)';
+const TILE = 'aspect-[5/3] w-[clamp(10.5rem,44vw,14rem)] shrink-0';
+
+// TMDB has no genre popularity: a fixed list of well-known names, matched by name against the API.
+const POPULAR = [
+  'Science Fiction',
+  'Action',
+  'Drama',
+  'Fantasy',
+  'Thriller',
+  'Comedy',
+  'Adventure',
+  'Animation',
+  'Horror',
+  'Romance',
+  'Mystery',
+  'Crime',
+];
+const SHORT_LABEL: Record<string, string> = { 'Science Fiction': 'Sci-Fi' };
+const MAX_TILES = 10;
+const MIN_CURATED = 6;
+
 @Component({
   selector: 'cv-home',
-  imports: [NgTemplateOutlet, RouterLink, HeroComponent, PosterRowComponent, StateBlockComponent],
+  imports: [
+    NgTemplateOutlet,
+    RouterLink,
+    SkeletonModule,
+    HeroComponent,
+    PosterRowComponent,
+    RowItemDirective,
+    StateBlockComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h1 class="sr-only">Cinevault: trending movies and series</h1>
@@ -50,38 +82,63 @@ const TONES = [
           "
         />
 
-        <section>
-          <h2 class="mb-4 text-h2 text-fg">Browse genres</h2>
-          @if (genres.hasValue()) {
-            <ul
-              class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:gap-4 xl:grid-cols-6"
+        @if (genres.hasValue()) {
+          @if (popularGenres().length) {
+            <cv-poster-row
+              heading="Popular genres"
+              [items]="popularGenres()"
+              [trackKey]="genreId"
+              [seeAllLink]="['/movies']"
             >
-              @for (g of genres.value(); track g.id; let i = $index) {
-                <li>
-                  <a
-                    [routerLink]="['/genre', 'movie', g.id]"
-                    class="group/tile relative flex aspect-[5/3] items-end rounded-md p-4 ring-1 ring-line transition-[filter] duration-200 ease-out-expo ring-inset hover:brightness-110"
-                    [class]="tone(i)"
+              <ng-template [cvRowItem]="popularGenres()" let-g>
+                <a
+                  [routerLink]="['/genre', 'movie', g.id]"
+                  class="group/tile relative flex items-end rounded-md p-4 ring-1 ring-line transition-[filter] duration-200 ease-out-expo ring-inset hover:brightness-110"
+                  [class]="g.tone + ' ' + tile"
+                >
+                  <span
+                    class="text-base leading-tight font-medium"
+                    [attr.aria-hidden]="g.label !== g.name || null"
+                    >{{ g.label }}</span
                   >
-                    <span class="text-base leading-tight font-medium">{{ g.name }}</span>
-                    <i
-                      class="pi pi-arrow-up-right absolute top-4 right-4 opacity-0 transition-opacity duration-150 group-hover/tile:opacity-90 group-focus-visible/tile:opacity-90"
-                      aria-hidden="true"
-                    ></i>
-                  </a>
-                </li>
-              }
-            </ul>
-          } @else if (genres.error()) {
-            <cv-state
-              kind="error"
-              message="Could not load genres. Check your connection and try again."
-              (retry)="genres.reload()"
-            />
-          } @else {
-            <cv-state kind="loading" />
+                  @if (g.label !== g.name) {
+                    <span class="sr-only">{{ g.name }}</span>
+                  }
+                  <i
+                    class="pi pi-arrow-up-right absolute top-4 right-4 opacity-0 transition-opacity duration-150 group-hover/tile:opacity-90 group-focus-visible/tile:opacity-90"
+                    aria-hidden="true"
+                  ></i>
+                </a>
+              </ng-template>
+            </cv-poster-row>
           }
-        </section>
+        } @else {
+          <section>
+            <!-- Same header and track metrics as the loaded row, so nothing moves when it arrives. -->
+            <div class="mb-2 flex min-h-11 items-center lg:min-h-10">
+              <h2 class="text-h2 text-fg">Popular genres</h2>
+            </div>
+            @if (genres.error()) {
+              <cv-state
+                kind="error"
+                message="Could not load genres. Check your connection and try again."
+                (retry)="genres.reload()"
+              />
+            } @else {
+              <div role="status" aria-busy="true" class="flex gap-4 overflow-hidden py-2 lg:gap-5">
+                <span class="sr-only">Loading</span>
+                @for (n of skeletonTiles; track n) {
+                  <p-skeleton
+                    class="aspect-[5/3] shrink-0"
+                    [width]="tileWidth"
+                    height="auto"
+                    borderRadius="6px"
+                  />
+                }
+              </div>
+            }
+          </section>
+        }
 
         <ng-container
           *ngTemplateOutlet="
@@ -129,7 +186,20 @@ export default class HomePage {
     (this.trending.value()?.items ?? []).filter((t) => t.backdropUrl).slice(0, HERO_SLIDES),
   );
 
-  protected tone(i: number): string {
-    return TONES[i % TONES.length];
-  }
+  protected readonly tile = TILE;
+  protected readonly tileWidth = TILE_WIDTH;
+  protected readonly genreId = (g: { id: number }) => g.id;
+  protected readonly skeletonTiles = [0, 1, 2, 3, 4, 5, 6, 7];
+
+  protected readonly popularGenres = computed(() => {
+    const all = this.genres.hasValue() ? this.genres.value() : [];
+    const byName = new Map(all.map((g) => [g.name, g]));
+    const curated = POPULAR.flatMap((n) => byName.get(n) ?? []);
+    return (curated.length >= MIN_CURATED ? curated : all).slice(0, MAX_TILES).map((g, i) => ({
+      id: g.id,
+      name: g.name,
+      label: SHORT_LABEL[g.name] ?? g.name,
+      tone: TONES[i % TONES.length],
+    }));
+  });
 }

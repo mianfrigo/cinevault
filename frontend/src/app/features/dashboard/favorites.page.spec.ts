@@ -75,7 +75,7 @@ describe('Favorites page', () => {
     (await list({ page: '2' })).flush(paged([fav(1)], 2, 3));
     await settle();
 
-    const series = el.querySelector<HTMLElement>('p-togglebutton[aria-label="Series"]')!;
+    const series = el.querySelector<HTMLElement>('p-togglebutton[aria-label^="Series"]')!;
     series.click();
     (await list({ type: 'tv', page: '1' })).flush(paged([fav(7, { mediaType: 'tv' })]));
     await settle();
@@ -168,5 +168,146 @@ describe('Favorites page', () => {
     await settle();
     expect(removeButton(el, 'Title 1')).not.toBeNull();
     http.verify();
+  });
+
+  describe('lead, filter counts and cards', () => {
+    const ids = [
+      { mediaType: 'movie', tmdbId: 1 },
+      { mediaType: 'movie', tmdbId: 2 },
+      { mediaType: 'tv', tmdbId: 3 },
+    ];
+
+    /** The hearts store's ids request, answered with these favorites. */
+    async function heartsLoad(ctx: Awaited<ReturnType<typeof setup>>, list = ids) {
+      await vi.waitFor(() => ctx.http.expectOne('/api/v1/me/favorites/ids').flush(list));
+      await ctx.harness.fixture.whenStable();
+      ctx.harness.detectChanges();
+    }
+    const lead = (el: HTMLElement) => el.querySelector('header p')?.textContent?.trim();
+    const pills = (el: HTMLElement) =>
+      Array.from(el.querySelectorAll('p-togglebutton')).map((b) => ({
+        label: b.getAttribute('aria-label'),
+        text: b.textContent?.replace(/\s+/g, ' ').trim(),
+      }));
+
+    it('shows no number until the hearts ids have loaded', async () => {
+      const ctx = await setup('/dashboard/favorites');
+      (await ctx.list({ page: '1' })).flush(paged([fav(1), fav(2)]));
+      await ctx.harness.fixture.whenStable();
+      ctx.harness.detectChanges();
+
+      expect(lead(ctx.el)).toBe('');
+      expect(pills(ctx.el).map((p) => p.text)).toEqual(['All', 'Movies', 'Series']);
+      ctx.http.match(() => true);
+    });
+
+    it('shows the total as the lead and the counts on the pills, with accessible names', async () => {
+      const ctx = await setup('/dashboard/favorites');
+      (await ctx.list({ page: '1' })).flush(paged([fav(1), fav(2)]));
+      await heartsLoad(ctx);
+
+      expect(lead(ctx.el)).toBe('3 saved titles');
+      expect(pills(ctx.el)).toEqual([
+        { label: 'All, 3 titles', text: 'All 3' },
+        { label: 'Movies, 2 titles', text: 'Movies 2' },
+        { label: 'Series, 1 title', text: 'Series 1' },
+      ]);
+      ctx.http.match(() => true);
+    });
+
+    it('says "1 saved title" for one and "No saved titles yet" for none', async () => {
+      const one = await setup('/dashboard/favorites');
+      (await one.list({ page: '1' })).flush(paged([fav(1)]));
+      await heartsLoad(one, [{ mediaType: 'movie', tmdbId: 1 }]);
+      expect(lead(one.el)).toBe('1 saved title');
+      one.http.match(() => true);
+      TestBed.resetTestingModule();
+
+      const none = await setup('/dashboard/favorites');
+      (await none.list({ page: '1' })).flush(paged([]));
+      await heartsLoad(none, []);
+      expect(lead(none.el)).toBe('No saved titles yet');
+      expect(pills(none.el).map((p) => p.text)).toEqual(['All 0', 'Movies 0', 'Series 0']);
+      none.http.match(() => true);
+    });
+
+    it('counts a pending removal out at once, back in on Undo, and once after the DELETE', async () => {
+      const ctx = await setup('/dashboard/favorites');
+      (await ctx.list({ page: '1' })).flush(paged([fav(1), fav(2)]));
+      await heartsLoad(ctx);
+      const sidebar = () => ctx.harness.fixture.nativeElement.querySelector('aside').textContent;
+
+      removeButton(ctx.el, 'Title 1')!.click();
+      await ctx.settle();
+      expect(lead(ctx.el)).toBe('2 saved titles');
+      expect(pills(ctx.el).map((p) => p.text)).toEqual(['All 2', 'Movies 1', 'Series 1']);
+      expect(sidebar()).toContain(', 2 saved titles');
+
+      const undo = await vi.waitFor(() => {
+        const b = ctx.el.querySelector<HTMLButtonElement>('[data-undo] button');
+        expect(b).not.toBeNull();
+        return b!;
+      });
+      undo.click();
+      await ctx.settle();
+      expect(lead(ctx.el)).toBe('3 saved titles');
+      expect(pills(ctx.el).map((p) => p.text)).toEqual(['All 3', 'Movies 2', 'Series 1']);
+
+      removeButton(ctx.el, 'Title 1')!.click();
+      await ctx.settle();
+      await ctx.harness.navigateByUrl('/dashboard/account'); // leaving sends the DELETE
+      ctx.harness.detectChanges();
+      ctx.http.expectOne({ method: 'DELETE', url: '/api/v1/me/favorites/movie/1' }).flush(null, ok);
+      await ctx.settle();
+      expect(sidebar()).toContain(', 2 saved titles');
+      ctx.http.match(() => true);
+    });
+
+    it('counts a title again when its DELETE fails', async () => {
+      const ctx = await setup('/dashboard/favorites');
+      (await ctx.list({ page: '1' })).flush(paged([fav(1), fav(2)]));
+      await heartsLoad(ctx);
+
+      removeButton(ctx.el, 'Title 1')!.click();
+      await ctx.settle();
+      await ctx.harness.navigateByUrl('/dashboard/account');
+      ctx.harness.detectChanges();
+      ctx.http
+        .expectOne({ method: 'DELETE', url: '/api/v1/me/favorites/movie/1' })
+        .flush(null, { status: 500, statusText: 'Server Error' });
+      await ctx.settle();
+      expect(ctx.harness.fixture.nativeElement.querySelector('aside').textContent).toContain(
+        ', 3 saved titles',
+      );
+      ctx.http.match(() => true);
+    });
+
+    it('draws each card with "year · type" at the left and the score at the right', async () => {
+      const ctx = await setup('/dashboard/favorites');
+      (await ctx.list({ page: '1' })).flush(
+        paged([
+          fav(1, { title: 'Alien', year: 1979, rating: 8.46 }),
+          fav(2, { title: 'Dark', year: 2017, mediaType: 'tv', rating: null }),
+        ]),
+      );
+      await ctx.settle();
+
+      const metas = Array.from(ctx.el.querySelectorAll('[data-meta]')).map((m) =>
+        m.textContent?.replace(/\s+/g, ' ').trim(),
+      );
+      expect(metas).toEqual(['1979 · Movie8.5', '2017 · Series']);
+      expect(ctx.el.textContent).not.toMatch(/null|undefined|NaN/);
+      ctx.http.match(() => true);
+    });
+
+    it('keeps the grid shape while loading with placeholder cards and no text', async () => {
+      const { el, list, settle, http } = await setup('/dashboard/favorites');
+      const status = el.querySelector('[role="status"]')!;
+      expect(status.querySelectorAll('p-skeleton').length).toBeGreaterThan(8);
+      expect(status.textContent?.trim()).toBe('Loading');
+      (await list({ page: '1' })).flush(paged([]));
+      await settle();
+      http.verify();
+    });
   });
 });

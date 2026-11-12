@@ -44,20 +44,14 @@ describe('Logging out with a removal pending', () => {
     )!.click();
     await fixture.whenStable();
 
-    // Log out through the account menu in the nav (the only log out on a phone).
-    const menu = await vi.waitFor(() => {
-      fixture.detectChanges();
-      const b = el.querySelector<HTMLButtonElement>('button[aria-label="Account menu"]');
-      expect(b).not.toBeNull();
-      return b!;
-    });
-    menu.click();
+    // Log out through the dashboard sidebar (the app nav is not on the dashboard).
     const logout = await vi.waitFor(() => {
-      const item = Array.from(document.querySelectorAll<HTMLElement>('.p-menu-item-link')).find(
-        (a) => a.textContent?.includes('Log out'),
+      fixture.detectChanges();
+      const b = Array.from(el.querySelectorAll<HTMLButtonElement>('aside button')).find((x) =>
+        x.textContent?.includes('Log out'),
       );
-      expect(item).toBeDefined();
-      return item!;
+      expect(b).toBeDefined();
+      return b!;
     });
     logout.click();
 

@@ -55,7 +55,7 @@ export const PASSWORD_WRONG = 'That password is not correct.';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="mb-6 md:mb-8">
+    <header class="mb-8">
       <h1 class="text-h1 text-fg">Account</h1>
       <p class="mt-2 text-sm text-fg-3">Your details and sign-in settings.</p>
     </header>

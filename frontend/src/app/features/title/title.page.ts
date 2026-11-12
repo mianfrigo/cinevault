@@ -22,6 +22,7 @@ import { ConfigService } from '../../core/config/config.service';
 import { FavoritesStore } from '../../core/favorites/favorites.store';
 import { MediaTypeParam, TitleDetail } from '../../core/models';
 import NotFoundComponent from '../../pages/not-found.component';
+import { initials } from '../../shared/initials';
 import { PosterRowComponent } from '../../shared/poster-row.component';
 import { ScoreComponent } from '../../shared/score.component';
 import { StateBlockComponent } from '../../shared/state-block.component';
@@ -38,16 +39,6 @@ function formatRuntime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
-
-/** "Keanu Reeves" -> "KR", "Cher" -> "C". */
-function initials(name: string): string {
-  const words = name.split(/\s+/).filter(Boolean);
-  const letters = [words[0], words.length > 1 ? words[words.length - 1] : ''];
-  return letters
-    .map((w) => w?.[0] ?? '')
-    .join('')
-    .toUpperCase();
 }
 
 /** "en" -> "English"; the code itself when it has no name. */

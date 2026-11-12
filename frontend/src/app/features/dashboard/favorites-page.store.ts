@@ -122,11 +122,13 @@ export const FavoritesPageStore = signalStore(
         next: () => {
           gone.delete(key);
           hearts.setSaved(item.mediaType, item.tmdbId, false);
+          hearts.unhide(item.mediaType, item.tmdbId); // after setSaved: the count never ticks back up
           // Fills the page up again (and corrects the page count).
           if (!destroyed) reload();
         },
         error: () => {
           gone.delete(key);
+          hearts.unhide(item.mediaType, item.tmdbId); // still saved: counted again
           if (destroyed) return;
           patchState(store, { removeFailed: item.title });
           reload();
@@ -164,6 +166,7 @@ export const FavoritesPageStore = signalStore(
       remove(item: FavoriteItem): void {
         flush();
         patchState(store, { pendingRemoval: { key: favoriteKey(item), item }, removeFailed: null });
+        hearts.hide(item.mediaType, item.tmdbId);
         // Only a browser has a user who can undo; elsewhere there is nothing to wait for.
         if (browser) timer = setTimeout(flush, UNDO_MS);
         else flush();
@@ -172,6 +175,8 @@ export const FavoritesPageStore = signalStore(
       undo(): void {
         clearTimeout(timer);
         timer = undefined;
+        const pending = store.pendingRemoval();
+        if (pending) hearts.unhide(pending.item.mediaType, pending.item.tmdbId);
         patchState(store, { pendingRemoval: null });
       },
 

@@ -106,4 +106,50 @@ describe('PosterCardComponent', () => {
     expect(removed).toHaveBeenCalledTimes(1);
     expect(toggle).not.toHaveBeenCalled();
   });
+
+  describe('meta line (detailed)', () => {
+    function renderDetailed(title: TitleSummary): HTMLElement {
+      TestBed.configureTestingModule({
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      });
+      const fixture = TestBed.createComponent(PosterCardComponent);
+      fixture.componentRef.setInput('title', title);
+      fixture.componentRef.setInput('detailed', true);
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('shows "year · Movie" at the left and the score at the right', () => {
+      const el = renderDetailed(matrix);
+      const meta = el.querySelector('[data-meta]')!;
+      expect(meta.querySelector('span')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        '1999 · Movie',
+      );
+      expect(meta.querySelector('cv-score')?.textContent?.trim()).toBe('8.2');
+    });
+
+    it('labels a series "Series"', () => {
+      const el = renderDetailed({ ...matrix, mediaType: 'tv' });
+      expect(el.querySelector('[data-meta]')?.textContent).toContain('1999 · Series');
+    });
+
+    it('shows no score and never the words null or undefined when the rating is null', () => {
+      const el = renderDetailed({ ...matrix, rating: null });
+      expect(el.querySelector('[data-meta] cv-score')?.textContent?.trim()).toBe('');
+      expect(el.querySelector('[data-meta] p-rating')).toBeNull();
+      expect(el.textContent).not.toMatch(/null|undefined|NaN/);
+    });
+
+    it('shows only the type when the year is unknown', () => {
+      const el = renderDetailed({ ...matrix, year: null });
+      const left = el.querySelector('[data-meta] span')?.textContent?.replace(/\s+/g, ' ').trim();
+      expect(left).toBe('Movie');
+    });
+
+    it('is off by default: the plain card keeps the year only', () => {
+      const el = render(matrix);
+      expect(el.querySelector('[data-meta]')).toBeNull();
+      expect(el.textContent).not.toContain('Movie');
+    });
+  });
 });

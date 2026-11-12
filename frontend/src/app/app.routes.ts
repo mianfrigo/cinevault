@@ -3,7 +3,7 @@ import { authGuard, guestGuard } from './core/auth/guards';
 
 const placeholder = () => import('./pages/placeholder.component');
 const browse = () => import('./features/browse/browse.page');
-// The auth pages draw their own split layout; the app shell leaves out its nav and footer for them.
+// The auth pages and the dashboard draw their own page; the app shell leaves out its nav and footer for them.
 const chromeless = { chromeless: true };
 const legalNote = 'Placeholder page. The owner will supply the final text.';
 
@@ -71,6 +71,7 @@ export const routes: Routes = [
   {
     path: 'dashboard',
     canActivate: [authGuard],
+    data: chromeless,
     loadComponent: () => import('./features/dashboard/dashboard-shell.component'),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'favorites' },

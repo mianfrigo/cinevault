@@ -296,12 +296,13 @@
 }
 
 /*
- * Touch targets: the preset sizes controls at 40px (laptop). Below 1024px they grow to 44px.
+ * Touch targets: the preset sizes controls at 40px (laptop). Below 1024px they grow to 44px (the filter pills to 40px inside their 2px frame).
  * Unlayered so it beats the primeng layer that declares these variables.
  */
 @media (max-width: 1023px) {
   :root {
     --p-button-padding-y: 0.65625rem;
     --p-form-field-padding-y: 0.5625rem;
+    --p-togglebutton-content-padding: 0.59375rem 1rem;
   }
 }

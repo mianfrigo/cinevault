@@ -119,6 +119,20 @@ describe('NavComponent', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('does not paint the untouched search box as invalid', () => {
+    const { el } = setup();
+    // Signal Forms passes the raw invalid state (empty) on to PrimeNG, which would draw a red border
+    // on a pristine box. The form resets the invalid tokens to the neutral ones, as cv-auth-field does.
+    const input = el.querySelector<HTMLInputElement>('input[type="search"]')!;
+    const form = input.closest('form')!;
+    expect(form.className).toContain(
+      '[--p-inputtext-invalid-border-color:var(--p-inputtext-border-color)]',
+    );
+    expect(form.className).toContain(
+      '[--p-inputtext-invalid-placeholder-color:var(--p-inputtext-placeholder-color)]',
+    );
+  });
+
   describe('mobile search toggle', () => {
     const toggleOf = (el: HTMLElement) =>
       el.querySelector<HTMLButtonElement>('button[aria-label="Search titles"]')!;

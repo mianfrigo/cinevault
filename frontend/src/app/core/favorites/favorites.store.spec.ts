@@ -114,6 +114,20 @@ describe('FavoritesStore', () => {
     expect(store.isFavorite('movie', 603)).toBe(true);
   });
 
+  it('setSaved changes a heart without a request and survives a load that is still in flight', async () => {
+    await sessionReady();
+    auth.setUser(user);
+    TestBed.tick();
+    const load = http.expectOne('/api/v1/me/favorites/ids');
+
+    store.setSaved('movie', 603, false);
+    load.flush([{ mediaType: 'movie', tmdbId: 603 }]); // older than the removal
+    await vi.waitFor(() => expect(store.keys()).toEqual([]));
+
+    store.setSaved('tv', 1, true);
+    expect(store.isFavorite('tv', 1)).toBe(true);
+  });
+
   it('an optimistic toggle still pending when the load arrives is kept, then rolled back on failure', async () => {
     await sessionReady();
     auth.setUser(user);

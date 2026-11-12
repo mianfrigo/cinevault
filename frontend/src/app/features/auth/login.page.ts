@@ -17,6 +17,7 @@ import { emailRules, queryText } from './auth.rules';
 /** Fixed set of notices a redirect can ask the login page to show: nothing else is ever rendered. */
 const NOTICES = new Map([
   ['password-reset', 'Your password was changed. Log in with your new password.'],
+  ['password-changed', 'Password changed, please log in again.'],
 ]);
 
 const LOGIN_MESSAGES = new Map([

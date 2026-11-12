@@ -96,6 +96,12 @@ describe('Login page', () => {
     expect(unknown.el.querySelector('p-message')).toBeNull();
   });
 
+  it('shows the password-changed notice after a password change from the account page', async () => {
+    const ctx = await setup('/login?notice=password-changed');
+    expect(ctx.text()).toContain('Password changed, please log in again.');
+    expect(ctx.el.querySelector('p-message')!.getAttribute('role')).toBe('status');
+  });
+
   it('ignores a next param that is percent-encoded //, or repeated', async () => {
     for (const query of ['next=%2F%2Fevil.com', 'next=%2Fprivacy&next=%2Fterms']) {
       const ctx = await logIn('/login?' + query);

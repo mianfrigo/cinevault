@@ -38,6 +38,12 @@ export const FavoritesStore = signalStore(
           : keys.filter((k) => k !== key),
       }));
 
+    // The key is set now; a load that is still in flight must not overwrite it with older data.
+    const record = (key: string, present: boolean) => {
+      setKey(key, present);
+      overlays.forEach((o) => o.set(key, present));
+    };
+
     return {
       isFavorite: (type: MediaTypeParam, id: number) => store.keySet().has(keyOf(type, id)),
 
@@ -65,11 +71,7 @@ export const FavoritesStore = signalStore(
         }
         const key = keyOf(type, id);
         const was = store.keySet().has(key);
-        const record = (present: boolean) => {
-          setKey(key, present);
-          overlays.forEach((o) => o.set(key, present));
-        };
-        record(!was);
+        record(key, !was);
         try {
           await firstValueFrom(
             was
@@ -77,10 +79,14 @@ export const FavoritesStore = signalStore(
               : api.put<void>(`/me/favorites/${type}/${id}`),
           );
         } catch (e) {
-          record(was);
+          record(key, was);
           throw e;
         }
       },
+
+      /** Sets a heart without a request, for when the API already changed it (a confirmed removal on the favorites page). */
+      setSaved: (type: MediaTypeParam, id: number, saved: boolean) =>
+        record(keyOf(type, id), saved),
 
       clear: () => patchState(store, { keys: [] }),
     };

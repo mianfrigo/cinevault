@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { FavoritesStore } from '../core/favorites/favorites.store';
@@ -33,13 +33,11 @@ import { TitleSummary } from '../core/models';
       <!-- The button is the 44px target (top-right corner); only the 32px chip inside is drawn. -->
       <p-button
         class="absolute top-0 right-0 z-10 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
-        [class.opacity-0]="!saved()"
+        [class.opacity-0]="!saved() && !removable()"
         [text]="true"
         severity="secondary"
-        [icon]="saved() ? 'pi pi-heart-fill' : 'pi pi-heart'"
-        [ariaLabel]="
-          (saved() ? 'Remove ' : 'Add ') + title().title + (saved() ? ' from' : ' to') + ' My List'
-        "
+        [icon]="removable() ? 'pi pi-times' : saved() ? 'pi pi-heart-fill' : 'pi pi-heart'"
+        [ariaLabel]="label()"
         [pt]="heartAttrs()"
         (onClick)="toggle()"
       />
@@ -50,6 +48,9 @@ export class PosterCardComponent {
   private readonly favorites = inject(FavoritesStore);
 
   readonly title = input.required<TitleSummary>();
+  /** The corner button removes the title from the user's favorites (emits `removed`) instead of toggling the heart. */
+  readonly removable = input(false);
+  readonly removed = output<void>();
 
   protected readonly saved = computed(() =>
     this.favorites.isFavorite(this.title().mediaType, this.title().tmdbId),
@@ -60,10 +61,16 @@ export class PosterCardComponent {
     return t.year === null ? t.title : `${t.title} (${t.year})`;
   });
 
+  protected readonly label = computed(() => {
+    const name = this.title().title;
+    if (this.removable()) return `Remove ${name} from favorites`;
+    return this.saved() ? `Remove ${name} from My List` : `Add ${name} to My List`;
+  });
+
   // p-button only forwards ariaLabel; aria-pressed and the sizing reach the inner <button> through pt.
   protected readonly heartAttrs = computed(() => ({
     root: {
-      'aria-pressed': String(this.saved()),
+      'aria-pressed': this.removable() ? null : String(this.saved()),
       class: 'size-11 !p-0',
     },
     icon: {
@@ -73,6 +80,7 @@ export class PosterCardComponent {
   }));
 
   protected toggle(): void {
+    if (this.removable()) return this.removed.emit();
     const t = this.title();
     // A failed API call is already undone by the store; the heart flipping back is the signal.
     this.favorites.toggle(t.mediaType, t.tmdbId).catch(() => undefined);

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { guestGuard } from './core/auth/guards';
+import { authGuard, guestGuard } from './core/auth/guards';
 
 const placeholder = () => import('./pages/placeholder.component');
 const browse = () => import('./features/browse/browse.page');
@@ -61,16 +61,22 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/reset-password.page'),
   },
   {
-    path: 'dashboard/favorites',
-    title: 'My favorites',
-    loadComponent: placeholder,
-    data: { heading: 'My favorites' },
-  },
-  {
-    path: 'dashboard/account',
-    title: 'Account',
-    loadComponent: placeholder,
-    data: { heading: 'Account' },
+    path: 'dashboard',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/dashboard/dashboard-shell.component'),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'favorites' },
+      {
+        path: 'favorites',
+        title: 'My favorites',
+        loadComponent: () => import('./features/dashboard/favorites.page'),
+      },
+      {
+        path: 'account',
+        title: 'Account',
+        loadComponent: () => import('./features/dashboard/account.page'),
+      },
+    ],
   },
   { path: 'admin/users', title: 'Users', loadComponent: placeholder, data: { heading: 'Users' } },
   {

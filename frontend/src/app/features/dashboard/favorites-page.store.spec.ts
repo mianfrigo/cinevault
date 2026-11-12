@@ -43,8 +43,12 @@ describe('FavoritesPageStore', () => {
   });
 
   afterEach(() => {
-    http.verify();
-    vi.useRealTimers();
+    // Real timers come back even when verify() throws.
+    try {
+      http.verify();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   const list = (params: Record<string, string | null>) =>
@@ -157,6 +161,23 @@ describe('FavoritesPageStore', () => {
     deletes(1)[0].flush(null, { status: 204, statusText: 'No Content' });
     expect(hearts.isFavorite('movie', 1)).toBe(false);
     list({ page: '1' }).flush(paged([]));
+  });
+
+  it('a pending removal of another filter does not count against the visible total or the total', () => {
+    store.setType('all');
+    list({ type: null, page: '1' }).flush(paged([fav(1), fav(2)]));
+    store.remove(fav(1));
+    expect(store.visibleTotal()).toBe(1);
+
+    store.setType('tv');
+    list({ type: 'tv', page: '1' }).flush(paged([fav(5, { mediaType: 'tv' })]));
+    expect(store.visibleTotal()).toBe(1); // the pending movie is not among these titles
+    expect(store.pendingRemoval()?.key).toBe('movie:1');
+
+    vi.advanceTimersByTime(5_000);
+    deletes(1)[0].flush(null, { status: 204, statusText: 'No Content' });
+    expect(store.total()).toBe(1); // it was not in the loaded list, so nothing to subtract
+    list({ type: 'tv', page: '1' }).flush(paged([fav(5, { mediaType: 'tv' })]));
   });
 
   it('brings the item back and reports it when the DELETE fails', () => {

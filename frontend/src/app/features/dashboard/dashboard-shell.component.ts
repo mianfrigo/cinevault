@@ -75,7 +75,7 @@ interface DashItem {
         @for (item of items(); track item.path) {
           <a
             [routerLink]="item.path"
-            class="flex min-h-14 flex-col items-center justify-center gap-1 text-micro font-medium text-fg-3 transition-colors duration-150 hover:text-fg focus-visible:-outline-offset-4"
+            class="flex min-h-14 flex-col items-center justify-center gap-1 text-micro font-medium transition-colors duration-150 hover:text-fg focus-visible:-outline-offset-4 not-aria-[current=page]:text-fg-3"
             routerLinkActive="text-accent-text"
             ariaCurrentWhenActive="page"
           >
@@ -92,7 +92,7 @@ export default class DashboardShell {
   private readonly router = inject(Router);
 
   protected readonly sideLink =
-    'flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-fg-2 transition-colors duration-150 hover:bg-hover hover:text-fg [&>i]:text-base';
+    'flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition-colors duration-150 hover:bg-hover hover:text-fg [&>i]:text-base not-aria-[current=page]:text-fg-2';
 
   // Task 19 adds Users and Overview here for admins (`this.auth.isAdmin()`).
   protected readonly items = computed<DashItem[]>(() => [

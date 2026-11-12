@@ -131,6 +131,33 @@ describe('Favorites page', () => {
     http.match('/api/v1/me/favorites/movie/1');
   });
 
+  it('steps back to the last page when the removal leaves the current page empty', async () => {
+    const { el, list, settle, http, url } = await setup('/dashboard/favorites?page=2');
+    (await list({ page: '2' })).flush(paged([fav(21)], 2, 2));
+    await settle();
+    // Only the 5 s undo timer is faked; the click starts it.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      el.querySelector<HTMLButtonElement>(
+        'button[aria-label="Remove Title 21 from favorites"]',
+      )!.click();
+      vi.advanceTimersByTime(5_000);
+    } finally {
+      vi.useRealTimers();
+    }
+    http
+      .expectOne({ method: 'DELETE', url: '/api/v1/me/favorites/movie/21' })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    // Page 2 is now past the end (one page left): the page asks for page 1 and the URL follows.
+    (await list({ page: '2' })).flush({ items: [], page: 2, totalPages: 1, totalItems: 20 });
+    (await list({ page: '1' })).flush(paged([fav(1)], 1, 1));
+    await settle();
+    expect(url()).toBe('/dashboard/favorites');
+    expect(el.textContent).not.toContain('No favorites on this page.');
+    expect(document.activeElement?.tagName).toBe('H1'); // focus stays on the page, not lost to the body
+    http.verify();
+  });
+
   it('shows an error with Retry when the list cannot be loaded', async () => {
     const { el, list, settle, http } = await setup('/dashboard/favorites');
     (await list({ page: '1' })).flush(null, { status: 500, statusText: 'Server Error' });

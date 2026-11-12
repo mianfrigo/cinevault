@@ -39,8 +39,9 @@ export class UserMenuComponent {
     { label: 'Log out', icon: 'pi pi-sign-out', command: () => void this.logout() },
   ]);
 
+  /** Leaves first: a page that still holds work (a pending favorite removal) sends it while the session is valid. */
   private async logout(): Promise<void> {
-    await this.auth.logout();
     await this.router.navigateByUrl('/');
+    await this.auth.logout();
   }
 }

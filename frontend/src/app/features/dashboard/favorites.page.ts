@@ -208,6 +208,22 @@ export default class FavoritesPage {
       untracked(() => this.store.show(type, page));
     });
 
+    // A removal that emptied the last page leaves the current page past the end: step back to the
+    // last page (replacing the history entry). Only the page heading is re-used, so focus stays put.
+    effect(() => {
+      const last = this.store.totalPages();
+      if (this.store.status() !== 'idle' || this.store.items().length > 0) return;
+      if (last > 0 && this.store.page() > last) {
+        untracked(() => {
+          void this.router.navigate([], {
+            queryParams: { page: last > 1 ? last : null },
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          });
+        });
+      }
+    });
+
     // The toast mirrors the store: it is there exactly while a removal can be undone.
     effect(() => {
       const pending = this.store.pendingRemoval();

@@ -60,12 +60,17 @@ export const FavoritesPageStore = signalStore(
     pendingRemoval: null,
     removeFailed: null,
   }),
-  withComputed(({ items, total, pendingRemoval }) => ({
+  withComputed(({ items, total, type, pendingRemoval }) => ({
     visibleItems: computed(() => {
       const hidden = pendingRemoval()?.key;
       return items().filter((i) => favoriteKey(i) !== hidden);
     }),
-    visibleTotal: computed(() => Math.max(total() - (pendingRemoval() ? 1 : 0), 0)),
+    // A pending title of another filter is not among these titles, so it is not subtracted.
+    visibleTotal: computed(() => {
+      const pending = pendingRemoval();
+      const counts = pending && (type() === 'all' || pending.item.mediaType === type());
+      return Math.max(total() - (counts ? 1 : 0), 0);
+    }),
   })),
   withMethods((store) => {
     const api = inject(ApiClient);
@@ -108,9 +113,10 @@ export const FavoritesPageStore = signalStore(
     /** Hides the item for good at once and sends its DELETE. */
     const send = ({ key, item }: PendingRemoval) => {
       gone.add(key);
+      // Only a title of the loaded list is part of the total (the filter may have changed since).
       patchState(store, (s) => ({
         items: s.items.filter((i) => favoriteKey(i) !== key),
-        total: Math.max(s.total - 1, 0),
+        total: Math.max(s.total - (s.items.some((i) => favoriteKey(i) === key) ? 1 : 0), 0),
       }));
       api.delete<void>(`/me/favorites/${item.mediaType}/${item.tmdbId}`).subscribe({
         next: () => {

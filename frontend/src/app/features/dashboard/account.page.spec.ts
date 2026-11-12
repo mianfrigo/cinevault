@@ -77,6 +77,9 @@ describe('Account page', () => {
       expect(ctx.el.querySelector('#old-password')?.getAttribute('aria-invalid')).toBe('true');
       await vi.waitFor(() => expect(document.activeElement?.id).toBe('old-password'));
       expect(ctx.hasText('raw server text')).toBe(false);
+      // A wrong old password does not end the session.
+      expect(TestBed.inject(AuthStore).isLoggedIn()).toBe(true);
+      ctx.http.expectNone('/api/v1/auth/logout');
 
       // Typing a new attempt clears it and the form submits again.
       ctx.type('#old-password', 'old password 2');

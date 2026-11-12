@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
-  afterNextRender,
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -113,8 +113,6 @@ const MIN_CURATED = 6;
                       <img
                         [src]="g.coverUrl"
                         alt=""
-                        width="780"
-                        height="468"
                         loading="lazy"
                         decoding="async"
                         class="size-full object-cover"
@@ -228,15 +226,18 @@ export default class HomePage {
   protected readonly cover = signal<Record<number, 'loaded' | 'failed'>>({});
 
   constructor() {
-    // Covers that finished before hydration attached the listeners would otherwise stay hidden.
-    afterNextRender(() =>
+    // A cover can settle before hydration attaches its listeners (or before a re-created tile gets
+    // them), and the browser never replays load/error: read the img state after every genre render.
+    afterRenderEffect(() => {
+      this.popularGenres();
       this.host.nativeElement
         .querySelectorAll<HTMLImageElement>('img[data-cover]')
         .forEach((img) => {
-          if (img.complete)
-            this.mark(Number(img.dataset['cover']), img.naturalWidth ? 'loaded' : 'failed');
-        }),
-    );
+          const id = Number(img.dataset['cover']);
+          if (img.complete && !this.cover()[id])
+            this.mark(id, img.naturalWidth ? 'loaded' : 'failed');
+        });
+    });
   }
 
   protected mark(id: number, state: 'loaded' | 'failed') {

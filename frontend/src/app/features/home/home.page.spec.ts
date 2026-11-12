@@ -77,6 +77,7 @@ describe('HomePage', () => {
   afterEach(() => {
     http.verify();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   const request = (path: string, type: string) =>
@@ -234,8 +235,7 @@ describe('HomePage', () => {
         expect(first?.getAttribute('alt')).toBe('');
         expect(first?.getAttribute('loading')).toBe('lazy');
         expect(first?.getAttribute('decoding')).toBe('async');
-        expect(first?.getAttribute('width')).toBeTruthy(); // explicit size: no layout shift
-        expect(first?.getAttribute('height')).toBeTruthy();
+
         expect(row.every((a) => img(a))).toBe(true);
       });
 
@@ -269,6 +269,27 @@ describe('HomePage', () => {
         first?.dispatchEvent(new Event('load'));
         fixture.detectChanges();
         expect(layer?.classList).not.toContain('opacity-0');
+      });
+
+      describe('covers that settled before the client took over (SSR hydration)', () => {
+        // The browser fires load/error before hydration attaches listeners; only the img state is left.
+        function stubImage(complete: boolean, naturalWidth: number) {
+          vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(complete);
+          vi.spyOn(HTMLImageElement.prototype, 'naturalWidth', 'get').mockReturnValue(naturalWidth);
+        }
+
+        it('shows a cover that had already loaded, without waiting for a load event', async () => {
+          stubImage(true, 780);
+          const row = tiles(await loadGenres(manyGenres));
+          expect(img(row[0])?.parentElement?.classList).not.toContain('opacity-0');
+        });
+
+        it('drops a cover that had already failed, leaving the tonal tile', async () => {
+          stubImage(true, 0);
+          const row = tiles(await loadGenres(manyGenres));
+          expect(img(row[0])).toBeNull();
+          expect(text(row[0])).toBe('Sci-FiScience Fiction');
+        });
       });
 
       it('makes a single genre request on Home, and none to the plain genre list', async () => {

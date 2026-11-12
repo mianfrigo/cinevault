@@ -222,6 +222,12 @@ describe('HomePage', () => {
       ]);
     });
 
+    it('renders no section at all when the API returns no genres', async () => {
+      const el = await loadGenres([]);
+      expect(el.textContent).not.toContain('Popular genres');
+      expect(region(el)).toBeNull();
+    });
+
     it('shows the heading and a skeleton row while the genres load', () => {
       const fixture = load(); // nothing flushed yet
       const el = fixture.nativeElement as HTMLElement;

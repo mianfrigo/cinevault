@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   contentChild,
+  Directive,
   ElementRef,
   inject,
   input,
@@ -16,13 +17,32 @@ import { TitleSummary } from '../core/models';
 import { PosterCardComponent } from './poster-card.component';
 
 /**
+ * Marks the `<ng-template let-item>` that renders a row item, and types its context: bind it to the
+ * same array as the row's `items` (`<ng-template [cvRowItem]="items" let-item>`) so `item` is typed.
+ */
+@Directive({ selector: 'ng-template[cvRowItem]' })
+export class RowItemDirective<T> {
+  readonly cvRowItem = input.required<readonly T[]>();
+  readonly template = inject<TemplateRef<{ $implicit: T }>>(TemplateRef);
+
+  // Type-only guard Angular's template checker calls; the predicate uses the parameter as a type.
+  static ngTemplateContextGuard<T>(
+    _dir: RowItemDirective<T>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    ctx: unknown,
+  ): ctx is { $implicit: T } {
+    return true;
+  }
+}
+
+/**
  * A heading and a horizontally scrolling row of posters. PrimeNG's Carousel in composition mode is
  * a native scroll-snap track (`autoSize` keeps the fixed poster widths of the UX brief), which is
  * the mockup's row behaviour. Its legacy `numVisible` mode (deprecated in PrimeNG 22) pages by
  * transform and cannot scroll continuously or fade at the edges.
  *
- * Give it an `<ng-template let-item>` child to render something other than a poster (the Home
- * genre tiles); the template receives each item as `$implicit`.
+ * Give it a `cvRowItem` template to render something other than a poster (the Home genre
+ * tiles) and a `trackKey` to identify items; without them it renders poster cards keyed by title.
  */
 @Component({
   selector: 'cv-poster-row',
@@ -74,12 +94,12 @@ import { PosterCardComponent } from './poster-card.component';
           role="region"
           [attr.aria-label]="heading()"
         >
-          @for (t of items(); track $index) {
+          @for (t of items(); track trackKey()(t)) {
             <p-carousel-item class="pr-4 lg:pr-5">
-              @if (itemTemplate(); as tpl) {
-                <ng-container *ngTemplateOutlet="tpl; context: { $implicit: t }" />
+              @if (itemTemplate(); as item) {
+                <ng-container *ngTemplateOutlet="item.template; context: { $implicit: t }" />
               } @else {
-                <cv-poster-card [title]="$any(t)" class="w-35 md:w-40 lg:w-44 xl:w-46" />
+                <cv-poster-card [title]="poster(t)" class="w-35 md:w-40 lg:w-44 xl:w-46" />
               }
             </p-carousel-item>
           }
@@ -91,11 +111,21 @@ import { PosterCardComponent } from './poster-card.component';
 export class PosterRowComponent<T = TitleSummary> {
   readonly heading = input.required<string>();
   readonly items = input.required<readonly T[]>();
-  readonly itemTemplate = contentChild(TemplateRef);
+  readonly itemTemplate = contentChild(RowItemDirective);
+  /** Stable identity per item; defaults to the title's media type and TMDB id (poster rows). */
+  readonly trackKey = input<(item: T) => string | number>((t) => {
+    const { mediaType, tmdbId } = t as unknown as TitleSummary;
+    return mediaType + tmdbId;
+  });
   readonly seeAllLink = input<string[]>();
 
   private readonly track = viewChild.required('track', { read: ElementRef });
   private readonly win = inject(DOCUMENT).defaultView;
+
+  /** Without an item template the items are titles. */
+  protected poster(t: T): TitleSummary {
+    return t as unknown as TitleSummary;
+  }
 
   /** Arrows move 85% of the visible width, like the mockup (the carousel's own next() moves one item). */
   protected scroll(dir: 1 | -1): void {

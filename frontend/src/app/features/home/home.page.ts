@@ -4,7 +4,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CatalogService } from '../../core/catalog/catalog.service';
-import { PosterRowComponent } from '../../shared/poster-row.component';
+import { PosterRowComponent, RowItemDirective } from '../../shared/poster-row.component';
 import { StateBlockComponent } from '../../shared/state-block.component';
 import { HeroComponent } from './hero.component';
 
@@ -23,6 +23,7 @@ const TONES = [
 ];
 
 // Tile size shared by the real tiles and the skeleton so the row never shifts (mockup: 5:3, 168-224px wide).
+const TILE_WIDTH = 'clamp(10.5rem, 44vw, 14rem)';
 const TILE = 'aspect-[5/3] w-[clamp(10.5rem,44vw,14rem)] shrink-0';
 
 // TMDB has no genre popularity: a fixed list of well-known names, matched by name against the API.
@@ -52,6 +53,7 @@ const MIN_CURATED = 6;
     SkeletonModule,
     HeroComponent,
     PosterRowComponent,
+    RowItemDirective,
     StateBlockComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -81,32 +83,35 @@ const MIN_CURATED = 6;
         />
 
         @if (genres.hasValue()) {
-          <cv-poster-row
-            heading="Popular genres"
-            [items]="popularGenres()"
-            [seeAllLink]="['/movies']"
-          >
-            <ng-template let-g>
-              <a
-                [routerLink]="['/genre', 'movie', g.id]"
-                class="group/tile relative flex items-end rounded-md p-4 ring-1 ring-line transition-[filter] duration-200 ease-out-expo ring-inset hover:brightness-110"
-                [class]="g.tone + ' ' + tile"
-              >
-                <span
-                  class="text-base leading-tight font-medium"
-                  [attr.aria-hidden]="g.label !== g.name || null"
-                  >{{ g.label }}</span
+          @if (popularGenres().length) {
+            <cv-poster-row
+              heading="Popular genres"
+              [items]="popularGenres()"
+              [trackKey]="genreId"
+              [seeAllLink]="['/movies']"
+            >
+              <ng-template [cvRowItem]="popularGenres()" let-g>
+                <a
+                  [routerLink]="['/genre', 'movie', g.id]"
+                  class="group/tile relative flex items-end rounded-md p-4 ring-1 ring-line transition-[filter] duration-200 ease-out-expo ring-inset hover:brightness-110"
+                  [class]="g.tone + ' ' + tile"
                 >
-                @if (g.label !== g.name) {
-                  <span class="sr-only">{{ g.name }}</span>
-                }
-                <i
-                  class="pi pi-arrow-up-right absolute top-4 right-4 opacity-0 transition-opacity duration-150 group-hover/tile:opacity-90 group-focus-visible/tile:opacity-90"
-                  aria-hidden="true"
-                ></i>
-              </a>
-            </ng-template>
-          </cv-poster-row>
+                  <span
+                    class="text-base leading-tight font-medium"
+                    [attr.aria-hidden]="g.label !== g.name || null"
+                    >{{ g.label }}</span
+                  >
+                  @if (g.label !== g.name) {
+                    <span class="sr-only">{{ g.name }}</span>
+                  }
+                  <i
+                    class="pi pi-arrow-up-right absolute top-4 right-4 opacity-0 transition-opacity duration-150 group-hover/tile:opacity-90 group-focus-visible/tile:opacity-90"
+                    aria-hidden="true"
+                  ></i>
+                </a>
+              </ng-template>
+            </cv-poster-row>
+          }
         } @else {
           <section>
             <!-- Same header and track metrics as the loaded row, so nothing moves when it arrives. -->
@@ -123,7 +128,12 @@ const MIN_CURATED = 6;
               <div role="status" aria-busy="true" class="flex gap-4 overflow-hidden py-2 lg:gap-5">
                 <span class="sr-only">Loading</span>
                 @for (n of skeletonTiles; track n) {
-                  <p-skeleton [class]="tile" height="auto" borderRadius="6px" />
+                  <p-skeleton
+                    class="aspect-[5/3] shrink-0"
+                    [width]="tileWidth"
+                    height="auto"
+                    borderRadius="6px"
+                  />
                 }
               </div>
             }
@@ -177,6 +187,8 @@ export default class HomePage {
   );
 
   protected readonly tile = TILE;
+  protected readonly tileWidth = TILE_WIDTH;
+  protected readonly genreId = (g: { id: number }) => g.id;
   protected readonly skeletonTiles = [0, 1, 2, 3, 4, 5, 6, 7];
 
   protected readonly popularGenres = computed(() => {

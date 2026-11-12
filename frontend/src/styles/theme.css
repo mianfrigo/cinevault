@@ -178,6 +178,21 @@
   );
 }
 
+/*
+ * Genre tile cover scrim: ink rising from the bottom so the label (light tone text) keeps 4.5:1 over
+ * any backdrop. A multi-stop gradient with alpha stops has no Tailwind utility.
+ */
+@utility tile-scrim {
+  --ink: var(--color-surface-1);
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--ink) 92%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 78%, transparent) 30%,
+    color-mix(in srgb, var(--ink) 35%, transparent) 65%,
+    color-mix(in srgb, var(--ink) 15%, transparent) 100%
+  );
+}
+
 /* Quiet metadata line (mockup .meta): items separated by thin dots, no separator before the first. */
 @utility meta-row {
   display: flex;

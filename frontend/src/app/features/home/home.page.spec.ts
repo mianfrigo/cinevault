@@ -1,8 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Genre, Paged, TitleSummary } from '../../core/models';
+import { GenreCover, Paged, TitleSummary } from '../../core/models';
 import HomePage from './home.page';
 
 const title = (tmdbId: number, name: string, mediaType: 'movie' | 'tv'): TitleSummary => ({
@@ -26,12 +26,13 @@ const paged = (items: TitleSummary[]): Paged<TitleSummary> => ({
 const trending = paged([1, 2, 3, 4].map((i) => title(i, `Trending ${i}`, 'movie')));
 const newTv = paged([10, 11].map((i) => title(i, `Fresh ${i}`, 'tv')));
 const topRated = paged([20, 21].map((i) => title(i, `Classic ${i}`, 'movie')));
-const genres: Genre[] = [
-  { id: 878, name: 'Science Fiction' },
-  { id: 28, name: 'Action' },
+const cover = (id: number) => `https://image.tmdb.org/t/p/w780/${id}.jpg`;
+const genres: GenreCover[] = [
+  { id: 878, name: 'Science Fiction', coverUrl: cover(878) },
+  { id: 28, name: 'Action', coverUrl: cover(28) },
 ];
 // TMDB's movie genre list comes back alphabetical, so the curated order must not follow API order.
-const manyGenres: Genre[] = [
+const manyGenres: GenreCover[] = [
   'Action',
   'Adventure',
   'Animation',
@@ -49,7 +50,7 @@ const manyGenres: Genre[] = [
   'Science Fiction',
   'Thriller',
   'War',
-].map((name, i) => ({ id: 100 + i, name }));
+].map((name, i) => ({ id: 100 + i, name, coverUrl: cover(100 + i) }));
 
 describe('HomePage', () => {
   let http: HttpTestingController;
@@ -76,6 +77,7 @@ describe('HomePage', () => {
   afterEach(() => {
     http.verify();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   const request = (path: string, type: string) =>
@@ -92,7 +94,7 @@ describe('HomePage', () => {
     request('trending', 'movie').flush(trending);
     request('new', 'tv').flush(newTv);
     request('top-rated', 'movie').flush(topRated);
-    request('genres', 'movie').flush(genres);
+    request('genre-covers', 'movie').flush(genres);
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -113,7 +115,7 @@ describe('HomePage', () => {
     request('trending', 'movie').flush(trending);
     request('new', 'tv').flush(null, { status: 500, statusText: 'Server Error' });
     request('top-rated', 'movie').flush(topRated);
-    request('genres', 'movie').flush(genres);
+    request('genre-covers', 'movie').flush(genres);
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -139,12 +141,13 @@ describe('HomePage', () => {
   });
 
   describe('Popular genres', () => {
-    async function loadGenres(response: Genre[]) {
-      const fixture = load();
+    let fixture: ComponentFixture<HomePage>;
+    async function loadGenres(response: GenreCover[]) {
+      fixture = load();
       request('trending', 'movie').flush(trending);
       request('new', 'tv').flush(newTv);
       request('top-rated', 'movie').flush(topRated);
-      request('genres', 'movie').flush(response);
+      request('genre-covers', 'movie').flush(response);
       await fixture.whenStable();
       fixture.detectChanges();
       return fixture.nativeElement as HTMLElement;
@@ -209,10 +212,10 @@ describe('HomePage', () => {
 
     it('falls back to the first genres in API order when fewer than 6 curated names match', async () => {
       const el = await loadGenres([
-        { id: 1, name: 'Zeta' },
-        { id: 2, name: 'Action' },
-        { id: 3, name: 'Alpha' },
-        { id: 4, name: 'Drama' },
+        { id: 1, name: 'Zeta', coverUrl: null },
+        { id: 2, name: 'Action', coverUrl: null },
+        { id: 3, name: 'Alpha', coverUrl: null },
+        { id: 4, name: 'Drama', coverUrl: null },
       ]);
       expect(tiles(el).map((a) => a.getAttribute('href'))).toEqual([
         '/genre/movie/1',
@@ -220,6 +223,79 @@ describe('HomePage', () => {
         '/genre/movie/3',
         '/genre/movie/4',
       ]);
+    });
+
+    describe('cover images', () => {
+      const img = (a: HTMLAnchorElement) => a.querySelector('img');
+
+      it('renders a decorative, lazy cover image with the coverUrl in each tile', async () => {
+        const row = tiles(await loadGenres(manyGenres));
+        const first = img(row[0]);
+        expect(first?.getAttribute('src')).toBe(cover(114)); // Science Fiction
+        expect(first?.getAttribute('alt')).toBe('');
+        expect(first?.getAttribute('loading')).toBe('lazy');
+        expect(first?.getAttribute('decoding')).toBe('async');
+
+        expect(row.every((a) => img(a))).toBe(true);
+      });
+
+      it('shows no image when coverUrl is null and keeps the tile usable', async () => {
+        const el = await loadGenres(
+          manyGenres.map((g) => (g.name === 'Action' ? { ...g, coverUrl: null } : g)),
+        );
+        const row = tiles(el);
+        expect(img(row[1])).toBeNull(); // Action
+        expect(img(row[0])).not.toBeNull();
+        expect(text(row[1])).toBe('Action');
+        expect(row[1].getAttribute('href')).toBe('/genre/movie/100');
+      });
+
+      it('drops only the failed image, leaving the tonal tile with its label and link', async () => {
+        const el = await loadGenres(manyGenres);
+        const row = tiles(el);
+        img(row[1])?.dispatchEvent(new Event('error')); // Action
+        fixture.detectChanges();
+
+        expect(img(row[1])).toBeNull();
+        expect(text(row[1])).toBe('Action');
+        expect(row[1].getAttribute('href')).toBe('/genre/movie/100');
+        expect(img(row[0])).not.toBeNull();
+      });
+
+      it('keeps the cover hidden over the tonal tile until it has loaded, then fades it in', async () => {
+        const first = img(tiles(await loadGenres(manyGenres))[0]);
+        const layer = first?.parentElement;
+        expect(layer?.classList).toContain('opacity-0');
+        first?.dispatchEvent(new Event('load'));
+        fixture.detectChanges();
+        expect(layer?.classList).not.toContain('opacity-0');
+      });
+
+      describe('covers that settled before the client took over (SSR hydration)', () => {
+        // The browser fires load/error before hydration attaches listeners; only the img state is left.
+        function stubImage(complete: boolean, naturalWidth: number) {
+          vi.spyOn(HTMLImageElement.prototype, 'complete', 'get').mockReturnValue(complete);
+          vi.spyOn(HTMLImageElement.prototype, 'naturalWidth', 'get').mockReturnValue(naturalWidth);
+        }
+
+        it('shows a cover that had already loaded, without waiting for a load event', async () => {
+          stubImage(true, 780);
+          const row = tiles(await loadGenres(manyGenres));
+          expect(img(row[0])?.parentElement?.classList).not.toContain('opacity-0');
+        });
+
+        it('drops a cover that had already failed, leaving the tonal tile', async () => {
+          stubImage(true, 0);
+          const row = tiles(await loadGenres(manyGenres));
+          expect(img(row[0])).toBeNull();
+          expect(text(row[0])).toBe('Sci-FiScience Fiction');
+        });
+      });
+
+      it('makes a single genre request on Home, and none to the plain genre list', async () => {
+        await loadGenres(manyGenres);
+        http.expectNone((r) => r.url === '/api/v1/catalog/genres');
+      });
     });
 
     it('renders no section at all when the API returns no genres', async () => {
@@ -241,7 +317,7 @@ describe('HomePage', () => {
       request('trending', 'movie');
       request('new', 'tv');
       request('top-rated', 'movie');
-      request('genres', 'movie');
+      request('genre-covers', 'movie');
     });
 
     it('shows an error block with Retry when genres fail and the rest of Home still renders', async () => {
@@ -249,7 +325,7 @@ describe('HomePage', () => {
       request('trending', 'movie').flush(trending);
       request('new', 'tv').flush(newTv);
       request('top-rated', 'movie').flush(topRated);
-      request('genres', 'movie').flush(null, { status: 500, statusText: 'Server Error' });
+      request('genre-covers', 'movie').flush(null, { status: 500, statusText: 'Server Error' });
       await fixture.whenStable();
       fixture.detectChanges();
       const el = fixture.nativeElement as HTMLElement;
@@ -265,7 +341,7 @@ describe('HomePage', () => {
 
       retry()[0].click();
       fixture.detectChanges();
-      request('genres', 'movie').flush(manyGenres);
+      request('genre-covers', 'movie').flush(manyGenres);
       await fixture.whenStable();
       fixture.detectChanges();
 

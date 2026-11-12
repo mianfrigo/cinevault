@@ -1,26 +1,26 @@
 import { Routes } from '@angular/router';
 
 const placeholder = () => import('./pages/placeholder.component');
+const browse = () => import('./features/browse/browse.page');
 const legalNote = 'Placeholder page. The owner will supply the final text.';
 
 // Route map: docs/app-flow.md section 1. Each placeholder is replaced by its real screen in a later task.
 export const routes: Routes = [
   { path: '', title: 'Cinevault', loadComponent: () => import('./features/home/home.page') },
-  { path: 'movies', title: 'Movies', loadComponent: placeholder, data: { heading: 'Movies' } },
-  { path: 'tv', title: 'TV Shows', loadComponent: placeholder, data: { heading: 'TV Shows' } },
+  {
+    path: 'movies',
+    title: 'Movies',
+    loadComponent: browse,
+    data: { type: 'movie' },
+  },
+  { path: 'tv', title: 'TV Shows', loadComponent: browse, data: { type: 'tv' } },
   {
     path: 'new',
     title: 'New & Popular',
-    loadComponent: placeholder,
-    data: { heading: 'New & Popular' },
+    loadComponent: () => import('./features/browse/new.page'),
   },
-  {
-    path: 'genre/:type/:id',
-    title: 'Genre',
-    loadComponent: placeholder,
-    data: { heading: 'Genre' },
-  },
-  { path: 'search', title: 'Search', loadComponent: placeholder, data: { heading: 'Search' } },
+  { path: 'genre/:type/:id', title: 'Genre', loadComponent: browse },
+  { path: 'search', title: 'Search', loadComponent: () => import('./features/browse/search.page') },
   {
     path: 'title/:type/:id',
     title: 'Title',

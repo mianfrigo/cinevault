@@ -5,7 +5,7 @@ import { AppException } from '../common/app.exception';
 import type { Paged } from '../common/paged';
 import { cached } from '../cache/cached';
 import { TmdbClient } from '../tmdb/tmdb.client';
-import { TMDB_MAX_PAGE } from '../tmdb/tmdb.constants';
+import { IMG, TMDB_MAX_PAGE, imageUrl } from '../tmdb/tmdb.constants';
 import {
   mapDetail,
   mapSeason,
@@ -24,9 +24,14 @@ import type {
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
-const TTL = { day: 24 * HOUR, list: HOUR, search: 10 * MINUTE };
+const TTL = {
+  day: 24 * HOUR,
+  list: HOUR,
+  search: 10 * MINUTE,
+  degraded: 5 * MINUTE,
+};
 
-/** Parallel TMDB detail loads per `summaries` call, so a page of favorites cannot flood TMDB. */
+/** Parallel TMDB loads per `summaries` or `genreCovers` call, so neither can flood TMDB. */
 const SUMMARY_CONCURRENCY = 5;
 
 /** `Promise.all(items.map(fn))` with at most `limit` running; stops starting new work after a failure. */
@@ -52,6 +57,12 @@ async function mapLimit<T, R>(
     Array.from({ length: Math.min(limit, items.length) }, worker),
   );
   return out;
+}
+
+export interface GenreCover {
+  id: number;
+  name: string;
+  coverUrl: string | null;
 }
 
 export type ListKind = 'trending' | 'popular' | 'top-rated' | 'new';
@@ -125,6 +136,49 @@ export class CatalogService {
       TTL.day,
       (raw: { genres?: { id: number; name: string }[] | null }) =>
         (raw.genres ?? []).map((g) => ({ id: g.id, name: g.name })),
+    );
+  }
+
+  /**
+   * One card-size backdrop per genre, from the most popular titles of that genre,
+   * never the same title twice (genres are served in list order). Cached whole.
+   * A genre whose lookup fails (other than a clean 404) gets `null` and the result
+   * is cached for 5 minutes instead of 24 h: that still shields TMDB during an
+   * outage (one burst per 5 minutes, not per request) without pinning the gaps all day.
+   */
+  genreCovers(type: MediaTypeParam): Promise<GenreCover[]> {
+    let degraded = false;
+    return cached(
+      this.cache,
+      `tmdb:/genre-covers/${type}:`,
+      () => (degraded ? TTL.degraded : TTL.day),
+      async () => {
+        const genres = await this.genres(type);
+        const pages = await mapLimit(genres, SUMMARY_CONCURRENCY, async (g) => {
+          try {
+            return await this.tmdb.get<TmdbPage>(`/discover/${type}`, {
+              with_genres: g.id,
+              sort_by: 'popularity.desc',
+            });
+          } catch (e) {
+            if (!(e instanceof AppException && e.code === 'NOT_FOUND')) {
+              degraded = true;
+            }
+            return null;
+          }
+        });
+        const used = new Set<number>();
+        return genres.map((g, i) => {
+          const pick = pages[i]?.results?.find(
+            (r) => r.backdrop_path && !used.has(r.id),
+          );
+          if (pick) used.add(pick.id);
+          return {
+            ...g,
+            coverUrl: imageUrl(pick?.backdrop_path ?? null, IMG.backdropCard),
+          };
+        });
+      },
     );
   }
 

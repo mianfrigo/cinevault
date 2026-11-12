@@ -158,6 +158,7 @@ interface UserDto {
 | `GET /catalog/top-rated?type=` | Top rated | `Paged<TitleSummary>` |
 | `GET /catalog/new?type=` | Now playing (movie) or on the air (tv) | `Paged<TitleSummary>` |
 | `GET /catalog/genres?type=` | Genre list | `{id:number,name:string}[]` |
+| `GET /catalog/genre-covers?type=` | One card-size (w780) backdrop per genre, from its most popular titles, no title repeated; `coverUrl` is `null` when none; cached 24 h | `{id:number,name:string,coverUrl:string\|null}[]` |
 | `GET /catalog/discover?type=&genre=&page=` | Titles by genre | `Paged<TitleSummary>` |
 | `GET /catalog/search?q=&page=` | Search movies and series (`q` 1 to 100 chars) | `Paged<TitleSummary>` |
 | `GET /catalog/:type/:id` | Title details | `TitleDetail` |

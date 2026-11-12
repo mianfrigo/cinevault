@@ -35,6 +35,17 @@ describe('cached', () => {
     expect(cache.set).toHaveBeenCalledWith('k', { a: 1 }, 1000);
   });
 
+  it('takes the ttl from the loaded value when given a function', async () => {
+    const { cache } = fakeCache();
+    await cached(
+      cache,
+      'k',
+      (v) => (v === 'bad' ? 5 : 1000),
+      () => Promise.resolve('bad'),
+    );
+    expect(cache.set).toHaveBeenCalledWith('k', 'bad', 5);
+  });
+
   it('returns the loaded value when the cache throws on get and set', async () => {
     const boom = () => Promise.reject(new Error('redis://user:secret@host'));
     const { cache } = fakeCache({ get: boom, set: boom });

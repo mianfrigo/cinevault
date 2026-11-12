@@ -78,7 +78,7 @@ Cache the normalized DTO, keyed by `tmdb:<route>:<sorted query>`.
 
 | Data | TTL |
 |---|---|
-| Title details, season details, genre lists | 24h |
+| Title details, season details, genre lists, genre covers | 24h (5 min when a genre lookup failed) |
 | Trending, popular, top rated, new, discover | 1h |
 | Search | 10 min |
 

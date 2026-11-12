@@ -17,15 +17,15 @@ import { MessageService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
-import { CatalogService } from '../../core/catalog/catalog.service';
-import { ConfigService } from '../../core/config/config.service';
-import { FavoritesStore } from '../../core/favorites/favorites.store';
-import { MediaTypeParam, TitleDetail } from '../../core/models';
+import { CatalogService } from '@core/catalog/catalog.service';
+import { ConfigService } from '@core/config/config.service';
+import { FavoritesStore } from '@core/favorites/favorites.store';
+import { MediaTypeParam, TitleDetail } from '@core/models';
 import NotFoundComponent from '../../pages/not-found.component';
-import { initials } from '../../shared/initials';
-import { PosterRowComponent } from '../../shared/poster-row.component';
-import { ScoreComponent } from '../../shared/score.component';
-import { StateBlockComponent } from '../../shared/state-block.component';
+import { initials } from '@shared/utils/initials';
+import { PosterRowComponent } from '@shared/components/poster-row/poster-row.component';
+import { ScoreComponent } from '@shared/components/score/score.component';
+import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { SeasonsComponent } from './seasons.component';
 
 /** The HTTP status behind a resource error (the resource may wrap the original error). */

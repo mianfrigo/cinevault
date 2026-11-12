@@ -2,8 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { AuthStore } from '../core/auth/auth.store';
-import { UserDto } from '../core/models';
+import { AuthStore } from '@core/auth/auth.store';
+import { UserDto } from '@core/models';
 import { NavComponent } from './nav.component';
 
 const user = (role: UserDto['role']): UserDto => ({

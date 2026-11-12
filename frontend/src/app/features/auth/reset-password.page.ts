@@ -12,12 +12,15 @@ import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
-import { ApiError } from '../../core/models';
-import { AuthApi, failureMessage } from './auth.api';
+import { ApiError } from '@core/models';
+import { AuthApi } from './auth.api';
+import { failureMessage } from '@shared/utils/failure-message';
 import { AuthLayoutComponent } from './auth-layout.component';
-import { AuthFieldComponent } from './auth-field.component';
-import { FocusOnDirective, focusFirstInvalid } from './auth-focus';
-import { confirmMatches, newPasswordRules, queryText } from './auth.rules';
+import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
+import { FocusOnDirective } from '@shared/directives/focus-on.directive';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
+import { confirmMatches, newPasswordRules } from '@shared/validators/auth.rules';
+import { queryText } from '@shared/utils/query-text';
 
 type View = 'form' | 'expired' | 'invalid';
 

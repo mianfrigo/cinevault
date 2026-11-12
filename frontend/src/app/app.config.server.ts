@@ -2,8 +2,8 @@ import { inject, mergeApplicationConfig, ApplicationConfig, REQUEST } from '@ang
 import { HTTP_TRANSFER_CACHE_ORIGIN_MAP } from '@angular/common/http';
 import { provideServerRendering, withRoutes } from '@angular/ssr';
 import { appConfig } from './app.config';
-import { API_BASE } from './core/api/api-client';
-import { transferCacheOriginMap } from './core/api/transfer-cache-origin';
+import { API_BASE } from '@core/api/api-client';
+import { transferCacheOriginMap } from '@core/api/transfer-cache-origin';
 import { serverRoutes } from './app.routes.server';
 
 const apiInternalUrl = () => process.env['API_INTERNAL_URL'] ?? 'http://localhost:3000';

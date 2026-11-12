@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
-import { AuthStore } from '../../core/auth/auth.store';
+import { AuthStore } from '@core/auth/auth.store';
 
 /**
  * Spec helper: the real route table (guards and input binding included) with a finished session

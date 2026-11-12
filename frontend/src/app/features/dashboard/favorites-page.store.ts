@@ -11,9 +11,9 @@ import {
 } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { pipe, switchMap, tap } from 'rxjs';
-import { ApiClient } from '../../core/api/api-client';
-import { FavoritesStore } from '../../core/favorites/favorites.store';
-import { FavoriteItem, MediaTypeParam, Paged } from '../../core/models';
+import { ApiClient } from '@core/api/api-client';
+import { FavoritesStore } from '@core/favorites/favorites.store';
+import { FavoriteItem, MediaTypeParam, Paged } from '@core/models';
 
 export type FavoritesFilter = 'all' | MediaTypeParam;
 

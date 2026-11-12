@@ -4,11 +4,11 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { AvatarModule } from 'primeng/avatar';
 import { SkeletonModule } from 'primeng/skeleton';
-import { ApiClient } from '../../core/api/api-client';
-import { AuthStore } from '../../core/auth/auth.store';
-import { AdminOverview } from '../../core/models';
-import { initials } from '../../shared/initials';
-import { StateBlockComponent } from '../../shared/state-block.component';
+import { ApiClient } from '@core/api/api-client';
+import { AuthStore } from '@core/auth/auth.store';
+import { AdminOverview } from '@core/models';
+import { initials } from '@shared/utils/initials';
+import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { UserStatusComponent } from './user-status.component';
 
 /**

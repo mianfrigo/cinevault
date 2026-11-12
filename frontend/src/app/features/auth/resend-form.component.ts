@@ -3,11 +3,13 @@ import { apply, form, FormField, FormRoot } from '@angular/forms/signals';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
-import { ApiError } from '../../core/models';
-import { AuthApi, failureMessage } from './auth.api';
-import { AuthFieldComponent } from './auth-field.component';
-import { FocusOnDirective, focusFirstInvalid } from './auth-focus';
-import { emailRules } from './auth.rules';
+import { ApiError } from '@core/models';
+import { AuthApi } from './auth.api';
+import { failureMessage } from '@shared/utils/failure-message';
+import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
+import { FocusOnDirective } from '@shared/directives/focus-on.directive';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
+import { emailRules } from '@shared/validators/auth.rules';
 
 /** Asks for an address and requests a new verification link (used when the page does not know the email). */
 @Component({

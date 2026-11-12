@@ -24,26 +24,15 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { ToastModule } from 'primeng/toast';
-import { AuthStore } from '../../core/auth/auth.store';
-import { Role, UserDto } from '../../core/models';
-import { initials } from '../../shared/initials';
-import { PaginatorComponent } from '../../shared/paginator.component';
-import { StateBlockComponent } from '../../shared/state-block.component';
-import { GENERIC_MESSAGE, RATE_LIMIT_MESSAGE } from '../auth/auth.api';
+import { AuthStore } from '@core/auth/auth.store';
+import { Role, UserDto } from '@core/models';
+import { initials } from '@shared/utils/initials';
+import { PaginatorComponent } from '@shared/components/paginator/paginator.component';
+import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
+import { adminFailure } from './admin.messages';
 import { RoleSelectComponent } from './role-select.component';
 import { QUERY_MAX, UsersPageStore } from './users-page.store';
 import { UserStatusComponent } from './user-status.component';
-
-export const LAST_ADMIN_MESSAGE =
-  'There must always be one administrator. Make someone else an admin first.';
-export const SELF_ACTION_MESSAGE = 'You cannot do that to your own account.';
-
-/** Plain words for what the API refused with; never the server's own text. */
-export function adminFailure(code: string): string {
-  if (code === 'LAST_ADMIN') return LAST_ADMIN_MESSAGE;
-  if (code === 'SELF_ACTION') return SELF_ACTION_MESSAGE;
-  return code === 'RATE_LIMITED' ? RATE_LIMIT_MESSAGE : GENERIC_MESSAGE;
-}
 
 /** A row with what the template needs to know about it, so the template holds no logic. */
 interface Row {

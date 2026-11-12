@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, linkedSignal, output } from '@angular/core';
 import { disabled, form, FormField } from '@angular/forms/signals';
 import { SelectModule } from 'primeng/select';
-import { Role } from '../../core/models';
+import { Role } from '@core/models';
 
 const OPTIONS: { label: string; value: Role }[] = [
   { label: 'User', value: 'USER' },

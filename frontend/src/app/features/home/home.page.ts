@@ -11,9 +11,10 @@ import {
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { SkeletonModule } from 'primeng/skeleton';
-import { CatalogService } from '../../core/catalog/catalog.service';
-import { PosterRowComponent, RowItemDirective } from '../../shared/poster-row.component';
-import { StateBlockComponent } from '../../shared/state-block.component';
+import { CatalogService } from '@core/catalog/catalog.service';
+import { PosterRowComponent } from '@shared/components/poster-row/poster-row.component';
+import { RowItemDirective } from '@shared/directives/row-item.directive';
+import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { HeroComponent } from './hero.component';
 
 const HERO_SLIDES = 3;

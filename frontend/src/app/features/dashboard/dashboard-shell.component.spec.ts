@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { UserDto } from '../../core/models';
+import { UserDto } from '@core/models';
 import { fav, member, paged, setup } from './dashboard.testing';
 
 const alex: UserDto = { ...member, name: 'Alex Mercer' };

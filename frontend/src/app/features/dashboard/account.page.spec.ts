@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { AuthStore } from '../../core/auth/auth.store';
+import { AuthStore } from '@core/auth/auth.store';
 import { error, member, setup } from './dashboard.testing';
 
 const noContent = { status: 204, statusText: 'No Content' };

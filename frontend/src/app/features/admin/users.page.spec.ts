@@ -1,7 +1,7 @@
-import { UserDto } from '../../core/models';
+import { UserDto } from '@core/models';
 import { error, me, openAdmin, person, usersOf } from './admin.testing';
-import { GENERIC_MESSAGE, RATE_LIMIT_MESSAGE } from '../auth/auth.api';
-import { LAST_ADMIN_MESSAGE, SELF_ACTION_MESSAGE } from './users.page';
+import { GENERIC_MESSAGE, RATE_LIMIT_MESSAGE } from '@shared/utils/failure-message';
+import { LAST_ADMIN_MESSAGE, SELF_ACTION_MESSAGE } from './admin.messages';
 
 const mine = { ...me, createdAt: '2025-01-01T00:00:00.000Z' };
 const users = (): UserDto[] => [mine, person(2), person(3, { status: 'BLOCKED' }), person(4)];

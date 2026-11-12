@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LogoComponent } from './logo.component';
+import { LogoComponent } from '@shared/components/logo/logo.component';
 
 @Component({
   selector: 'cv-footer',

@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
-import { Paged, TitleSummary } from '../../core/models';
+import { Paged, TitleSummary } from '@core/models';
 
 export const title = (tmdbId: number, name = `Title ${tmdbId}`): TitleSummary => ({
   tmdbId,

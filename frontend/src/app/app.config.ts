@@ -13,9 +13,9 @@ import { providePrimeNG } from 'primeng/config';
 
 import cinevaultPreset from './theme/cinevault-preset';
 import { routes } from './app.routes';
-import { authInterceptor } from './core/auth/auth.interceptor';
-import { API_BASE } from './core/api/api-client';
-import { AuthStore } from './core/auth/auth.store';
+import { authInterceptor } from '@core/auth/auth.interceptor';
+import { API_BASE } from '@core/api/api-client';
+import { AuthStore } from '@core/auth/auth.store';
 
 // provideAnimationsAsync() is deprecated since Angular 20.2 and PrimeNG 22 animates through
 // animate.enter/leave, so it is not registered (see task-12 report).

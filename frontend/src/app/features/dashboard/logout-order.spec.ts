@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { AuthStore } from '../../core/auth/auth.store';
+import { AuthStore } from '@core/auth/auth.store';
 import { UserMenuComponent } from '../../shell/user-menu.component';
 import { member } from './dashboard.testing';
 import DashboardShell from './dashboard-shell.component';

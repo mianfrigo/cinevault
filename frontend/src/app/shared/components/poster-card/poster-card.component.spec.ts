@@ -2,10 +2,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AuthStore } from '../core/auth/auth.store';
-import { FavoritesStore } from '../core/favorites/favorites.store';
+import { AuthStore } from '@core/auth/auth.store';
+import { FavoritesStore } from '@core/favorites/favorites.store';
 import { PosterCardComponent } from './poster-card.component';
-import { TitleSummary } from '../core/models';
+import { TitleSummary } from '@core/models';
 
 const matrix: TitleSummary = {
   tmdbId: 603,

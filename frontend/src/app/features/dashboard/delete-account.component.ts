@@ -15,14 +15,16 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
-import { AuthStore } from '../../core/auth/auth.store';
-import { ApiError } from '../../core/models';
-import { failureMessage } from '../auth/auth.api';
-import { AuthFieldComponent } from '../auth/auth-field.component';
-import { focusFirstInvalid } from '../auth/auth-focus';
-import { PASSWORD_MAX } from '../auth/auth.rules';
+import { AuthStore } from '@core/auth/auth.store';
+import { ApiError } from '@core/models';
+import { failureMessage } from '@shared/utils/failure-message';
+import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
+import { PASSWORD_MAX } from '@shared/validators/auth.rules';
 import { AccountApi } from './account.api';
-import { AccountSectionComponent, FormNoteComponent, Note } from './account-section.component';
+import { PASSWORD_WRONG } from './account.messages';
+import { AccountSectionComponent } from './account-section.component';
+import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 
 const CONFIRM_WORD = 'DELETE';
 const LAST_ADMIN =
@@ -166,9 +168,7 @@ export class DeleteAccountComponent {
             const error = e as ApiError;
             if (error.code === 'PASSWORD_WRONG') {
               afterNextRender(() => focusFirstInvalid(f), { injector: this.injector });
-              return [
-                { kind: 'server', message: 'That password is not correct.', fieldTree: f.password },
-              ];
+              return [{ kind: 'server', message: PASSWORD_WRONG, fieldTree: f.password }];
             }
             this.note.set({
               kind: 'error',

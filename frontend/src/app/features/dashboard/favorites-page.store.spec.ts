@@ -2,8 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { FavoritesStore } from '../../core/favorites/favorites.store';
-import { FavoriteItem, Paged } from '../../core/models';
+import { FavoritesStore } from '@core/favorites/favorites.store';
+import { FavoriteItem, Paged } from '@core/models';
 import { FavoritesPageStore } from './favorites-page.store';
 
 const fav = (tmdbId: number, extra: Partial<FavoriteItem> = {}): FavoriteItem => ({

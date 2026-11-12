@@ -4,8 +4,8 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
-import { AuthStore } from '../../core/auth/auth.store';
-import { FavoriteItem, Paged, UserDto } from '../../core/models';
+import { AuthStore } from '@core/auth/auth.store';
+import { FavoriteItem, Paged, UserDto } from '@core/models';
 
 export const member: UserDto = {
   id: 'u1',

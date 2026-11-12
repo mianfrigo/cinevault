@@ -2,10 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
-import { AuthStore } from '../../core/auth/auth.store';
-import { FavoritesStore } from '../../core/favorites/favorites.store';
-import { initials } from '../../shared/initials';
-import { LogoComponent } from '../../shell/logo.component';
+import { AuthStore } from '@core/auth/auth.store';
+import { FavoritesStore } from '@core/favorites/favorites.store';
+import { initials } from '@shared/utils/initials';
+import { LogoComponent } from '@shared/components/logo/logo.component';
 
 interface DashGroup {
   /** Heading of the group (sidebar only); the first group has none. */

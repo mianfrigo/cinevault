@@ -12,8 +12,8 @@ import {
   switchMap,
   tap,
 } from 'rxjs';
-import { ApiClient, toApiError } from '../../core/api/api-client';
-import { Paged, Role, UserDto, UserStatus } from '../../core/models';
+import { ApiClient, toApiError } from '@core/api/api-client';
+import { Paged, Role, UserDto, UserStatus } from '@core/models';
 
 /** The API serves 20 users per page. */
 export const PAGE_SIZE = 20;

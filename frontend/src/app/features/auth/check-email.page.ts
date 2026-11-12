@@ -11,9 +11,10 @@ import {
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
-import { ApiError } from '../../core/models';
-import { AuthApi, failureMessage } from './auth.api';
-import { queryText } from './auth.rules';
+import { ApiError } from '@core/models';
+import { AuthApi } from './auth.api';
+import { failureMessage } from '@shared/utils/failure-message';
+import { queryText } from '@shared/utils/query-text';
 import { AuthLayoutComponent } from './auth-layout.component';
 import { ResendFormComponent } from './resend-form.component';
 

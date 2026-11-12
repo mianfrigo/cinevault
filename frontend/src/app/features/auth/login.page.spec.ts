@@ -113,9 +113,8 @@ describe('Login page', () => {
   it('announces the password-changed notice politely', async () => {
     const ctx = await setup('/login?notice=password-reset');
     const notice = ctx.el.querySelector('p-message')!;
-    expect(
-      notice.getAttribute('role') === 'status' || notice.closest('[role="status"]'),
-    ).toBeTruthy();
+    expect(notice.getAttribute('role')).toBe('status');
+    expect(notice.closest('[role="status"]')).toBe(notice); // no wrapper with a second role
   });
 
   it('resends to the address that failed to log in, even if the field changed since', async () => {

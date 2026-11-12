@@ -49,9 +49,7 @@ interface Banner {
   template: `
     <cv-auth-card heading="Log in" lead="Welcome back. Pick up your list where you left it.">
       @if (noticeText(); as text) {
-        <div role="status">
-          <p-message severity="success">{{ text }}</p-message>
-        </div>
+        <p-message severity="success" role="status">{{ text }}</p-message>
       }
       @if (banner(); as b) {
         <p-message [severity]="b.kind" role="alert" [cvFocusOn]="b">

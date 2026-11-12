@@ -7,6 +7,12 @@ import { FavoritesStore } from '../../core/favorites/favorites.store';
 import { initials } from '../../shared/initials';
 import { LogoComponent } from '../../shell/logo.component';
 
+interface DashGroup {
+  /** Heading of the group (sidebar only); the first group has none. */
+  label?: string;
+  items: DashItem[];
+}
+
 interface DashItem {
   label: string;
   path: string;
@@ -22,10 +28,10 @@ const SIDE_LINK =
   'flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium transition-colors duration-150 hover:bg-hover hover:text-fg [&>i]:text-base not-aria-[current=page]:text-fg-2';
 
 /**
- * Frame of every /dashboard page (and, later, /admin): the app chrome is off here, so this draws the whole
- * page. From 1024px a full-height sidebar (logo, items, back to site, log out, user); below it a slim top
- * bar and a bottom tab bar. The items come from `items`, so the admin pages (Users, Overview) join it by
- * adding entries there. The TMDB credit sits quietly at the foot of the main column.
+ * Frame of every /dashboard and /admin page: the app chrome is off here, so this draws the whole page.
+ * From 1024px a full-height sidebar (logo, items, back to site, log out, user); below it a slim top bar and
+ * a bottom tab bar. The items come from `groups`: an administrator gets a second group, Admin (Users,
+ * Overview), which a member never sees. The TMDB credit sits quietly at the foot of the main column.
  */
 @Component({
   selector: 'cv-dashboard-shell',
@@ -39,22 +45,38 @@ const SIDE_LINK =
     >
       <cv-logo class="mb-7 px-3" />
       <nav aria-label="Dashboard sections" class="grid gap-0.5">
-        @for (item of items(); track item.path) {
-          <a
-            [routerLink]="item.path"
-            [class]="sideLink"
-            routerLinkActive="bg-hover-2 text-fg [&>i]:text-accent-text"
-            ariaCurrentWhenActive="page"
+        @for (group of groups(); track $index) {
+          <div
+            [attr.role]="group.label ? 'group' : null"
+            [attr.aria-labelledby]="group.label ? 'dash-group-' + $index : null"
+            class="grid gap-0.5"
           >
-            <i [class]="item.icon" aria-hidden="true"></i>
-            {{ item.label }}
-            @if (item.count !== undefined) {
-              <span class="ml-auto text-label font-normal text-fg-3 tabular-nums">
-                <span aria-hidden="true">{{ item.count }}</span>
-                <span class="sr-only">, {{ item.count }} {{ item.countLabel }}</span>
-              </span>
+            @if (group.label) {
+              <p
+                [id]="'dash-group-' + $index"
+                class="mt-4 mb-1 px-3 text-micro font-medium tracking-micro text-fg-3 uppercase"
+              >
+                {{ group.label }}
+              </p>
             }
-          </a>
+            @for (item of group.items; track item.path) {
+              <a
+                [routerLink]="item.path"
+                [class]="sideLink"
+                routerLinkActive="bg-hover-2 text-fg [&>i]:text-accent-text"
+                ariaCurrentWhenActive="page"
+              >
+                <i [class]="item.icon" aria-hidden="true"></i>
+                {{ item.label }}
+                @if (item.count !== undefined) {
+                  <span class="ml-auto text-label font-normal text-fg-3 tabular-nums">
+                    <span aria-hidden="true">{{ item.count }}</span>
+                    <span class="sr-only">, {{ item.count }} {{ item.countLabel }}</span>
+                  </span>
+                }
+              </a>
+            }
+          </div>
         }
       </nav>
       <div class="mt-auto grid gap-0.5 border-t border-line-soft pt-4">
@@ -110,7 +132,7 @@ const SIDE_LINK =
       aria-label="Dashboard (small screens)"
       class="fixed inset-x-0 bottom-0 z-95 grid h-15 grid-flow-col auto-cols-fr border-t border-line-soft bg-surface-0 box-content pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      @for (item of items(); track item.path) {
+      @for (item of allItems(); track item.path) {
         <a
           [routerLink]="item.path"
           class="flex min-h-11 flex-col items-center justify-center gap-1 text-micro font-medium transition-colors duration-150 hover:text-fg focus-visible:-outline-offset-4 not-aria-[current=page]:text-fg-3"
@@ -142,20 +164,36 @@ export default class DashboardShell {
     this.auth.user()?.role === 'ADMIN' ? 'Administrator' : 'Member',
   );
 
-  // Task 19 adds Users and Overview here for admins (`this.auth.isAdmin()`).
-  protected readonly items = computed<DashItem[]>(() => {
+  protected readonly groups = computed<DashGroup[]>(() => {
     const saved = this.favorites.counts()?.all;
-    return [
+    const groups: DashGroup[] = [
       {
-        label: 'Favorites',
-        path: '/dashboard/favorites',
-        icon: 'pi pi-heart',
-        count: saved,
-        countLabel: saved === 1 ? 'saved title' : 'saved titles',
+        items: [
+          {
+            label: 'Favorites',
+            path: '/dashboard/favorites',
+            icon: 'pi pi-heart',
+            count: saved,
+            countLabel: saved === 1 ? 'saved title' : 'saved titles',
+          },
+          { label: 'Account', path: '/dashboard/account', icon: 'pi pi-user' },
+        ],
       },
-      { label: 'Account', path: '/dashboard/account', icon: 'pi pi-user' },
     ];
+    if (this.auth.isAdmin()) {
+      groups.push({
+        label: 'Admin',
+        items: [
+          { label: 'Users', path: '/admin/users', icon: 'pi pi-users' },
+          { label: 'Overview', path: '/admin/overview', icon: 'pi pi-chart-bar' },
+        ],
+      });
+    }
+    return groups;
   });
+
+  /** The phone tab bar has no group headings: every item in one row (five tabs with Site fit 390px at 44px). */
+  protected readonly allItems = computed(() => this.groups().flatMap((g) => g.items));
 
   /** Leaves first: a page that still holds work (a pending removal) sends it while the session is valid. */
   protected async logout(): Promise<void> {

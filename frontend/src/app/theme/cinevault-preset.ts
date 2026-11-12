@@ -93,6 +93,22 @@ export default definePreset(Aura, {
         color: '#A7ABB6',
       },
     },
+    // Admin users table (mockup .utable): no fills, a hairline under the header and under each row, the row
+    // lightens on hover. The cell padding keeps the right-hand gap only, so the columns breathe like the mockup.
+    datatable: {
+      headerCell: {
+        background: 'transparent',
+        hoverBackground: 'transparent',
+        selectedBackground: 'transparent',
+        color: '#8D92A0',
+        hoverColor: '#8D92A0',
+        borderColor: line,
+        padding: '0 1rem 0.75rem 0',
+      },
+      columnTitle: { fontWeight: '500', fontSize: '0.75rem' },
+      row: { background: 'transparent', hoverBackground: 'rgba(255,255,255,.05)' },
+      bodyCell: { borderColor: 'rgba(255,255,255,.06)', padding: '0.75rem 1rem 0.75rem 0' },
+    },
     // Toast (mockup .toast): raised surface, strong hairline, no shadow.
     toast: {
       root: { width: '32.5rem', borderRadius: '8px' },

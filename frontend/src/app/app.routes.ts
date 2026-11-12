@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/auth/guards';
+import { adminGuard, authGuard, guestGuard } from './core/auth/guards';
 
 const placeholder = () => import('./pages/placeholder.component');
 const browse = () => import('./features/browse/browse.page');
@@ -87,12 +87,25 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: 'admin/users', title: 'Users', loadComponent: placeholder, data: { heading: 'Users' } },
   {
-    path: 'admin/overview',
-    title: 'Overview',
-    loadComponent: placeholder,
-    data: { heading: 'Overview' },
+    // The admin pages share the dashboard's frame (and its chromeless flag). Their code stays in lazy chunks.
+    path: 'admin',
+    canActivate: [authGuard, adminGuard],
+    data: chromeless,
+    loadComponent: () => import('./features/dashboard/dashboard-shell.component'),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'overview' },
+      {
+        path: 'users',
+        title: 'Users',
+        loadComponent: () => import('./features/admin/users.page'),
+      },
+      {
+        path: 'overview',
+        title: 'Overview',
+        loadComponent: () => import('./features/admin/overview.page'),
+      },
+    ],
   },
   {
     path: 'terms',

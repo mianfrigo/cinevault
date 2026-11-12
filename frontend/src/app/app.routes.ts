@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { guestGuard } from './core/auth/guards';
 
 const placeholder = () => import('./pages/placeholder.component');
 const browse = () => import('./features/browse/browse.page');
@@ -26,36 +27,38 @@ export const routes: Routes = [
     title: 'Title',
     loadComponent: () => import('./features/title/title.page'),
   },
-  { path: 'login', title: 'Log in', loadComponent: placeholder, data: { heading: 'Log in' } },
+  {
+    path: 'login',
+    title: 'Log in',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/login.page'),
+  },
   {
     path: 'register',
     title: 'Register',
-    loadComponent: placeholder,
-    data: { heading: 'Register' },
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/register.page'),
   },
   {
     path: 'forgot-password',
     title: 'Forgot password',
-    loadComponent: placeholder,
-    data: { heading: 'Forgot password' },
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/forgot-password.page'),
   },
   {
     path: 'check-email',
     title: 'Check your email',
-    loadComponent: placeholder,
-    data: { heading: 'Check your email' },
+    loadComponent: () => import('./features/auth/check-email.page'),
   },
   {
     path: 'verify-email',
     title: 'Verify email',
-    loadComponent: placeholder,
-    data: { heading: 'Verify email' },
+    loadComponent: () => import('./features/auth/verify-email.page'),
   },
   {
     path: 'reset-password',
     title: 'Reset password',
-    loadComponent: placeholder,
-    data: { heading: 'Reset password' },
+    loadComponent: () => import('./features/auth/reset-password.page'),
   },
   {
     path: 'dashboard/favorites',

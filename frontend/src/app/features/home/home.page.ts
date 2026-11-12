@@ -1,5 +1,13 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  signal,
+} from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -93,9 +101,31 @@ const MIN_CURATED = 6;
               <ng-template [cvRowItem]="popularGenres()" let-g>
                 <a
                   [routerLink]="['/genre', 'movie', g.id]"
-                  class="group/tile relative flex items-end rounded-md p-4 ring-1 ring-line transition-[filter] duration-200 ease-out-expo ring-inset hover:brightness-110"
+                  class="group/tile relative isolate flex items-end overflow-hidden rounded-md p-4 transition-[filter] duration-200 ease-out-expo after:pointer-events-none after:absolute after:inset-0 after:rounded-md after:ring-1 after:ring-line after:ring-inset hover:brightness-110"
                   [class]="g.tone + ' ' + tile"
                 >
+                  @if (g.coverUrl && cover()[g.id] !== 'failed') {
+                    <!-- Decorative cover over the tonal field: tone tint, then a scrim for the label. Hidden until loaded so the tone is the loading state. -->
+                    <span
+                      class="absolute inset-0 -z-10 bg-inherit transition-opacity duration-500 ease-out-expo motion-reduce:transition-none"
+                      [class.opacity-0]="cover()[g.id] !== 'loaded'"
+                    >
+                      <img
+                        [src]="g.coverUrl"
+                        alt=""
+                        width="780"
+                        height="468"
+                        loading="lazy"
+                        decoding="async"
+                        class="size-full object-cover"
+                        [attr.data-cover]="g.id"
+                        (load)="mark(g.id, 'loaded')"
+                        (error)="mark(g.id, 'failed')"
+                      />
+                      <span class="absolute inset-0 bg-inherit opacity-50"></span>
+                      <span class="tile-scrim absolute inset-0"></span>
+                    </span>
+                  }
                   <span
                     class="text-base leading-tight font-medium"
                     [attr.aria-hidden]="g.label !== g.name || null"
@@ -171,6 +201,7 @@ const MIN_CURATED = 6;
 })
 export default class HomePage {
   private readonly catalog = inject(CatalogService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   // Four independent read-only requests: one failing never blanks the page.
   protected readonly trending = rxResource({
@@ -180,7 +211,9 @@ export default class HomePage {
   protected readonly topRated = rxResource({
     stream: () => this.catalog.list('top-rated', 'movie'),
   });
-  protected readonly genres = rxResource({ stream: () => this.catalog.genres('movie') });
+  protected readonly genres = rxResource({
+    stream: () => this.catalog.genreCovers('movie'),
+  });
 
   protected readonly heroItems = computed(() =>
     (this.trending.value()?.items ?? []).filter((t) => t.backdropUrl).slice(0, HERO_SLIDES),
@@ -191,6 +224,25 @@ export default class HomePage {
   protected readonly genreId = (g: { id: number }) => g.id;
   protected readonly skeletonTiles = [0, 1, 2, 3, 4, 5, 6, 7];
 
+  // Per-genre cover state. A browser without it (SSR, before hydration) shows the tonal field.
+  protected readonly cover = signal<Record<number, 'loaded' | 'failed'>>({});
+
+  constructor() {
+    // Covers that finished before hydration attached the listeners would otherwise stay hidden.
+    afterNextRender(() =>
+      this.host.nativeElement
+        .querySelectorAll<HTMLImageElement>('img[data-cover]')
+        .forEach((img) => {
+          if (img.complete)
+            this.mark(Number(img.dataset['cover']), img.naturalWidth ? 'loaded' : 'failed');
+        }),
+    );
+  }
+
+  protected mark(id: number, state: 'loaded' | 'failed') {
+    this.cover.update((c) => ({ ...c, [id]: state }));
+  }
+
   protected readonly popularGenres = computed(() => {
     const all = this.genres.hasValue() ? this.genres.value() : [];
     const byName = new Map(all.map((g) => [g.name, g]));
@@ -198,6 +250,7 @@ export default class HomePage {
     return (curated.length >= MIN_CURATED ? curated : all).slice(0, MAX_TILES).map((g, i) => ({
       id: g.id,
       name: g.name,
+      coverUrl: g.coverUrl,
       label: SHORT_LABEL[g.name] ?? g.name,
       tone: TONES[i % TONES.length],
     }));

@@ -1,7 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiClient } from '../api/api-client';
-import { Genre, MediaTypeParam, Paged, SeasonDetail, TitleDetail, TitleSummary } from '../models';
+import {
+  Genre,
+  GenreCover,
+  MediaTypeParam,
+  Paged,
+  SeasonDetail,
+  TitleDetail,
+  TitleSummary,
+} from '../models';
 
 export type ListKind = 'trending' | 'popular' | 'top-rated' | 'new';
 
@@ -16,6 +24,10 @@ export class CatalogService {
 
   genres(type: MediaTypeParam): Observable<Genre[]> {
     return this.api.get('/catalog/genres', { type });
+  }
+
+  genreCovers(type: MediaTypeParam): Observable<GenreCover[]> {
+    return this.api.get('/catalog/genre-covers', { type });
   }
 
   discover(type: MediaTypeParam, genre: number, page = 1): Observable<Paged<TitleSummary>> {

@@ -36,6 +36,11 @@ export interface Genre {
   name: string;
 }
 
+/** A genre with a TMDB backdrop of its most popular title; null when none was found. */
+export interface GenreCover extends Genre {
+  coverUrl: string | null;
+}
+
 export interface TitleDetail extends TitleSummary {
   tagline: string | null;
   runtimeMinutes: number | null;

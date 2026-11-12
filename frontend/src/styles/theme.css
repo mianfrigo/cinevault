@@ -87,6 +87,16 @@
   --color-tone-bone: #2c3038;
   --color-tone-bone-fg: #eeeae0;
 
+  /* auth key art (mockup PAL): ground and light field of the four tones used; the mid field is --color-tone-* */
+  --color-tone-sage-ground: #141c18;
+  --color-tone-sage-light: #b2c1a5;
+  --color-tone-clay-ground: #231413;
+  --color-tone-clay-light: #e2b69a;
+  --color-tone-teal-ground: #0e1a1c;
+  --color-tone-teal-light: #9ec5c0;
+  --color-tone-slate-ground: #10151c;
+  --color-tone-slate-light: #9bafc6;
+
   /* hero: the progress bar fills over the 7 s autoplay interval, the copy rises in */
   --animate-hero-fill: hero-fill 7s linear forwards;
   --animate-hero-rise: hero-rise 800ms var(--ease-out-expo) both;

@@ -14,12 +14,18 @@ import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
-import { AuthCardComponent } from './auth-card.component';
+import { AuthLayoutComponent } from './auth-layout.component';
 import { AuthFieldComponent } from './auth-field.component';
 import { FocusOnDirective, focusFirstInvalid } from './auth-focus';
 import { confirmMatches, newPasswordRules, queryText } from './auth.rules';
 
 type View = 'form' | 'expired' | 'invalid';
+
+const HEADINGS: Record<View, string> = {
+  form: 'Choose a new password',
+  expired: 'Link expired',
+  invalid: 'Link not valid',
+};
 
 @Component({
   selector: 'cv-reset-password-page',
@@ -30,18 +36,20 @@ type View = 'form' | 'expired' | 'invalid';
     ButtonModule,
     MessageModule,
     PasswordModule,
-    AuthCardComponent,
+    AuthLayoutComponent,
     AuthFieldComponent,
     FocusOnDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @switch (view()) {
-      @case ('form') {
-        <cv-auth-card
-          heading="Choose a new password"
-          lead="Pick a password you have not used here before."
-        >
+    <cv-auth-layout
+      [heading]="heading()"
+      [lead]="view() === 'form' ? 'Pick a password you have not used here before.' : undefined"
+      art="recover"
+      back="login"
+    >
+      @switch (view()) {
+        @case ('form') {
           @if (problem(); as p) {
             <p-message severity="error" role="alert" [cvFocusOn]="p">{{ p.text }}</p-message>
           }
@@ -49,7 +57,7 @@ type View = 'form' | 'expired' | 'invalid';
             <cv-auth-field
               label="New password"
               controlId="password"
-              hint="At least 10 characters."
+              hint="At least 10 characters, at most 128."
               [field]="resetForm.password"
             >
               <p-password
@@ -78,21 +86,17 @@ type View = 'form' | 'expired' | 'invalid';
               [loading]="resetForm().submitting()"
             />
           </form>
-        </cv-auth-card>
-      }
-      @case ('expired') {
-        <cv-auth-card heading="Link expired">
+        }
+        @case ('expired') {
           <p-message severity="error" role="alert">This reset link has expired.</p-message>
           <p-button label="Request a new link" [fluid]="true" routerLink="/forgot-password" />
-        </cv-auth-card>
-      }
-      @default {
-        <cv-auth-card heading="Link not valid">
+        }
+        @default {
           <p-message severity="error" role="alert">This reset link is not valid.</p-message>
           <p-button label="Request a new link" [fluid]="true" routerLink="/forgot-password" />
-        </cv-auth-card>
+        }
       }
-    }
+    </cv-auth-layout>
   `,
 })
 export default class ResetPasswordPage {
@@ -107,6 +111,7 @@ export default class ResetPasswordPage {
 
   private readonly outcome = signal<View>('form');
   protected readonly view = computed<View>(() => (this.activeToken() ? this.outcome() : 'invalid'));
+  protected readonly heading = computed(() => HEADINGS[this.view()]);
   protected readonly problem = signal<{ text: string } | null>(null);
 
   constructor() {

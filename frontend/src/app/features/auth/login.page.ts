@@ -9,7 +9,7 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { safeNext } from '../../core/auth/guards';
 import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
-import { AuthCardComponent } from './auth-card.component';
+import { AuthLayoutComponent } from './auth-layout.component';
 import { AuthFieldComponent } from './auth-field.component';
 import { FocusOnDirective, focusFirstInvalid } from './auth-focus';
 import { emailRules, queryText } from './auth.rules';
@@ -42,13 +42,17 @@ interface Banner {
     InputTextModule,
     MessageModule,
     PasswordModule,
-    AuthCardComponent,
+    AuthLayoutComponent,
     AuthFieldComponent,
     FocusOnDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <cv-auth-card heading="Log in" lead="Welcome back. Pick up your list where you left it.">
+    <cv-auth-layout
+      heading="Log in"
+      lead="Welcome back. Pick up your list where you left it."
+      art="login"
+    >
       @if (noticeText(); as text) {
         <p-message severity="success" role="status">{{ text }}</p-message>
       }
@@ -82,7 +86,7 @@ interface Banner {
           <a
             slot="label-end"
             routerLink="/forgot-password"
-            class="text-sm text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
+            class="-my-3 py-3 text-sm font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
             >Forgot password?</a
           >
           <p-password
@@ -101,7 +105,7 @@ interface Banner {
           [loading]="loginForm().submitting()"
         />
       </form>
-      <p class="text-sm text-fg-2">
+      <p class="mt-2 text-sm text-fg-2">
         New to Cinevault?
         <a
           routerLink="/register"
@@ -109,7 +113,7 @@ interface Banner {
           >Create an account</a
         >
       </p>
-    </cv-auth-card>
+    </cv-auth-layout>
   `,
 })
 export default class LoginPage {

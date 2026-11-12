@@ -14,7 +14,7 @@ export interface Note {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
-      'grid gap-4 border-t border-line-soft py-6 lg:grid-cols-[17.5rem_minmax(0,1fr)] lg:gap-8',
+      'grid gap-6 border-t border-line-soft py-8 lg:grid-cols-[17.5rem_minmax(0,1fr)] lg:gap-12',
     role: 'group',
     '[attr.aria-labelledby]': 'headingId()',
   },

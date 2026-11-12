@@ -56,6 +56,32 @@ export default definePreset(Aura, {
       },
       content: { background: 'transparent', padding: '0 0 0.5rem 0' },
     },
+    // Filter pills (mockup .seg-tabs): the frame is drawn by the page; each pill is flat text, the chosen one a
+    // raised surface-4 fill. The selectbutton's own radius is the pill radius.
+    selectbutton: { root: { borderRadius: '6px' } },
+    togglebutton: {
+      root: {
+        padding: '0',
+        borderRadius: '6px',
+        gap: '0.5rem',
+        fontWeight: '500',
+        fontSize: '0.875rem',
+        background: 'transparent',
+        checkedBackground: 'transparent',
+        hoverBackground: 'transparent',
+        borderColor: 'transparent',
+        checkedBorderColor: 'transparent',
+        color: '#A7ABB6',
+        hoverColor: '#ECEDF0',
+        checkedColor: '#ECEDF0',
+      },
+      content: {
+        padding: '0.4375rem 1rem',
+        borderRadius: '6px',
+        checkedBackground: '#22262D',
+        checkedShadow: 'none',
+      },
+    },
     // Cast initials (mockup .avatar): neutral surface, quiet text, 36px.
     avatar: {
       root: {

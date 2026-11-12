@@ -4,14 +4,18 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
+import { provideRouter, Router, RouterOutlet, withComponentInputBinding } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { App } from './app';
 import { routes } from './app.routes';
 import { AuthStore } from './core/auth/auth.store';
+import { UserDto } from './core/models';
 
 @Component({ selector: 'cv-test-page', template: '<h1>Page</h1>' })
 class TestPage {}
+
+@Component({ selector: 'cv-test-parent', imports: [RouterOutlet], template: '<router-outlet />' })
+class TestParent {}
 
 function render() {
   TestBed.configureTestingModule({
@@ -20,6 +24,13 @@ function render() {
       provideRouter([
         { path: '', component: TestPage },
         { path: 'auth', component: TestPage, data: { chromeless: true } },
+        // A parent with a component and children, like the dashboard: the children do not inherit its data.
+        {
+          path: 'area',
+          component: TestParent,
+          data: { chromeless: true },
+          children: [{ path: 'inner', component: TestPage }],
+        },
       ]),
       MessageService,
     ],
@@ -57,11 +68,28 @@ describe('App', () => {
     expect(el.querySelector('cv-footer')).not.toBeNull();
   });
 
-  it('marks exactly the six auth pages chromeless', () => {
+  it('leaves out the nav and footer on the children of a chromeless parent route', async () => {
+    const fixture = render();
+    const router = TestBed.inject(Router);
+    const el = fixture.nativeElement as HTMLElement;
+
+    await router.navigateByUrl('/area/inner');
+    await fixture.whenStable();
+    expect(el.querySelector('cv-nav')).toBeNull();
+    expect(el.querySelector('cv-footer')).toBeNull();
+    expect(el.querySelector('main#main h1')).not.toBeNull();
+
+    await router.navigateByUrl('/');
+    await fixture.whenStable();
+    expect(el.querySelector('cv-nav')).not.toBeNull();
+  });
+
+  it('marks exactly the six auth pages and the dashboard chromeless', () => {
     const chromeless = routes.filter((r) => r.data?.['chromeless']).map((r) => r.path);
     expect(chromeless.sort()).toEqual(
       [
         'check-email',
+        'dashboard',
         'forgot-password',
         'login',
         'register',
@@ -74,7 +102,7 @@ describe('App', () => {
 
 describe('App with the real route table', () => {
   /** The address bar is already at `url` when the app boots, as on a hard reload; the router has not navigated yet. */
-  async function boot(url: string) {
+  async function boot(url: string, user?: UserDto) {
     TestBed.configureTestingModule({
       imports: [App],
       providers: [
@@ -87,18 +115,25 @@ describe('App with the real route table', () => {
     });
     const http = TestBed.inject(HttpTestingController);
     const restored = TestBed.inject(AuthStore).restoreSession();
-    http.expectOne('/api/v1/auth/refresh').flush({}, { status: 401, statusText: 'Unauthorized' });
+    const refresh = http.expectOne('/api/v1/auth/refresh');
+    if (user) refresh.flush({ accessToken: 't', user });
+    else refresh.flush({}, { status: 401, statusText: 'Unauthorized' });
     await restored;
     TestBed.inject(Location).go(url);
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const chrome = () => [!!el.querySelector('cv-nav'), !!el.querySelector('cv-footer')];
+    /** Navigates without waiting for the page's own requests (a logged in dashboard asks for its list). */
+    const go = async (to: string) => {
+      await TestBed.inject(Router).navigateByUrl(to);
+      fixture.detectChanges();
+    };
     const visit = async (to: string) => {
       await TestBed.inject(Router).navigateByUrl(to);
       await fixture.whenStable();
     };
-    return { fixture, chrome, visit };
+    return { fixture, chrome, visit, go };
   }
 
   it('renders no nav or footer in the very first frame of every auth route, before any navigation ends', async () => {
@@ -116,12 +151,47 @@ describe('App with the real route table', () => {
     }
   });
 
+  it('renders no nav or footer in the very first frame of the dashboard and its pages', async () => {
+    for (const url of [
+      '/dashboard',
+      '/dashboard/favorites',
+      '/dashboard/favorites?type=tv&page=2',
+      '/dashboard/account',
+    ]) {
+      const { chrome } = await boot(url);
+      expect(chrome(), url).toEqual([false, false]);
+      TestBed.resetTestingModule();
+    }
+  });
+
   it('renders the nav and footer in the first frame of other routes', async () => {
-    for (const url of ['/', '/movies', '/terms']) {
+    // '/dashboarding' shares a prefix with a chromeless route but is not below it.
+    for (const url of ['/', '/movies', '/terms', '/dashboarding']) {
       const { chrome } = await boot(url);
       expect(chrome(), url).toEqual([true, true]);
       TestBed.resetTestingModule();
     }
+  });
+
+  it('keeps the chrome off through a navigation into the dashboard and brings it back on leaving it', async () => {
+    const member: UserDto = {
+      id: 'u1',
+      email: 'ada@example.com',
+      name: 'Ada',
+      role: 'USER',
+      status: 'ACTIVE',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    };
+    const { chrome, go } = await boot('/dashboard/favorites', member);
+    await go('/dashboard/favorites');
+    expect(chrome()).toEqual([false, false]);
+    expect(TestBed.inject(Router).url).toBe('/dashboard/favorites');
+    await go('/dashboard/account');
+    expect(chrome()).toEqual([false, false]);
+    await go('/movies');
+    expect(chrome()).toEqual([true, true]);
+    await go('/dashboard');
+    expect(chrome()).toEqual([false, false]);
   });
 
   it('keeps the chrome off on /login, brings it back on /terms and hides it again on /login', async () => {

@@ -66,6 +66,56 @@ describe('FavoritesStore', () => {
     expect(store.keys()).toEqual([]);
   });
 
+  describe('counts', () => {
+    const ids = [
+      { mediaType: 'movie' as const, tmdbId: 603 },
+      { mediaType: 'movie' as const, tmdbId: 604 },
+      { mediaType: 'tv' as const, tmdbId: 1399 },
+    ];
+
+    it('are null until the keys have loaded (not 0), then split by media type', async () => {
+      expect(store.counts()).toBeNull();
+      auth.setUser(user);
+      TestBed.tick();
+      expect(store.counts()).toBeNull(); // the request is in flight
+      http.expectOne('/api/v1/me/favorites/ids').flush(ids);
+      await vi.waitFor(() => expect(store.counts()).toEqual({ all: 3, movie: 2, tv: 1 }));
+    });
+
+    it('are 0 (not null) for a user whose list is empty', async () => {
+      auth.setUser(user);
+      TestBed.tick();
+      http.expectOne('/api/v1/me/favorites/ids').flush([]);
+      await vi.waitFor(() => expect(store.counts()).toEqual({ all: 0, movie: 0, tv: 0 }));
+    });
+
+    it('leave out a title whose removal is pending and count it again when the removal is undone', async () => {
+      await loginWith(ids);
+      store.hide('movie', 603);
+      expect(store.counts()).toEqual({ all: 2, movie: 1, tv: 1 });
+      expect(store.isFavorite('movie', 603)).toBe(true); // the heart is not touched
+
+      store.unhide('movie', 603);
+      expect(store.counts()).toEqual({ all: 3, movie: 2, tv: 1 });
+    });
+
+    it('stay right when the removal is confirmed: setSaved(false) then unhide counts it once', async () => {
+      await loginWith(ids);
+      store.hide('movie', 603);
+      store.setSaved('movie', 603, false);
+      expect(store.counts()).toEqual({ all: 2, movie: 1, tv: 1 });
+      store.unhide('movie', 603);
+      expect(store.counts()).toEqual({ all: 2, movie: 1, tv: 1 });
+    });
+
+    it('are null again after logout', async () => {
+      await loginWith(ids);
+      auth.clearSession();
+      TestBed.tick();
+      expect(store.counts()).toBeNull();
+    });
+  });
+
   it('toggle adds the key optimistically and removes it when the API fails', async () => {
     await sessionReady();
     await loginWith([{ mediaType: 'movie', tmdbId: 1 }]);

@@ -18,8 +18,24 @@ const keyOf = (type: MediaTypeParam, id: number) => `${type}:${id}`;
 
 export const FavoritesStore = signalStore(
   { providedIn: 'root' },
-  withState<{ keys: string[] }>({ keys: [] }),
-  withComputed(({ keys }) => ({ keySet: computed(() => new Set(keys())) })),
+  withState<{ keys: string[]; loaded: boolean; hidden: string[] }>({
+    keys: [],
+    // True once the ids have arrived: before that a count would read 0 for a user who has favorites.
+    loaded: false,
+    // Keys whose removal is pending or in flight on the favorites page: still saved, but not counted.
+    hidden: [],
+  }),
+  withComputed(({ keys, loaded, hidden }) => ({
+    keySet: computed(() => new Set(keys())),
+    /** Saved titles as the favorites page shows them (a pending removal is already gone); null until loaded. */
+    counts: computed(() => {
+      if (!loaded()) return null;
+      const gone = new Set(hidden());
+      const shown = keys().filter((k) => !gone.has(k));
+      const movie = shown.filter((k) => k.startsWith('movie:')).length;
+      return { all: shown.length, movie, tv: shown.length - movie };
+    }),
+  })),
   withMethods((store) => {
     const api = inject(ApiClient);
     const auth = inject(AuthStore);
@@ -54,7 +70,7 @@ export const FavoritesStore = signalStore(
           const ids = await firstValueFrom(api.get<FavoriteId[]>('/me/favorites/ids'));
           // The user may have logged out while the request was in flight.
           if (!auth.isLoggedIn()) return;
-          patchState(store, { keys: ids.map((i) => keyOf(i.mediaType, i.tmdbId)) });
+          patchState(store, { keys: ids.map((i) => keyOf(i.mediaType, i.tmdbId)), loaded: true });
           touched.forEach((present, key) => setKey(key, present));
         } finally {
           overlays.delete(touched);
@@ -88,7 +104,15 @@ export const FavoritesStore = signalStore(
       setSaved: (type: MediaTypeParam, id: number, saved: boolean) =>
         record(keyOf(type, id), saved),
 
-      clear: () => patchState(store, { keys: [] }),
+      /** The favorites page hides a title while its removal waits for Undo (or its DELETE is in flight): it is not counted. */
+      hide: (type: MediaTypeParam, id: number) =>
+        patchState(store, ({ hidden }) => ({ hidden: [...hidden, keyOf(type, id)] })),
+      unhide: (type: MediaTypeParam, id: number) =>
+        patchState(store, ({ hidden }) => ({
+          hidden: hidden.filter((k) => k !== keyOf(type, id)),
+        })),
+
+      clear: () => patchState(store, { keys: [], loaded: false, hidden: [] }),
     };
   }),
   withHooks({

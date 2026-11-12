@@ -3,10 +3,11 @@ import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { FavoritesStore } from '../core/favorites/favorites.store';
 import { TitleSummary } from '../core/models';
+import { ScoreComponent } from './score.component';
 
 @Component({
   selector: 'cv-poster-card',
-  imports: [RouterLink, ButtonModule],
+  imports: [RouterLink, ButtonModule, ScoreComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   template: `
@@ -26,14 +27,24 @@ import { TitleSummary } from '../core/models';
           }
         </div>
         <p class="mt-3 truncate text-sm leading-tight font-medium text-fg">{{ title().title }}</p>
-        @if (title().year !== null) {
+        @if (detailed()) {
+          <!-- Mockup .card-meta: "year · type" at the left, the score at the right. -->
+          <div
+            data-meta
+            class="mt-0.5 flex items-center justify-between gap-2 text-label whitespace-nowrap text-fg-3 tabular-nums"
+          >
+            <span class="truncate">{{ meta() }}</span>
+            <cv-score class="shrink-0 text-fg-2" [value]="title().rating" />
+          </div>
+        } @else if (title().year !== null) {
           <p class="mt-0.5 text-label text-fg-3 tabular-nums">{{ title().year }}</p>
         }
       </a>
       <!-- The button is the 44px target (top-right corner); only the 32px chip inside is drawn. -->
       <p-button
         class="absolute top-0 right-0 z-10 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
-        [class.opacity-0]="!saved() && !removable()"
+        [class.opacity-0]="removable() || !saved()"
+        [class.max-md:opacity-100]="removable()"
         [text]="true"
         severity="secondary"
         [icon]="removable() ? 'pi pi-times' : saved() ? 'pi pi-heart-fill' : 'pi pi-heart'"
@@ -51,6 +62,8 @@ export class PosterCardComponent {
   /** The corner button removes the title from the user's favorites (emits `removed`) instead of toggling the heart. */
   readonly removable = input(false);
   readonly removed = output<void>();
+  /** Adds the mockup's meta line under the title: "year · Movie" and the score. Off for the plain rows. */
+  readonly detailed = input(false);
 
   protected readonly saved = computed(() =>
     this.favorites.isFavorite(this.title().mediaType, this.title().tmdbId),
@@ -59,6 +72,12 @@ export class PosterCardComponent {
   protected readonly alt = computed(() => {
     const t = this.title();
     return t.year === null ? t.title : `${t.title} (${t.year})`;
+  });
+
+  protected readonly meta = computed(() => {
+    const t = this.title();
+    const type = t.mediaType === 'tv' ? 'Series' : 'Movie';
+    return t.year === null ? type : `${t.year} · ${type}`;
   });
 
   protected readonly label = computed(() => {

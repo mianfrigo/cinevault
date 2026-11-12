@@ -1,6 +1,7 @@
 import { Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import {
+  ActivatedRouteSnapshot,
   NavigationCancel,
   NavigationEnd,
   NavigationError,
@@ -39,14 +40,17 @@ export class App {
   private readonly location = inject(Location);
 
   /**
-   * The auth pages (route data `chromeless`) draw their own page: no nav, no footer. The first frame is
-   * already right: before the router has navigated (the lazy page is still loading) the address bar names
-   * the page, so the top-level route it matches decides. Every navigation outcome then resyncs.
+   * The auth pages and the dashboard (route data `chromeless`) draw their own page: no nav, no footer. The
+   * first frame is already right: before the router has navigated (the lazy page is still loading) the
+   * address bar names the page, so the top-level route it falls under decides (the route itself or any
+   * path below it, so `dashboard` covers `dashboard/favorites`). Every navigation outcome then resyncs.
    */
   protected readonly chromeless = signal(
-    this.router.config.some(
-      (r) => r.data?.['chromeless'] && r.path === this.location.path().split(/[?#]/)[0].slice(1),
-    ),
+    this.router.config.some((r) => {
+      if (!r.data?.['chromeless'] || !r.path) return false;
+      const path = this.location.path().split(/[?#]/)[0].slice(1);
+      return path === r.path || path.startsWith(r.path + '/');
+    }),
   );
 
   constructor() {
@@ -59,9 +63,13 @@ export class App {
         e instanceof NavigationError
       ))
         return;
-      let route = this.router.routerState.snapshot.root;
-      while (route.firstChild) route = route.firstChild;
-      this.chromeless.set(route.data['chromeless'] === true);
+      // Any activated route of the chain may carry the flag: a parent's data is not inherited by its
+      // children when the parent has a component (the dashboard shell), so the whole chain is read.
+      let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
+      let flagged = false;
+      for (; route && !flagged; route = route.firstChild)
+        flagged = route.data['chromeless'] === true;
+      this.chromeless.set(flagged);
     });
   }
 }

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { adminGuard, authGuard, guestGuard } from './core/auth/guards';
+import { adminGuard, authGuard, guestGuard } from '@core/auth/guards';
 
 const placeholder = () => import('./pages/placeholder.component');
 const browse = () => import('./features/browse/browse.page');

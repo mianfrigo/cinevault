@@ -2,8 +2,8 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
-import { FavoritesStore } from '../../core/favorites/favorites.store';
-import { TitleDetail } from '../../core/models';
+import { FavoritesStore } from '@core/favorites/favorites.store';
+import { TitleDetail } from '@core/models';
 import { setup } from '../browse/browse.testing';
 import { movie, season1, series } from './title.testing';
 

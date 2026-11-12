@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Genre } from '../../core/models';
+import { Genre } from '@core/models';
 import { paged, setup, title } from './browse.testing';
 
 const genres: Genre[] = [

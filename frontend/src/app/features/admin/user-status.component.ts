@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { UserStatus } from '../../core/models';
+import { UserStatus } from '@core/models';
 
 const LOOK: Record<UserStatus, { label: string; dot: string }> = {
   ACTIVE: { label: 'Active', dot: 'bg-ok' },

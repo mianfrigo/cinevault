@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom, Observable } from 'rxjs';
-import { ApiClient, toApiError } from '../../core/api/api-client';
-import { UserDto } from '../../core/models';
+import { ApiClient, toApiError } from '@core/api/api-client';
+import { UserDto } from '@core/models';
 
 /** The authenticated /me calls of the account page. Every method rejects with an `ApiError`. */
 @Injectable({ providedIn: 'root' })

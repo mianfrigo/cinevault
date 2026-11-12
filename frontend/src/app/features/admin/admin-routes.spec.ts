@@ -7,8 +7,8 @@ import { provideRouter, Router, withComponentInputBinding } from '@angular/route
 import { MessageService } from 'primeng/api';
 import { App } from '../../app';
 import { routes } from '../../app.routes';
-import { AuthStore } from '../../core/auth/auth.store';
-import { UserDto } from '../../core/models';
+import { AuthStore } from '@core/auth/auth.store';
+import { UserDto } from '@core/models';
 import { member } from '../dashboard/dashboard.testing';
 import { me, openAdmin, person, usersOf } from './admin.testing';
 

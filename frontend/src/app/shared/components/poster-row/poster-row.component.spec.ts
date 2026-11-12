@@ -1,8 +1,9 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { TitleSummary } from '../core/models';
-import { PosterRowComponent, RowItemDirective } from './poster-row.component';
+import { TitleSummary } from '@core/models';
+import { PosterRowComponent } from './poster-row.component';
+import { RowItemDirective } from '@shared/directives/row-item.directive';
 
 const title = (tmdbId: number): TitleSummary => ({
   tmdbId,

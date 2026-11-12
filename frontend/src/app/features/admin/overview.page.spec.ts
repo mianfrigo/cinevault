@@ -1,4 +1,4 @@
-import { AdminOverview } from '../../core/models';
+import { AdminOverview } from '@core/models';
 import { error, openAdmin, person } from './admin.testing';
 
 const overview = (extra: Partial<AdminOverview> = {}): AdminOverview => ({

@@ -1,4 +1,4 @@
-import { SeasonDetail, TitleDetail } from '../../core/models';
+import { SeasonDetail, TitleDetail } from '@core/models';
 
 /** Spec fixtures for the title page. */
 export const movie: TitleDetail = {

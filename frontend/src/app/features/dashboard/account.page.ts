@@ -20,24 +20,23 @@ import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
-import { AuthStore } from '../../core/auth/auth.store';
-import { ApiError } from '../../core/models';
-import { failureMessage } from '../auth/auth.api';
-import { AuthFieldComponent } from '../auth/auth-field.component';
-import { focusFirstInvalid } from '../auth/auth-focus';
+import { AuthStore } from '@core/auth/auth.store';
+import { ApiError } from '@core/models';
+import { failureMessage } from '@shared/utils/failure-message';
+import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import {
   confirmMatches,
   emailRules,
   nameRules,
   newPasswordRules,
   PASSWORD_MAX,
-} from '../auth/auth.rules';
+} from '@shared/validators/auth.rules';
 import { AccountApi } from './account.api';
-import { AccountSectionComponent, FormNoteComponent, Note } from './account-section.component';
+import { PASSWORD_WRONG } from './account.messages';
+import { AccountSectionComponent } from './account-section.component';
+import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { DeleteAccountComponent } from './delete-account.component';
-
-/** Neutral copy for a wrong password, shown under the field. */
-export const PASSWORD_WRONG = 'That password is not correct.';
 
 /** /dashboard/account: name, password, email and the delete-account flow. Every form uses Signal Forms. */
 @Component({

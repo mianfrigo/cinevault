@@ -11,9 +11,9 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { FavoritesStore } from '../../core/favorites/favorites.store';
-import { TitleSummary } from '../../core/models';
-import { ScoreComponent } from '../../shared/score.component';
+import { FavoritesStore } from '@core/favorites/favorites.store';
+import { TitleSummary } from '@core/models';
+import { ScoreComponent } from '@shared/components/score/score.component';
 
 const SWIPE_PX = 50;
 

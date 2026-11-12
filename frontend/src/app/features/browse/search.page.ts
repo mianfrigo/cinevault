@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { CatalogService } from '../../core/catalog/catalog.service';
-import { latestValue } from '../../shared/latest-value';
-import { injectPageNavigator, MAX_PAGE, normalisePage } from '../../shared/page-param';
-import { StateBlockComponent } from '../../shared/state-block.component';
+import { CatalogService } from '@core/catalog/catalog.service';
+import { latestValue } from '@shared/utils/latest-value';
+import { injectPageNavigator, MAX_PAGE, normalisePage } from '@shared/utils/page-param';
+import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { PosterGridComponent } from './poster-grid.component';
 
 /** The backend rejects a longer query with 400. */

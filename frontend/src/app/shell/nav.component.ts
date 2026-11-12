@@ -15,8 +15,8 @@ import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
-import { AuthStore } from '../core/auth/auth.store';
-import { LogoComponent } from './logo.component';
+import { AuthStore } from '@core/auth/auth.store';
+import { LogoComponent } from '@shared/components/logo/logo.component';
 import { UserMenuComponent } from './user-menu.component';
 
 interface NavLink {

@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { GenreCover, Paged, TitleSummary } from '../../core/models';
+import { GenreCover, Paged, TitleSummary } from '@core/models';
 import HomePage from './home.page';
 
 const title = (tmdbId: number, name: string, mediaType: 'movie' | 'tv'): TitleSummary => ({

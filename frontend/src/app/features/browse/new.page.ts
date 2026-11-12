@@ -1,8 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { CatalogService } from '../../core/catalog/catalog.service';
-import { StateBlockComponent } from '../../shared/state-block.component';
+import { CatalogService } from '@core/catalog/catalog.service';
+import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { PosterGridComponent } from './poster-grid.component';
 
 /** /new: what is new in cinemas and on air, movies and TV. Each section loads, fails and retries on its own. */

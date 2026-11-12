@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Paged, UserDto } from '../../core/models';
+import { Paged, UserDto } from '@core/models';
 import { UsersPageStore } from './users-page.store';
 
 const user = (n: number, extra: Partial<UserDto> = {}): UserDto => ({

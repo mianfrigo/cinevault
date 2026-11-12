@@ -10,11 +10,12 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
-import { ApiError } from '../../core/models';
-import { AuthApi, failureMessage } from './auth.api';
+import { ApiError } from '@core/models';
+import { AuthApi } from './auth.api';
+import { failureMessage } from '@shared/utils/failure-message';
 import { AuthLayoutComponent } from './auth-layout.component';
-import { FocusOnDirective } from './auth-focus';
-import { queryText } from './auth.rules';
+import { FocusOnDirective } from '@shared/directives/focus-on.directive';
+import { queryText } from '@shared/utils/query-text';
 import { ResendFormComponent } from './resend-form.component';
 
 type State = 'verifying' | 'verified' | 'expired' | 'invalid' | 'error';

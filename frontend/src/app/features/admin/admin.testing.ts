@@ -1,4 +1,4 @@
-import { Paged, UserDto } from '../../core/models';
+import { Paged, UserDto } from '@core/models';
 import { member, setup } from '../dashboard/dashboard.testing';
 
 export { error } from '../dashboard/dashboard.testing';

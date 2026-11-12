@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { MenuModule } from 'primeng/menu';
-import { AuthStore } from '../core/auth/auth.store';
+import { AuthStore } from '@core/auth/auth.store';
 
 /** Avatar with a popup menu for the logged-in user. Loaded through @defer to keep it out of the initial bundle. */
 @Component({

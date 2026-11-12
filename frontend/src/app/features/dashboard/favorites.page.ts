@@ -22,13 +22,13 @@ import { MessageModule } from 'primeng/message';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ToastModule } from 'primeng/toast';
-import { AuthStore } from '../../core/auth/auth.store';
-import { FavoritesStore } from '../../core/favorites/favorites.store';
-import { FavoriteItem } from '../../core/models';
-import { MAX_PAGE, normalisePage } from '../../shared/page-param';
-import { PaginatorComponent } from '../../shared/paginator.component';
-import { PosterCardComponent } from '../../shared/poster-card.component';
-import { StateBlockComponent } from '../../shared/state-block.component';
+import { AuthStore } from '@core/auth/auth.store';
+import { FavoritesStore } from '@core/favorites/favorites.store';
+import { FavoriteItem } from '@core/models';
+import { MAX_PAGE, normalisePage } from '@shared/utils/page-param';
+import { PaginatorComponent } from '@shared/components/paginator/paginator.component';
+import { PosterCardComponent } from '@shared/components/poster-card/poster-card.component';
+import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { FavoritesFilter, FavoritesPageStore, favoriteKey } from './favorites-page.store';
 
 const FILTERS: { name: string; value: FavoritesFilter }[] = [

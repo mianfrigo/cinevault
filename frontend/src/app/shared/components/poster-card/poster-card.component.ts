@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { FavoritesStore } from '../core/favorites/favorites.store';
-import { TitleSummary } from '../core/models';
-import { ScoreComponent } from './score.component';
+import { FavoritesStore } from '@core/favorites/favorites.store';
+import { TitleSummary } from '@core/models';
+import { ScoreComponent } from '@shared/components/score/score.component';
 
 @Component({
   selector: 'cv-poster-card',

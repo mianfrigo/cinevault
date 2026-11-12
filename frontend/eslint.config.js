@@ -34,6 +34,12 @@ module.exports = defineConfig([
     },
   },
   {
+    // One class per file (component, directive, pipe, service); spec-local test hosts are exempt.
+    files: ['**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    rules: { 'max-classes-per-file': ['error', 1] },
+  },
+  {
     files: ['**/*.html'],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     rules: {},

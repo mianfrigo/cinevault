@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LogoComponent } from '../../shell/logo.component';
+import { LogoComponent } from '@shared/components/logo/logo.component';
 import { AUTH_ART, AuthArtComponent, AuthArtVariant } from './auth-art.component';
 
 /**

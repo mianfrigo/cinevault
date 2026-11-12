@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { TitleSummary } from '../../core/models';
-import { PaginatorComponent } from '../../shared/paginator.component';
-import { PosterCardComponent } from '../../shared/poster-card.component';
+import { TitleSummary } from '@core/models';
+import { PaginatorComponent } from '@shared/components/paginator/paginator.component';
+import { PosterCardComponent } from '@shared/components/poster-card/poster-card.component';
 
 /** Responsive grid of poster cards with the paginator below it (hidden for a single page). */
 @Component({

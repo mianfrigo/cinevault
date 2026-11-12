@@ -5,8 +5,8 @@ import { Router, provideRouter, withComponentInputBinding } from '@angular/route
 import { MessageService } from 'primeng/api';
 import { App } from '../../app';
 import { routes } from '../../app.routes';
-import { authInterceptor } from '../../core/auth/auth.interceptor';
-import { AuthStore } from '../../core/auth/auth.store';
+import { authInterceptor } from '@core/auth/auth.interceptor';
+import { AuthStore } from '@core/auth/auth.store';
 import { fav, member, paged } from './dashboard.testing';
 
 const noContent = { status: 204, statusText: 'No Content' };

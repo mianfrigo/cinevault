@@ -14,7 +14,7 @@ import { MessageModule } from 'primeng/message';
 import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
 import { queryText } from './auth.rules';
-import { AuthCardComponent } from './auth-card.component';
+import { AuthLayoutComponent } from './auth-layout.component';
 import { ResendFormComponent } from './resend-form.component';
 
 const COOLDOWN_SECONDS = 30;
@@ -22,50 +22,60 @@ const SHAPE = /^[^\s@]+@[^\s@]+$/;
 
 @Component({
   selector: 'cv-check-email-page',
-  imports: [RouterLink, ButtonModule, MessageModule, AuthCardComponent, ResendFormComponent],
+  imports: [RouterLink, ButtonModule, MessageModule, AuthLayoutComponent, ResendFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <cv-auth-card heading="Check your email">
+    <cv-auth-layout heading="Check your email" art="verify" [mail]="true">
       @if (address(); as to) {
-        <p class="-mt-3 text-fg-2">
+        <p slot="lead" class="mt-3 max-w-[44ch] text-fg-2">
           We sent a verification link to<br />
           <span class="font-medium break-all text-fg">{{ to }}</span>
         </p>
+      } @else {
+        <p slot="lead" class="mt-3 max-w-[44ch] text-fg-2">
+          Open the verification link we emailed you. Need a new one? Enter your address.
+        </p>
+      }
+      @if (address(); as to) {
         @if (notice(); as n) {
           <p-message [severity]="n.kind" role="status">{{ n.text }}</p-message>
         }
-        <ol class="grid gap-3 text-sm text-fg-2">
-          <li class="flex gap-3">
-            <span class="w-4 text-fg-3">1</span>Open the email from Cinevault.
+        <ol class="mt-2 grid gap-3 text-sm text-fg-2">
+          <li class="flex items-baseline gap-3">
+            <span class="w-4 flex-none text-fg-3 tabular-nums">1</span>Open the email from
+            Cinevault.
           </li>
-          <li class="flex gap-3">
-            <span class="w-4 text-fg-3">2</span>Select Verify email. The link works for 24 hours.
+          <li class="flex items-baseline gap-3">
+            <span class="w-4 flex-none text-fg-3 tabular-nums">2</span
+            ><span
+              >Select <b class="font-semibold">Verify email</b>. The link works for 24 hours.</span
+            >
           </li>
-          <li class="flex gap-3">
-            <span class="w-4 text-fg-3">3</span>Come back and log in. Not there? Check spam or
-            promotions.
+          <li class="flex items-baseline gap-3">
+            <span class="w-4 flex-none text-fg-3 tabular-nums">3</span>Come back and log in. Not
+            there? Check spam or promotions.
           </li>
         </ol>
-        <p-button
-          [label]="remaining() ? 'Resend in ' + remaining() + 's' : 'Resend verification email'"
-          [fluid]="true"
-          [disabled]="remaining() > 0"
-          [loading]="sending()"
-          (onClick)="resend(to)"
-        />
-        <p-button
-          label="Wrong address? Start over"
-          variant="text"
-          [fluid]="true"
-          routerLink="/register"
-        />
+        <div class="mt-2 grid gap-2">
+          <p-button
+            [label]="remaining() ? 'Resend in ' + remaining() + 's' : 'Resend verification email'"
+            [fluid]="true"
+            [disabled]="remaining() > 0"
+            [loading]="sending()"
+            (onClick)="resend(to)"
+          />
+          <p-button
+            label="Wrong address? Start over"
+            severity="secondary"
+            variant="text"
+            [fluid]="true"
+            routerLink="/register"
+          />
+        </div>
       } @else {
-        <p class="-mt-3 text-fg-2">
-          Open the verification link we emailed you. Need a new one? Enter your address.
-        </p>
         <cv-resend-form />
       }
-    </cv-auth-card>
+    </cv-auth-layout>
   `,
 })
 export default class CheckEmailPage {

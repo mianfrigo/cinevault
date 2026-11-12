@@ -63,7 +63,7 @@ describe('Register page', () => {
     await vi.waitFor(() => {
       ctx.harness.detectChanges();
       const hint = ctx.el.querySelector('#' + password.getAttribute('aria-describedby'));
-      expect(hint?.textContent).toContain('At least 10 characters.');
+      expect(hint?.textContent).toContain('At least 10 characters, at most 128.');
     });
   });
 

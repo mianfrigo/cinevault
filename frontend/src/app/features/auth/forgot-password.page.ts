@@ -6,7 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
-import { AuthCardComponent } from './auth-card.component';
+import { AuthLayoutComponent } from './auth-layout.component';
 import { AuthFieldComponent } from './auth-field.component';
 import { FocusOnDirective, focusFirstInvalid } from './auth-focus';
 import { emailRules } from './auth.rules';
@@ -20,28 +20,45 @@ import { emailRules } from './auth.rules';
     ButtonModule,
     InputTextModule,
     MessageModule,
-    AuthCardComponent,
+    AuthLayoutComponent,
     AuthFieldComponent,
     FocusOnDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (sent()) {
-      <cv-auth-card heading="Check your inbox">
-        <p role="status" class="text-fg-2">If that email exists, we sent a link.</p>
-        <p-button label="Back to log in" severity="secondary" [fluid]="true" routerLink="/login" />
-        <p-button
-          label="Use a different email"
-          variant="text"
-          [fluid]="true"
-          (onClick)="sent.set(false)"
-        />
-      </cv-auth-card>
-    } @else {
-      <cv-auth-card
-        heading="Reset password"
-        lead="Enter the email you signed up with. We will send a link to choose a new password."
-      >
+    <cv-auth-layout
+      [heading]="sent() ? 'Check your inbox' : 'Reset password'"
+      [lead]="
+        sent()
+          ? undefined
+          : 'Enter the email you signed up with. We will send a link to choose a new password.'
+      "
+      art="recover"
+      back="login"
+      [mail]="sent()"
+    >
+      @if (sent()) {
+        <p role="status" slot="lead" class="mt-3 max-w-[44ch] text-fg-2">
+          If that email exists, we sent a link.
+        </p>
+      }
+      @if (sent()) {
+        <div class="grid gap-2">
+          <p-button
+            label="Back to log in"
+            severity="secondary"
+            [fluid]="true"
+            routerLink="/login"
+          />
+          <p-button
+            label="Use a different email"
+            severity="secondary"
+            variant="text"
+            [fluid]="true"
+            (onClick)="sent.set(false)"
+          />
+        </div>
+      } @else {
         @if (problem(); as p) {
           <p-message severity="error" role="alert" [cvFocusOn]="p">{{ p.text }}</p-message>
         }
@@ -64,7 +81,7 @@ import { emailRules } from './auth.rules';
             [loading]="forgotForm().submitting()"
           />
         </form>
-        <p class="text-sm text-fg-2">
+        <p class="mt-2 text-sm text-fg-2">
           Remembered it?
           <a
             routerLink="/login"
@@ -72,8 +89,8 @@ import { emailRules } from './auth.rules';
             >Log in</a
           >
         </p>
-      </cv-auth-card>
-    }
+      }
+    </cv-auth-layout>
   `,
 })
 export default class ForgotPasswordPage {

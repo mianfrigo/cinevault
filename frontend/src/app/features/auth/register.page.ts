@@ -7,7 +7,7 @@ import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
-import { AuthCardComponent } from './auth-card.component';
+import { AuthLayoutComponent } from './auth-layout.component';
 import { AuthFieldComponent } from './auth-field.component';
 import { FocusOnDirective, focusFirstInvalid } from './auth-focus';
 import { confirmMatches, emailRules, nameRules, newPasswordRules } from './auth.rules';
@@ -22,15 +22,16 @@ import { confirmMatches, emailRules, nameRules, newPasswordRules } from './auth.
     InputTextModule,
     MessageModule,
     PasswordModule,
-    AuthCardComponent,
+    AuthLayoutComponent,
     AuthFieldComponent,
     FocusOnDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <cv-auth-card
+    <cv-auth-layout
       heading="Create account"
       lead="One account keeps your favorites across phone and laptop. We will email a link to verify your address."
+      art="register"
     >
       @if (problem(); as p) {
         <p-message severity="error" role="alert" [cvFocusOn]="p">{{ p.text }}</p-message>
@@ -60,7 +61,7 @@ import { confirmMatches, emailRules, nameRules, newPasswordRules } from './auth.
         <cv-auth-field
           label="Password"
           controlId="password"
-          hint="At least 10 characters."
+          hint="At least 10 characters, at most 128."
           [field]="registerForm.password"
         >
           <p-password
@@ -90,11 +91,20 @@ import { confirmMatches, emailRules, nameRules, newPasswordRules } from './auth.
         />
         <p class="text-label text-fg-3">
           By creating an account you agree to the
-          <a routerLink="/terms" class="text-fg underline underline-offset-4">Terms</a> and
-          <a routerLink="/privacy" class="text-fg underline underline-offset-4">Privacy Policy</a>.
+          <a
+            routerLink="/terms"
+            class="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
+            >Terms</a
+          >
+          and
+          <a
+            routerLink="/privacy"
+            class="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
+            >Privacy Policy</a
+          >.
         </p>
       </form>
-      <p class="text-sm text-fg-2">
+      <p class="mt-2 text-sm text-fg-2">
         Already have an account?
         <a
           routerLink="/login"
@@ -102,7 +112,7 @@ import { confirmMatches, emailRules, nameRules, newPasswordRules } from './auth.
           >Log in</a
         >
       </p>
-    </cv-auth-card>
+    </cv-auth-layout>
   `,
 })
 export default class RegisterPage {

@@ -3,6 +3,8 @@ import { authGuard, guestGuard } from './core/auth/guards';
 
 const placeholder = () => import('./pages/placeholder.component');
 const browse = () => import('./features/browse/browse.page');
+// The auth pages draw their own split layout; the app shell leaves out its nav and footer for them.
+const chromeless = { chromeless: true };
 const legalNote = 'Placeholder page. The owner will supply the final text.';
 
 // Route map: docs/app-flow.md section 1. Each placeholder is replaced by its real screen in a later task.
@@ -32,33 +34,39 @@ export const routes: Routes = [
     title: 'Log in',
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/login.page'),
+    data: chromeless,
   },
   {
     path: 'register',
     title: 'Register',
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/register.page'),
+    data: chromeless,
   },
   {
     path: 'forgot-password',
     title: 'Forgot password',
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/forgot-password.page'),
+    data: chromeless,
   },
   {
     path: 'check-email',
     title: 'Check your email',
     loadComponent: () => import('./features/auth/check-email.page'),
+    data: chromeless,
   },
   {
     path: 'verify-email',
     title: 'Verify email',
     loadComponent: () => import('./features/auth/verify-email.page'),
+    data: chromeless,
   },
   {
     path: 'reset-password',
     title: 'Reset password',
     loadComponent: () => import('./features/auth/reset-password.page'),
+    data: chromeless,
   },
   {
     path: 'dashboard',

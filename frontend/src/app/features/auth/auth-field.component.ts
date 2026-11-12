@@ -21,7 +21,7 @@ import { MessageModule } from 'primeng/message';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex items-baseline justify-between gap-3">
-      <label [for]="controlId()" class="text-sm font-medium text-fg">{{ label() }}</label>
+      <label [for]="controlId()" class="text-sm font-medium text-fg-2">{{ label() }}</label>
       <ng-content select="[slot=label-end]" />
     </div>
     <ng-content />

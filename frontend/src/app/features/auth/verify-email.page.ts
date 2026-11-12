@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   input,
   signal,
@@ -11,12 +12,20 @@ import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
-import { AuthCardComponent } from './auth-card.component';
+import { AuthLayoutComponent } from './auth-layout.component';
 import { FocusOnDirective } from './auth-focus';
 import { queryText } from './auth.rules';
 import { ResendFormComponent } from './resend-form.component';
 
 type State = 'verifying' | 'verified' | 'expired' | 'invalid' | 'error';
+
+const HEADINGS: Record<State, string> = {
+  verifying: 'Verifying your email',
+  verified: 'Email verified',
+  expired: 'Link expired',
+  invalid: 'Link not valid',
+  error: 'We could not verify your email',
+};
 
 @Component({
   selector: 'cv-verify-email-page',
@@ -24,46 +33,37 @@ type State = 'verifying' | 'verified' | 'expired' | 'invalid' | 'error';
     RouterLink,
     ButtonModule,
     MessageModule,
-    AuthCardComponent,
+    AuthLayoutComponent,
     ResendFormComponent,
     FocusOnDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @switch (state()) {
-      @case ('verifying') {
-        <cv-auth-card heading="Verifying your email">
+    <cv-auth-layout [heading]="heading()" [lead]="lead()" art="verify">
+      @switch (state()) {
+        @case ('verifying') {
           <p role="status" class="text-fg-2">One moment.</p>
-        </cv-auth-card>
-      }
-      @case ('verified') {
-        <cv-auth-card heading="Email verified">
+        }
+        @case ('verified') {
           <p-message severity="success" role="status">Your email is verified.</p-message>
           <p-button label="Log in" [fluid]="true" routerLink="/login" />
-        </cv-auth-card>
-      }
-      @case ('error') {
-        <cv-auth-card heading="We could not verify your email">
+        }
+        @case ('error') {
           @if (failure(); as f) {
             <p-message severity="error" role="alert" [cvFocusOn]="f">{{ f.text }}</p-message>
           }
           <p-button label="Retry" [fluid]="true" (onClick)="verify()" />
-        </cv-auth-card>
-      }
-      @default {
-        <cv-auth-card
-          [heading]="state() === 'expired' ? 'Link expired' : 'Link not valid'"
-          lead="Enter your email and we will send a new verification link."
-        >
+        }
+        @default {
           <p-message severity="error" role="alert">{{
             state() === 'expired'
               ? 'This verification link has expired.'
               : 'This verification link is not valid.'
           }}</p-message>
           <cv-resend-form />
-        </cv-auth-card>
+        }
       }
-    }
+    </cv-auth-layout>
   `,
 })
 export default class VerifyEmailPage {
@@ -73,6 +73,12 @@ export default class VerifyEmailPage {
   /** From the query string (router input binding). Only ever sent in the request body. */
   readonly token = input<string | string[]>();
   protected readonly state = signal<State>('verifying');
+  protected readonly heading = computed(() => HEADINGS[this.state()]);
+  protected readonly lead = computed(() =>
+    this.state() === 'expired' || this.state() === 'invalid'
+      ? 'Enter your email and we will send a new verification link.'
+      : undefined,
+  );
   protected readonly failure = signal<{ text: string } | null>(null);
   /** Kept in memory once it has left the address bar, for Retry. */
   private spent?: string;

@@ -92,7 +92,8 @@ describe('Login page', () => {
     expect(known.text()).toContain('Your password was changed.');
     TestBed.resetTestingModule();
     const unknown = await setup('/login?notice=%3Cb%3Ehi%3C%2Fb%3E');
-    expect(unknown.text()).not.toContain('hi');
+    expect(unknown.text()).not.toContain('<b>hi</b>');
+    expect(unknown.el.querySelector('b')).toBeNull();
     expect(unknown.el.querySelector('p-message')).toBeNull();
   });
 

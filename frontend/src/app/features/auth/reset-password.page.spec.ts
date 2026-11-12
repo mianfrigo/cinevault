@@ -46,4 +46,25 @@ describe('Reset password page', () => {
     req.flush(null, { status: 204, statusText: 'No Content' });
     await vi.waitFor(() => expect(ctx.url()).toBe('/login?notice=password-reset'));
   });
+
+  it('drops the token from the address bar but still submits it', async () => {
+    const ctx = await setup('/reset-password?token=tok-5');
+    await vi.waitFor(() => expect(ctx.url()).toBe('/reset-password'));
+    fill(ctx, 'a-long-enough-pass', 'a-long-enough-pass');
+    const req = await ctx.request('reset-password');
+    expect(req.request.body).toEqual({ token: 'tok-5', newPassword: 'a-long-enough-pass' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await vi.waitFor(() => expect(ctx.url()).toBe('/login?notice=password-reset'));
+  });
+
+  it('treats a repeated token param as invalid', async () => {
+    const ctx = await setup('/reset-password?token=a&token=b');
+    expect(ctx.text()).toContain('This reset link is not valid.');
+  });
+
+  it('moves focus to the first invalid control after a blocked submit', async () => {
+    const ctx = await setup('/reset-password?token=tok');
+    fill(ctx, 'short', 'short');
+    await vi.waitFor(() => expect(document.activeElement).toBe(ctx.el.querySelector('#password')));
+  });
 });

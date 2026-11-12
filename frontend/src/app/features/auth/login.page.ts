@@ -11,7 +11,8 @@ import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
 import { AuthCardComponent } from './auth-card.component';
 import { AuthFieldComponent } from './auth-field.component';
-import { emailRules } from './auth.rules';
+import { FocusOnDirective, focusFirstInvalid } from './auth-focus';
+import { emailRules, queryText } from './auth.rules';
 
 /** Fixed set of notices a redirect can ask the login page to show: nothing else is ever rendered. */
 const NOTICES = new Map([
@@ -42,15 +43,18 @@ interface Banner {
     PasswordModule,
     AuthCardComponent,
     AuthFieldComponent,
+    FocusOnDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <cv-auth-card heading="Log in" lead="Welcome back. Pick up your list where you left it.">
       @if (noticeText(); as text) {
-        <p-message severity="success">{{ text }}</p-message>
+        <div role="status">
+          <p-message severity="success">{{ text }}</p-message>
+        </div>
       }
       @if (banner(); as b) {
-        <p-message [severity]="b.kind" role="alert">
+        <p-message [severity]="b.kind" role="alert" [cvFocusOn]="b">
           {{ b.text }}
           @if (b.canResend) {
             <p-button
@@ -115,12 +119,14 @@ export default class LoginPage {
   private readonly router = inject(Router);
 
   /** Query params, bound by the router. `next` is only honoured as a same-origin path. */
-  readonly next = input<string>();
-  readonly notice = input<string>();
+  readonly next = input<string | string[]>();
+  readonly notice = input<string | string[]>();
 
-  protected readonly noticeText = computed(() => NOTICES.get(this.notice() ?? ''));
+  protected readonly noticeText = computed(() => NOTICES.get(queryText(this.notice()) ?? ''));
   protected readonly banner = signal<Banner | null>(null);
   protected readonly resending = signal(false);
+  /** The address that failed to log in: the banner's Resend uses it, not whatever the field holds now. */
+  private failedEmail = '';
 
   private readonly model = signal({ email: '', password: '' });
   protected readonly loginForm = form(
@@ -131,12 +137,15 @@ export default class LoginPage {
     },
     {
       submission: {
+        onInvalid: focusFirstInvalid,
         action: async (f) => {
           this.banner.set(null);
+          const email = f.email().value().trim();
           try {
-            await this.auth.login(f.email().value().trim(), f.password().value());
+            await this.auth.login(email, f.password().value());
           } catch (e) {
             const error = e as ApiError; // AuthStore.login rejects with the API error body
+            this.failedEmail = email;
             this.banner.set({
               kind: 'error',
               text: LOGIN_MESSAGES.get(error.code) ?? failureMessage(error),
@@ -153,7 +162,7 @@ export default class LoginPage {
   protected async resend(): Promise<void> {
     this.resending.set(true);
     try {
-      await this.authApi.resendVerification(this.model().email.trim());
+      await this.authApi.resendVerification(this.failedEmail);
       this.banner.set({
         kind: 'success',
         text: 'Verification email sent. It can take a minute to arrive.',

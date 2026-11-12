@@ -72,7 +72,14 @@ describe('Login page', () => {
   });
 
   it('Login ignores a next param that is an absolute external URL', async () => {
-    for (const next of ['https://evil.example/steal', '//evil.example', '/\\evil.example']) {
+    for (const next of [
+      'https://evil.example/steal',
+      '//evil.example',
+      '/\\evil.example',
+      'javascript:alert(1)',
+      '/\tevil.example',
+      '/a b',
+    ]) {
       const ctx = await logIn(`/login?next=${encodeURIComponent(next)}`);
       ctx.req.flush({ accessToken: 't', user });
       await vi.waitFor(() => expect(ctx.url()).toBe('/dashboard/favorites'));
@@ -87,5 +94,57 @@ describe('Login page', () => {
     const unknown = await setup('/login?notice=%3Cb%3Ehi%3C%2Fb%3E');
     expect(unknown.text()).not.toContain('hi');
     expect(unknown.el.querySelector('p-message')).toBeNull();
+  });
+
+  it('ignores a next param that is percent-encoded //, or repeated', async () => {
+    for (const query of ['next=%2F%2Fevil.com', 'next=%2Fprivacy&next=%2Fterms']) {
+      const ctx = await logIn('/login?' + query);
+      ctx.req.flush({ accessToken: 't', user });
+      await vi.waitFor(() => expect(ctx.url()).toBe('/dashboard/favorites'));
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('shows no notice for a repeated notice param', async () => {
+    const ctx = await setup('/login?notice=password-reset&notice=password-reset');
+    expect(ctx.el.querySelector('p-message')).toBeNull();
+  });
+
+  it('announces the password-changed notice politely', async () => {
+    const ctx = await setup('/login?notice=password-reset');
+    const notice = ctx.el.querySelector('p-message')!;
+    expect(
+      notice.getAttribute('role') === 'status' || notice.closest('[role="status"]'),
+    ).toBeTruthy();
+  });
+
+  it('resends to the address that failed to log in, even if the field changed since', async () => {
+    const ctx = await logIn();
+    const unverified = error(403, 'EMAIL_NOT_VERIFIED');
+    ctx.req.flush(unverified.body, unverified.init);
+    await ctx.seeText('Your email is not verified yet.');
+    ctx.type('#email', 'someone-else@example.com');
+    Array.from(ctx.el.querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('Resend verification email'))!
+      .click();
+    const resend = await ctx.request('resend-verification');
+    expect(resend.request.body).toEqual({ email: 'ada@example.com' });
+    resend.flush({ message: 'ok' }, { status: 202, statusText: 'Accepted' });
+  });
+
+  it('moves focus to the first invalid control after a blocked submit and to the banner after a server error', async () => {
+    const ctx = await setup('/login');
+    ctx.submit();
+    await vi.waitFor(() => expect(document.activeElement).toBe(ctx.el.querySelector('#email')));
+
+    ctx.type('#email', 'ada@example.com');
+    ctx.type('#password', 'x');
+    ctx.submit();
+    const wrong = error(401, 'INVALID_CREDENTIALS');
+    (await ctx.request('login')).flush(wrong.body, wrong.init);
+    await ctx.seeText('Email or password is incorrect.');
+    await vi.waitFor(() =>
+      expect(document.activeElement).toBe(ctx.el.querySelector('p-message[role="alert"]')),
+    );
   });
 });

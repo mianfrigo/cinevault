@@ -16,6 +16,23 @@ describe('Forgot password page', () => {
     }
   });
 
+  it('moves focus to the email field after a blocked submit and to the banner after a server error', async () => {
+    const ctx = await setup('/forgot-password');
+    ctx.type('#email', 'nope');
+    ctx.submit();
+    await vi.waitFor(() => expect(document.activeElement).toBe(ctx.el.querySelector('#email')));
+
+    ctx.type('#email', 'a@example.com');
+    (ctx.el.querySelector('#email') as HTMLElement).blur();
+    ctx.submit();
+    const broken = error(500, 'INTERNAL');
+    (await ctx.request('forgot-password')).flush(broken.body, broken.init);
+    await ctx.seeText('Something went wrong.');
+    await vi.waitFor(() =>
+      expect(document.activeElement).toBe(ctx.el.querySelector('p-message[role="alert"]')),
+    );
+  });
+
   it('blocks an invalid email and maps 429 and other failures', async () => {
     const ctx = await setup('/forgot-password');
     ctx.type('#email', 'not-an-email');

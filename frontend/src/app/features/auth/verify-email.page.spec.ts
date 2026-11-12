@@ -8,6 +8,7 @@ describe('Verify email page', () => {
     expect(req.request.body).toEqual({ token: 'tok-123' });
     req.flush(null, { status: 204, statusText: 'No Content' });
     await ctx.seeText('Your email is verified.');
+
     expect(ctx.text()).toContain('Log in');
     ctx.http.expectNone('/api/v1/auth/verify-email');
   });
@@ -37,5 +38,52 @@ describe('Verify email page', () => {
     await ctx.settle();
     ctx.http.expectNone('/api/v1/auth/verify-email');
     expect(ctx.text()).toContain('This verification link is not valid.');
+  });
+
+  it('shows a rate limit message for 429 and a neutral one for 5xx, never "not valid"', async () => {
+    for (const [status, code, copy] of [
+      [429, 'RATE_LIMITED', 'Too many attempts. Try again in a minute.'],
+      [500, 'INTERNAL', 'Something went wrong. Please try again.'],
+    ] as const) {
+      const ctx = await setup('/verify-email?token=tok');
+      const failed = error(status, code);
+      (await ctx.request('verify-email')).flush(failed.body, failed.init);
+      await ctx.seeText(copy);
+      expect(ctx.text()).not.toContain('not valid');
+      expect(ctx.text()).not.toContain('expired');
+      expect(ctx.text()).not.toContain('raw server text');
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('Retry calls verify again once per click and keeps the token after it left the URL', async () => {
+    const ctx = await setup('/verify-email?token=tok-7');
+    const failed = error(500, 'INTERNAL');
+    (await ctx.request('verify-email')).flush(failed.body, failed.init);
+    await ctx.seeText('Something went wrong.');
+    ctx.http.expectNone('/api/v1/auth/verify-email');
+
+    Array.from(ctx.el.querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('Retry'))!
+      .click();
+    const again = await ctx.request('verify-email');
+    expect(again.request.body).toEqual({ token: 'tok-7' });
+    again.flush(null, { status: 204, statusText: 'No Content' });
+    await ctx.seeText('Your email is verified.');
+  });
+
+  it('drops the token from the address bar without a second verify call', async () => {
+    const ctx = await setup('/verify-email?token=tok-8');
+    const req = await ctx.request('verify-email');
+    await vi.waitFor(() => expect(ctx.url()).toBe('/verify-email'));
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await ctx.seeText('Your email is verified.');
+    ctx.http.expectNone('/api/v1/auth/verify-email');
+  });
+
+  it('treats a repeated token param as invalid without calling the API', async () => {
+    const ctx = await setup('/verify-email?token=a&token=b');
+    await ctx.seeText('This verification link is not valid.');
+    ctx.http.expectNone('/api/v1/auth/verify-email');
   });
 });

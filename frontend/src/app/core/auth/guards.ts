@@ -3,9 +3,13 @@ import { inject, PLATFORM_ID } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthStore } from './auth.store';
 
-/** A post-login target is only valid as a same-origin path: one leading `/`, no `//`, no `/\`, no scheme. */
-export function safeNext(value: string | null | undefined): string | null {
-  return value && /^\/(?![/\\])/.test(value) ? value : null;
+// One leading `/` (not `//`, not `/\`); whitespace and control characters never belong in a path.
+// eslint-disable-next-line no-control-regex -- control characters are rejected on purpose
+const SAFE_PATH = /^\/(?![/\\])[^\s\u0000-\u001f\u007f]*$/;
+
+/** A post-login target is only valid as a same-origin path (no scheme). A repeated query param (an array) is not one. */
+export function safeNext(value: unknown): string | null {
+  return typeof value === 'string' && SAFE_PATH.test(value) ? value : null;
 }
 
 // The server renders every visitor-only decision as "let through": it has no session, so guarded

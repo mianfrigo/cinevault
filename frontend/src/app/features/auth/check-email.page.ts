@@ -13,6 +13,7 @@ import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
+import { queryText } from './auth.rules';
 import { AuthCardComponent } from './auth-card.component';
 import { ResendFormComponent } from './resend-form.component';
 
@@ -72,9 +73,9 @@ export default class CheckEmailPage {
   private readonly destroyRef = inject(DestroyRef);
 
   /** From the query string (router input binding); shown as text and only used when it looks like an address. */
-  readonly email = input<string>();
+  readonly email = input<string | string[]>();
   protected readonly address = computed(() => {
-    const value = this.email()?.trim();
+    const value = queryText(this.email())?.trim();
     return value && value.length <= 254 && SHAPE.test(value) ? value : null;
   });
 
@@ -82,11 +83,15 @@ export default class CheckEmailPage {
   protected readonly sending = signal(false);
   protected readonly notice = signal<{ kind: 'success' | 'error'; text: string } | null>(null);
   private timer?: ReturnType<typeof setInterval>;
+  private destroyed = false;
 
   constructor() {
     // Timers only exist in the browser; the server renders the 30 s state and the client resumes it.
     afterNextRender(() => this.startCountdown());
-    this.destroyRef.onDestroy(() => clearInterval(this.timer));
+    this.destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      clearInterval(this.timer);
+    });
   }
 
   protected async resend(to: string): Promise<void> {
@@ -98,7 +103,7 @@ export default class CheckEmailPage {
       this.notice.set({ kind: 'error', text: failureMessage(e as ApiError) });
     } finally {
       this.sending.set(false);
-      this.startCountdown();
+      if (!this.destroyed) this.startCountdown(); // the page may have been left while the request ran
     }
   }
 

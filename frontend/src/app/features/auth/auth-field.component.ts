@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  afterRenderEffect,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+} from '@angular/core';
 import { FieldTree } from '@angular/forms/signals';
 import { MessageModule } from 'primeng/message';
 
@@ -18,12 +26,16 @@ import { MessageModule } from 'primeng/message';
     </div>
     <ng-content />
     @if (hint() && !showError()) {
-      <p class="text-label text-fg-3">{{ hint() }}</p>
+      <p [attr.id]="controlId() + '-hint'" class="text-label text-fg-3">{{ hint() }}</p>
     }
     @if (showError()) {
-      <p-message severity="error" size="small" variant="simple">{{
-        field()().errors()[0]?.message
-      }}</p-message>
+      <p-message
+        [attr.id]="controlId() + '-error'"
+        severity="error"
+        size="small"
+        variant="simple"
+        >{{ field()().errors()[0]?.message }}</p-message
+      >
     }
   `,
   // Signal Forms hands PrimeNG controls the raw `invalid` state, so an untouched empty field would
@@ -39,6 +51,25 @@ export class AuthFieldComponent {
   readonly controlId = input.required<string>();
   readonly field = input.required<FieldTree<string>>();
   readonly hint = input<string>();
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  constructor() {
+    // Neither Signal Forms nor p-password link the control to its hint or error, so do it here
+    // (`[id]` matches the p-password inner input too). Browser only; the server HTML lacks the links.
+    afterRenderEffect(() => {
+      const control = this.host.nativeElement.querySelector(`[id="${this.controlId()}"]`);
+      const id = this.showError()
+        ? this.controlId() + '-error'
+        : this.hint()
+          ? this.controlId() + '-hint'
+          : null;
+      if (id) control?.setAttribute('aria-describedby', id);
+      else control?.removeAttribute('aria-describedby');
+      if (this.showError()) control?.setAttribute('aria-invalid', 'true');
+      else control?.removeAttribute('aria-invalid');
+    });
+  }
 
   protected readonly showError = computed(() => {
     const state = this.field()();

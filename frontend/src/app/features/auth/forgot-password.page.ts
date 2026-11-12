@@ -8,6 +8,7 @@ import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
 import { AuthCardComponent } from './auth-card.component';
 import { AuthFieldComponent } from './auth-field.component';
+import { FocusOnDirective, focusFirstInvalid } from './auth-focus';
 import { emailRules } from './auth.rules';
 
 @Component({
@@ -21,6 +22,7 @@ import { emailRules } from './auth.rules';
     MessageModule,
     AuthCardComponent,
     AuthFieldComponent,
+    FocusOnDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -40,8 +42,8 @@ import { emailRules } from './auth.rules';
         heading="Reset password"
         lead="Enter the email you signed up with. We will send a link to choose a new password."
       >
-        @if (problem(); as text) {
-          <p-message severity="error" role="alert">{{ text }}</p-message>
+        @if (problem(); as p) {
+          <p-message severity="error" role="alert" [cvFocusOn]="p">{{ p.text }}</p-message>
         }
         <form [formRoot]="forgotForm" class="grid gap-4">
           <cv-auth-field label="Email" controlId="email" [field]="forgotForm.email">
@@ -78,18 +80,19 @@ export default class ForgotPasswordPage {
   private readonly authApi = inject(AuthApi);
 
   protected readonly sent = signal(false);
-  protected readonly problem = signal<string | null>(null);
+  protected readonly problem = signal<{ text: string } | null>(null);
 
   private readonly model = signal({ email: '' });
   protected readonly forgotForm = form(this.model, (path) => apply(path.email, emailRules), {
     submission: {
+      onInvalid: focusFirstInvalid,
       action: async (f) => {
         this.problem.set(null);
         try {
           await this.authApi.forgotPassword(f.email().value().trim());
           this.sent.set(true); // same copy whether or not the address exists (always 202)
         } catch (e) {
-          this.problem.set(failureMessage(e as ApiError));
+          this.problem.set({ text: failureMessage(e as ApiError) });
         }
       },
     },

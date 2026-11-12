@@ -9,6 +9,7 @@ import { ApiError } from '../../core/models';
 import { AuthApi, failureMessage } from './auth.api';
 import { AuthCardComponent } from './auth-card.component';
 import { AuthFieldComponent } from './auth-field.component';
+import { FocusOnDirective, focusFirstInvalid } from './auth-focus';
 import { confirmMatches, emailRules, nameRules, newPasswordRules } from './auth.rules';
 
 @Component({
@@ -23,6 +24,7 @@ import { confirmMatches, emailRules, nameRules, newPasswordRules } from './auth.
     PasswordModule,
     AuthCardComponent,
     AuthFieldComponent,
+    FocusOnDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -30,8 +32,8 @@ import { confirmMatches, emailRules, nameRules, newPasswordRules } from './auth.
       heading="Create account"
       lead="One account keeps your favorites across phone and laptop. We will email a link to verify your address."
     >
-      @if (problem(); as text) {
-        <p-message severity="error" role="alert">{{ text }}</p-message>
+      @if (problem(); as p) {
+        <p-message severity="error" role="alert" [cvFocusOn]="p">{{ p.text }}</p-message>
       }
       <form [formRoot]="registerForm" class="grid gap-4">
         <cv-auth-field label="Name" controlId="name" [field]="registerForm.name">
@@ -107,7 +109,7 @@ export default class RegisterPage {
   private readonly authApi = inject(AuthApi);
   private readonly router = inject(Router);
 
-  protected readonly problem = signal<string | null>(null);
+  protected readonly problem = signal<{ text: string } | null>(null);
 
   private readonly model = signal({ name: '', email: '', password: '', confirm: '' });
   protected readonly registerForm = form(
@@ -121,6 +123,7 @@ export default class RegisterPage {
     },
     {
       submission: {
+        onInvalid: focusFirstInvalid,
         action: async (f) => {
           this.problem.set(null);
           try {
@@ -133,7 +136,7 @@ export default class RegisterPage {
             // 202 whatever the address (no enumeration); only the email goes in the URL.
             await this.router.navigate(['/check-email'], { queryParams: { email } });
           } catch (e) {
-            this.problem.set(failureMessage(e as ApiError));
+            this.problem.set({ text: failureMessage(e as ApiError) });
           }
         },
       },

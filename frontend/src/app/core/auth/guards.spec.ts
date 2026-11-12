@@ -104,10 +104,21 @@ describe('route guards', () => {
 
   it('safeNext accepts only same-origin paths', () => {
     expect(safeNext('/title/movie/603')).toBe('/title/movie/603');
-    for (const bad of ['//evil.com', 'https://evil.com', '/\\evil.com', 'javascript:1', '']) {
+    for (const bad of [
+      '//evil.com',
+      'https://evil.com',
+      '/\\evil.com',
+      'javascript:1',
+      'javascript:alert(1)',
+      '/\tevil.com',
+      '/a\nb',
+      '/a b',
+      '',
+    ]) {
       expect(safeNext(bad)).toBeNull();
     }
     expect(safeNext(null)).toBeNull();
     expect(safeNext(undefined)).toBeNull();
+    expect(safeNext(['/a', '/b'])).toBeNull(); // repeated query param
   });
 });

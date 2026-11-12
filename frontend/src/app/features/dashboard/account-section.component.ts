@@ -1,0 +1,55 @@
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { MessageModule } from 'primeng/message';
+import { FocusOnDirective } from '../auth/auth-focus';
+
+/** Result of a form submit as text under its heading. An error takes keyboard focus; a success is announced politely. */
+export interface Note {
+  kind: 'error' | 'success';
+  text: string;
+}
+
+/** One block of the account page: heading and description on the left (above on a phone), the content on the right. */
+@Component({
+  selector: 'cv-account-section',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class:
+      'grid gap-4 border-t border-line-soft py-6 lg:grid-cols-[17.5rem_minmax(0,1fr)] lg:gap-8',
+    role: 'group',
+    '[attr.aria-labelledby]': 'headingId()',
+  },
+  template: `
+    <div>
+      <h2 [id]="headingId()" class="text-h2 text-fg">{{ heading() }}</h2>
+      <p class="mt-2 max-w-[34ch] text-sm text-fg-3">{{ description() }}</p>
+    </div>
+    <div class="grid max-w-110 content-start gap-4">
+      <ng-content />
+    </div>
+  `,
+})
+export class AccountSectionComponent {
+  readonly heading = input.required<string>();
+  readonly headingId = input.required<string>();
+  readonly description = input.required<string>();
+}
+
+/** The banner of a form: renders nothing without a note. */
+@Component({
+  selector: 'cv-form-note',
+  imports: [MessageModule, FocusOnDirective],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'contents' },
+  template: `
+    @if (note(); as n) {
+      @if (n.kind === 'error') {
+        <p-message severity="error" role="alert" [cvFocusOn]="n">{{ n.text }}</p-message>
+      } @else {
+        <p-message severity="success" role="status">{{ n.text }}</p-message>
+      }
+    }
+  `,
+})
+export class FormNoteComponent {
+  readonly note = input<Note | null>(null);
+}

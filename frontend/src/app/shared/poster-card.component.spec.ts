@@ -84,4 +84,26 @@ describe('PosterCardComponent', () => {
     put.flush(null, { status: 204, statusText: 'No Content' });
     http.verify();
   });
+
+  it('in removable mode the button removes instead of toggling: it names the removal and emits removed', () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    });
+    const fixture = TestBed.createComponent(PosterCardComponent);
+    fixture.componentRef.setInput('title', matrix);
+    fixture.componentRef.setInput('removable', true);
+    const removed = vi.fn();
+    fixture.componentInstance.removed.subscribe(removed);
+    const toggle = vi.spyOn(TestBed.inject(FavoritesStore), 'toggle');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    const button = el.querySelector<HTMLButtonElement>(
+      'button[aria-label="Remove The Matrix from favorites"]',
+    )!;
+    expect(button.hasAttribute('aria-pressed')).toBe(false);
+    button.click();
+    expect(removed).toHaveBeenCalledTimes(1);
+    expect(toggle).not.toHaveBeenCalled();
+  });
 });

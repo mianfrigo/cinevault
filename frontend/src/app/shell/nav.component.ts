@@ -70,10 +70,12 @@ interface NavLink {
           [pt]="toggleAttrs()"
           (onClick)="toggleSearch()"
         />
+        <!-- Signal Forms hands PrimeNG the raw invalid state, so the empty box would be red. The search
+             never shows a field error (a blank query just does not submit): the invalid tokens stay neutral. -->
         <form
           role="search"
           autocomplete="off"
-          class="absolute inset-x-0 top-full border-b border-line-soft bg-surface-1 px-6 pt-2 pb-4 md:px-8 lg:static lg:ml-auto lg:block lg:w-80 lg:border-0 lg:bg-transparent lg:p-0"
+          class="absolute inset-x-0 top-full border-b border-line-soft bg-surface-1 px-6 pt-2 pb-4 md:px-8 lg:static lg:ml-auto lg:block lg:w-80 lg:border-0 lg:bg-transparent lg:p-0 [--p-inputtext-invalid-border-color:var(--p-inputtext-border-color)] [--p-inputtext-invalid-placeholder-color:var(--p-inputtext-placeholder-color)]"
           [class.hidden]="!searchOpen()"
           [formRoot]="searchForm"
           (keydown.escape)="closeSearch()"

@@ -41,7 +41,8 @@ export class UserMenuComponent {
 
   /** Leaves first: a page that still holds work (a pending favorite removal) sends it while the session is valid. */
   private async logout(): Promise<void> {
-    await this.router.navigateByUrl('/');
+    // A navigation that fails (a lazy chunk that cannot load) must not keep the user logged in.
+    await this.router.navigateByUrl('/').catch(() => undefined);
     await this.auth.logout();
   }
 }

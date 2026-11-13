@@ -8,6 +8,8 @@ import { ApiClient } from '@core/api/api-client';
 import { AuthStore } from '@core/auth/auth.store';
 import { AdminOverview } from '@core/models';
 import { initials } from '@shared/utils/initials';
+import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
+import { SectionHeaderComponent } from '@shared/components/section-header/section-header.component';
 import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { UserStatusComponent } from './user-status.component';
 
@@ -22,15 +24,14 @@ import { UserStatusComponent } from './user-status.component';
     RouterLink,
     AvatarModule,
     SkeletonModule,
+    PageHeaderComponent,
+    SectionHeaderComponent,
     StateBlockComponent,
     UserStatusComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="mb-8">
-      <h1 class="text-h1 text-fg">Overview</h1>
-      <p class="mt-2 text-sm text-fg-3">A quick read on who is using Cinevault.</p>
-    </header>
+    <cv-page-header title="Overview" lead="A quick read on who is using Cinevault." />
 
     @if (overview.error()) {
       <cv-state
@@ -59,8 +60,7 @@ import { UserStatusComponent } from './user-status.component';
       </dl>
 
       <section aria-labelledby="h-recent" class="lg:max-w-190">
-        <div class="mb-2 flex items-center justify-between">
-          <h2 id="h-recent" class="text-h2 text-fg">Recent signups</h2>
+        <cv-section-header class="mb-2" heading="Recent signups" headingId="h-recent">
           <a
             routerLink="/admin/users"
             class="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-fg-2 transition-colors duration-150 hover:text-fg"
@@ -68,7 +68,7 @@ import { UserStatusComponent } from './user-status.component';
             View all users
             <i class="pi pi-angle-right" aria-hidden="true"></i>
           </a>
-        </div>
+        </cv-section-header>
         @if (data.recentSignups.length === 0) {
           <p class="border-y border-line-soft py-6 text-sm text-fg-2">No one has signed up yet.</p>
         } @else {

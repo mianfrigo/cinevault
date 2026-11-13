@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -19,6 +20,9 @@ import { AuthStore } from '@core/auth/auth.store';
 import { LogoComponent } from '@shared/components/logo/logo.component';
 import { UserMenuComponent } from './user-menu.component';
 
+const LINK =
+  'relative flex items-center px-3 text-sm font-medium text-fg-2 transition-colors duration-150 hover:text-fg focus-visible:-outline-offset-4';
+
 interface NavLink {
   label: string;
   path: string;
@@ -29,6 +33,7 @@ interface NavLink {
 @Component({
   selector: 'cv-nav',
   imports: [
+    NgTemplateOutlet,
     RouterLink,
     RouterLinkActive,
     FormField,
@@ -44,20 +49,10 @@ interface NavLink {
   host: { class: 'sticky top-0 z-100 block' },
   template: `
     <header class="relative border-b border-line-soft bg-surface-1/85 backdrop-blur-lg">
-      <div class="mx-auto flex h-16 max-w-site items-center gap-2 px-6 md:px-8 lg:gap-8 xl:px-12">
+      <div class="site-gutter flex h-16 items-center gap-2 lg:gap-8">
         <cv-logo />
         <nav aria-label="Primary" class="hidden gap-1 self-stretch lg:flex">
-          @for (link of links(); track link.label) {
-            <a
-              [routerLink]="link.path"
-              [queryParams]="link.query"
-              routerLinkActive="text-fg after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:bg-accent-text"
-              [routerLinkActiveOptions]="{ exact: link.exact }"
-              ariaCurrentWhenActive="page"
-              class="relative flex items-center px-3 text-sm font-medium text-fg-2 transition-colors duration-150 hover:text-fg focus-visible:-outline-offset-4"
-              >{{ link.label }}</a
-            >
-          }
+          <ng-container *ngTemplateOutlet="items; context: wide" />
         </nav>
         <p-button
           class="ml-auto lg:hidden"
@@ -112,19 +107,24 @@ interface NavLink {
         aria-label="Primary (small screens)"
         class="flex gap-1 overflow-x-auto border-t border-line-soft px-3 md:px-5 lg:hidden"
       >
-        @for (link of links(); track link.label) {
-          <a
-            [routerLink]="link.path"
-            [queryParams]="link.query"
-            routerLinkActive="text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-accent-text"
-            [routerLinkActiveOptions]="{ exact: link.exact }"
-            ariaCurrentWhenActive="page"
-            class="relative flex min-h-11 flex-none items-center px-3 text-sm font-medium text-fg-2 transition-colors duration-150 hover:text-fg focus-visible:-outline-offset-4"
-            >{{ link.label }}</a
-          >
-        }
+        <ng-container *ngTemplateOutlet="items; context: narrow" />
       </nav>
     </header>
+
+    <!-- The links of both navs: only the classes differ (the underline sits on the bar's edge from 1024px, on the tab row below). -->
+    <ng-template #items let-classes="classes" let-active="active">
+      @for (link of links(); track link.label) {
+        <a
+          [routerLink]="link.path"
+          [queryParams]="link.query"
+          [routerLinkActive]="active"
+          [routerLinkActiveOptions]="{ exact: link.exact }"
+          ariaCurrentWhenActive="page"
+          [class]="classes"
+          >{{ link.label }}</a
+        >
+      }
+    </ng-template>
   `,
 })
 export class NavComponent {
@@ -133,6 +133,18 @@ export class NavComponent {
   private readonly injector = inject(Injector);
   private readonly toggle = viewChild.required('toggle', { read: ElementRef });
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('q');
+
+  /** Link classes of the desktop bar and of the small-screen tab row. */
+  protected readonly wide = {
+    classes: LINK,
+    active:
+      'text-fg after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:bg-accent-text',
+  };
+  protected readonly narrow = {
+    classes: LINK + ' min-h-11 flex-none',
+    active:
+      'text-fg after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-accent-text',
+  };
 
   protected readonly searchOpen = signal(false);
 

@@ -32,6 +32,7 @@ import {
   newPasswordRules,
   PASSWORD_MAX,
 } from '@shared/validators/auth.rules';
+import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
 import { AccountApi } from './account.api';
 import { PASSWORD_WRONG } from './account.messages';
 import { AccountSectionComponent } from './account-section.component';
@@ -50,14 +51,12 @@ import { DeleteAccountComponent } from './delete-account.component';
     AuthFieldComponent,
     AccountSectionComponent,
     FormNoteComponent,
+    PageHeaderComponent,
     DeleteAccountComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="mb-8">
-      <h1 class="text-h1 text-fg">Account</h1>
-      <p class="mt-2 text-sm text-fg-3">Your details and sign-in settings.</p>
-    </header>
+    <cv-page-header title="Account" lead="Your details and sign-in settings." />
 
     <cv-account-section
       heading="Profile"

@@ -3,29 +3,24 @@ import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { FavoritesStore } from '@core/favorites/favorites.store';
 import { TitleSummary } from '@core/models';
+import { PosterFrameComponent } from '@shared/components/poster-frame/poster-frame.component';
 import { ScoreComponent } from '@shared/components/score/score.component';
+import { titleAlt, titleMeta } from '@shared/utils/title-format';
 
 @Component({
   selector: 'cv-poster-card',
-  imports: [RouterLink, ButtonModule, ScoreComponent],
+  imports: [RouterLink, ButtonModule, PosterFrameComponent, ScoreComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   template: `
     <div class="group relative">
       <a [routerLink]="['/title', title().mediaType, title().tmdbId]" class="block">
-        <div
-          class="relative aspect-[2/3] overflow-hidden rounded-md bg-surface-2 ring-1 ring-line ring-inset transition duration-200 ease-out-expo group-focus-within:scale-[1.02] group-focus-within:brightness-110 group-hover:scale-[1.02] group-hover:brightness-110"
-        >
-          @if (title().posterUrl; as src) {
-            <img [src]="src" [alt]="alt()" loading="lazy" class="size-full object-cover" />
-          } @else {
-            <div
-              class="grid size-full place-items-center bg-surface-3 p-3 text-center text-sm font-medium text-fg-2"
-            >
-              {{ title().title }}
-            </div>
-          }
-        </div>
+        <cv-poster-frame
+          class="transition duration-200 ease-out-expo group-focus-within:scale-[1.02] group-focus-within:brightness-110 group-hover:scale-[1.02] group-hover:brightness-110"
+          [src]="title().posterUrl"
+          [title]="title().title"
+          [alt]="alt()"
+        />
         <p class="mt-3 truncate text-sm leading-tight font-medium text-fg">{{ title().title }}</p>
         @if (detailed()) {
           <!-- Mockup .card-meta: "year · type" at the left, the score at the right. -->
@@ -69,16 +64,9 @@ export class PosterCardComponent {
     this.favorites.isFavorite(this.title().mediaType, this.title().tmdbId),
   );
 
-  protected readonly alt = computed(() => {
-    const t = this.title();
-    return t.year === null ? t.title : `${t.title} (${t.year})`;
-  });
+  protected readonly alt = computed(() => titleAlt(this.title()));
 
-  protected readonly meta = computed(() => {
-    const t = this.title();
-    const type = t.mediaType === 'tv' ? 'Series' : 'Movie';
-    return t.year === null ? type : `${t.year} · ${type}`;
-  });
+  protected readonly meta = computed(() => titleMeta(this.title()));
 
   protected readonly label = computed(() => {
     const name = this.title().title;

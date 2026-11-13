@@ -3,6 +3,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { CatalogService } from '@core/catalog/catalog.service';
 import { latestValue } from '@shared/utils/latest-value';
 import { injectPageNavigator, MAX_PAGE, normalisePage } from '@shared/utils/page-param';
+import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
 import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { PosterGridComponent } from './poster-grid.component';
 
@@ -22,24 +23,15 @@ function cutUnits(text: string, max: number): string {
 /** /search?q=&page=. The search box in the nav is the only input; this page just reads the URL. */
 @Component({
   selector: 'cv-search',
-  imports: [PosterGridComponent, StateBlockComponent],
+  imports: [PageHeaderComponent, PosterGridComponent, StateBlockComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="mx-auto max-w-site px-6 py-8 md:px-8 lg:py-10 xl:px-12">
-      <header class="mb-6 md:mb-8">
-        <h1 class="text-h1 break-words text-fg">
-          @if (term(); as t) {
-            Results for “{{ t }}”
-          } @else {
-            Search
-          }
-        </h1>
-        @if (truncated()) {
-          <p class="mt-2 text-sm text-fg-3">
-            Searching for the first 100 characters of your query.
-          </p>
-        }
-      </header>
+    <section class="site-gutter py-8 lg:py-10">
+      <cv-page-header
+        compact
+        [title]="heading()"
+        [lead]="truncated() ? 'Searching for the first 100 characters of your query.' : undefined"
+      />
 
       @if (!term()) {
         <cv-state kind="empty" message="Type a title in the search box to find movies and shows." />
@@ -91,6 +83,9 @@ export default class SearchPage {
     typeof this.q() === 'string' ? (this.q() as string).trim() : '',
   );
   private readonly cut = computed(() => cutUnits(this.raw(), MAX_QUERY));
+  protected readonly heading = computed(() =>
+    this.term() ? `Results for “${this.term()}”` : 'Search',
+  );
   protected readonly truncated = computed(() => this.cut() !== this.raw());
   /** The query that is searched: trimmed and cut to 100 characters (longer ones are not sent as-is). Empty means no search. */
   protected readonly term = computed(() => this.cut().trim());

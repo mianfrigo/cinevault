@@ -217,6 +217,40 @@
   }
 }
 
+/* Page container (mockup .wrap): centred, capped at the site width, gutters 24 / 32 / 48px (spacing 6 / 8 / 12). */
+@utility site-gutter {
+  margin-inline: auto;
+  max-width: var(--container-site);
+  padding-inline: 1.5rem;
+
+  @media (min-width: 768px) {
+    padding-inline: 2rem;
+  }
+
+  @media (min-width: 1200px) {
+    padding-inline: 3rem;
+  }
+}
+
+/* Underlined text link of the auth pages. */
+@utility link-underline {
+  font-weight: 500;
+  color: var(--color-fg);
+  text-decoration: underline var(--color-line-strong);
+  text-underline-offset: 4px;
+
+  @media (hover: hover) {
+    &:hover {
+      text-decoration-color: currentcolor;
+    }
+  }
+}
+
+/* A section heading (h2) in its own colour and size; the margin is the caller's. */
+@utility section-title {
+  @apply text-h2 text-fg;
+}
+
 @layer base {
   html {
     color-scheme: dark;

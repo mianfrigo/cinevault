@@ -5,6 +5,7 @@ import { CatalogService } from '@core/catalog/catalog.service';
 import { MediaTypeParam } from '@core/models';
 import { latestValue } from '@shared/utils/latest-value';
 import { injectPageNavigator, MAX_PAGE, normalisePage } from '@shared/utils/page-param';
+import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
 import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { PosterGridComponent } from './poster-grid.component';
 
@@ -14,14 +15,17 @@ import { PosterGridComponent } from './poster-grid.component';
  */
 @Component({
   selector: 'cv-browse',
-  imports: [RouterLink, RouterLinkActive, PosterGridComponent, StateBlockComponent],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    PageHeaderComponent,
+    PosterGridComponent,
+    StateBlockComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="mx-auto max-w-site px-6 py-8 md:px-8 lg:py-10 xl:px-12">
-      <header class="mb-6 md:mb-8">
-        <h1 class="text-h1 text-fg">{{ heading() }}</h1>
-        <p class="mt-2 text-sm text-fg-3">{{ subheading() }}</p>
-      </header>
+    <section class="site-gutter py-8 lg:py-10">
+      <cv-page-header compact [title]="heading()" [lead]="subheading() || undefined" />
 
       @if (genreList.hasValue() && request(); as req) {
         <nav

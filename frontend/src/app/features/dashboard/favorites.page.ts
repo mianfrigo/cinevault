@@ -26,7 +26,10 @@ import { AuthStore } from '@core/auth/auth.store';
 import { FavoritesStore } from '@core/favorites/favorites.store';
 import { FavoriteItem } from '@core/models';
 import { MAX_PAGE, normalisePage } from '@shared/utils/page-param';
+import { plural } from '@shared/utils/plural';
+import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
 import { PaginatorComponent } from '@shared/components/paginator/paginator.component';
+import { PosterFrameComponent } from '@shared/components/poster-frame/poster-frame.component';
 import { PosterCardComponent } from '@shared/components/poster-card/poster-card.component';
 import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { FavoritesFilter, FavoritesPageStore, favoriteKey } from './favorites-page.store';
@@ -58,21 +61,18 @@ const UNDO_KEY = 'undo';
     SelectButtonModule,
     SkeletonModule,
     ToastModule,
+    PageHeaderComponent,
     PaginatorComponent,
     PosterCardComponent,
+    PosterFrameComponent,
     StateBlockComponent,
   ],
   // Its own MessageService: the toast of this page is keyed and mirrors the store, nothing else shows in it.
   providers: [FavoritesPageStore, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div>
-        <h1 #heading tabindex="-1" class="text-h1 text-fg outline-none">Favorites</h1>
-        <!-- min-h keeps the line's place while the count is not known yet. -->
-        <p class="mt-2 min-h-5 text-sm text-fg-3 tabular-nums">{{ lead() }}</p>
-      </div>
-      <div class="self-start">
+    <cv-page-header title="Favorites" [lead]="lead()">
+      <div slot="actions" class="self-start">
         <span id="fav-filter" class="sr-only">Filter favorites</span>
         <!-- Mockup .seg-tabs: a hairline frame, the chosen pill raised one surface step. -->
         <p-selectbutton
@@ -97,7 +97,7 @@ const UNDO_KEY = 'undo';
           </ng-template>
         </p-selectbutton>
       </div>
-    </header>
+    </cv-page-header>
 
     @if (store.removeFailed(); as failed) {
       <p-message severity="error" role="alert" class="mb-6 block">
@@ -126,7 +126,7 @@ const UNDO_KEY = 'undo';
       </div>
     } @else if (store.visibleTotal() === 0) {
       <div class="grid justify-items-center gap-3 border-t border-line-soft px-3 py-16 text-center">
-        <h2 class="text-h2 text-fg">
+        <h2 class="section-title">
           {{ filter() === 'all' ? 'You have not saved anything yet.' : emptyFiltered() }}
         </h2>
         <p class="max-w-[44ch] text-sm text-fg-2">
@@ -150,11 +150,7 @@ const UNDO_KEY = 'undo';
             <li class="min-w-0">
               @if (item.unavailable) {
                 <div class="block min-w-0">
-                  <div
-                    class="grid aspect-[2/3] place-items-center rounded-md bg-surface-2 p-3 text-center text-sm font-medium text-fg-2 ring-1 ring-line ring-inset"
-                  >
-                    {{ item.title }}
-                  </div>
+                  <cv-poster-frame [title]="item.title" [overlayRing]="true" />
                   <p class="mt-3 text-label text-fg-3">This title is no longer available.</p>
                   <p-button
                     label="Remove"
@@ -206,7 +202,7 @@ export default class FavoritesPage {
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
-  private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
+  private readonly heading = viewChild.required(PageHeaderComponent);
 
   // Route inputs. They come from the URL, so they are untrusted.
   readonly type = input<unknown>();
@@ -243,7 +239,7 @@ export default class FavoritesPage {
         name,
         value,
         count,
-        label: count === null ? name : `${name}, ${count} ${count === 1 ? 'title' : 'titles'}`,
+        label: count === null ? name : `${name}, ${count} ${plural(count, 'title')}`,
       };
     }),
   );
@@ -252,7 +248,7 @@ export default class FavoritesPage {
   protected readonly lead = computed(() => {
     const n = this.counts()?.all ?? null;
     if (n === null) return '';
-    return n === 0 ? 'No saved titles yet' : `${n} saved ${n === 1 ? 'title' : 'titles'}`;
+    return n === 0 ? 'No saved titles yet' : `${n} saved ${plural(n, 'title')}`;
   });
 
   // The select button's value follows the URL; picking one navigates (see setFilter).
@@ -290,7 +286,7 @@ export default class FavoritesPage {
         // The toast goes (timer end): keyboard focus on its Undo button would fall to the page body, so it goes to the heading.
         if (!pending && this.host.contains(this.host.ownerDocument.activeElement)) {
           const active = this.host.ownerDocument.activeElement as HTMLElement;
-          if (active.closest('[data-undo]')) this.heading().nativeElement.focus();
+          if (active.closest('[data-undo]')) this.heading().focus();
         }
         this.messages.clear(UNDO_KEY);
         if (!pending) return;

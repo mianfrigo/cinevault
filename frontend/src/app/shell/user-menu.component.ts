@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { MenuModule } from 'primeng/menu';
 import { AuthStore } from '@core/auth/auth.store';
+import { injectLogout } from '@core/auth/logout';
 
 /** Avatar with a popup menu for the logged-in user. Loaded through @defer to keep it out of the initial bundle. */
 @Component({
@@ -25,7 +25,7 @@ import { AuthStore } from '@core/auth/auth.store';
 })
 export class UserMenuComponent {
   private readonly auth = inject(AuthStore);
-  private readonly router = inject(Router);
+  private readonly logout = injectLogout();
 
   protected readonly initial = computed(() => this.auth.user()?.name.charAt(0).toUpperCase() ?? '');
 
@@ -38,11 +38,4 @@ export class UserMenuComponent {
     { separator: true },
     { label: 'Log out', icon: 'pi pi-sign-out', command: () => void this.logout() },
   ]);
-
-  /** Leaves first: a page that still holds work (a pending favorite removal) sends it while the session is valid. */
-  private async logout(): Promise<void> {
-    // A navigation that fails (a lazy chunk that cannot load) must not keep the user logged in.
-    await this.router.navigateByUrl('/').catch(() => undefined);
-    await this.auth.logout();
-  }
 }

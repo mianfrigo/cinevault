@@ -3,13 +3,12 @@ import { apply, form, FormField, FormRoot } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { MessageModule } from 'primeng/message';
 import { ApiError } from '@core/models';
 import { AuthApi } from './auth.api';
 import { failureMessage } from '@shared/utils/failure-message';
 import { AuthLayoutComponent } from './auth-layout.component';
 import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
-import { FocusOnDirective } from '@shared/directives/focus-on.directive';
+import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { emailRules } from '@shared/validators/auth.rules';
 
@@ -21,10 +20,9 @@ import { emailRules } from '@shared/validators/auth.rules';
     FormRoot,
     ButtonModule,
     InputTextModule,
-    MessageModule,
     AuthLayoutComponent,
     AuthFieldComponent,
-    FocusOnDirective,
+    FormNoteComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -61,9 +59,7 @@ import { emailRules } from '@shared/validators/auth.rules';
           />
         </div>
       } @else {
-        @if (problem(); as p) {
-          <p-message severity="error" role="alert" [cvFocusOn]="p">{{ p.text }}</p-message>
-        }
+        <cv-form-note [note]="problem()" />
         <form [formRoot]="forgotForm" class="grid gap-4">
           <cv-auth-field label="Email" controlId="email" [field]="forgotForm.email">
             <input
@@ -85,11 +81,7 @@ import { emailRules } from '@shared/validators/auth.rules';
         </form>
         <p class="mt-2 text-sm text-fg-2">
           Remembered it?
-          <a
-            routerLink="/login"
-            class="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
-            >Log in</a
-          >
+          <a routerLink="/login" class="link-underline">Log in</a>
         </p>
       }
     </cv-auth-layout>
@@ -99,7 +91,7 @@ export default class ForgotPasswordPage {
   private readonly authApi = inject(AuthApi);
 
   protected readonly sent = signal(false);
-  protected readonly problem = signal<{ text: string } | null>(null);
+  protected readonly problem = signal<Note | null>(null);
 
   private readonly model = signal({ email: '' });
   protected readonly forgotForm = form(this.model, (path) => apply(path.email, emailRules), {
@@ -111,7 +103,7 @@ export default class ForgotPasswordPage {
           await this.authApi.forgotPassword(f.email().value().trim());
           this.sent.set(true); // same copy whether or not the address exists (always 202)
         } catch (e) {
-          this.problem.set({ text: failureMessage(e as ApiError) });
+          this.problem.set({ kind: 'error', text: failureMessage(e as ApiError) });
         }
       },
     },

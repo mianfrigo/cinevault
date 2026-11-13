@@ -14,7 +14,7 @@ import { ApiError } from '@core/models';
 import { AuthApi } from './auth.api';
 import { failureMessage } from '@shared/utils/failure-message';
 import { AuthLayoutComponent } from './auth-layout.component';
-import { FocusOnDirective } from '@shared/directives/focus-on.directive';
+import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { queryText } from '@shared/utils/query-text';
 import { ResendFormComponent } from './resend-form.component';
 
@@ -36,7 +36,7 @@ const HEADINGS: Record<State, string> = {
     MessageModule,
     AuthLayoutComponent,
     ResendFormComponent,
-    FocusOnDirective,
+    FormNoteComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -46,13 +46,11 @@ const HEADINGS: Record<State, string> = {
           <p role="status" class="text-fg-2">One moment.</p>
         }
         @case ('verified') {
-          <p-message severity="success" role="status">Your email is verified.</p-message>
+          <cv-form-note [note]="verifiedNote" />
           <p-button label="Log in" [fluid]="true" routerLink="/login" />
         }
         @case ('error') {
-          @if (failure(); as f) {
-            <p-message severity="error" role="alert" [cvFocusOn]="f">{{ f.text }}</p-message>
-          }
+          <cv-form-note [note]="failure()" />
           <p-button label="Retry" [fluid]="true" (onClick)="verify()" />
         }
         @default {
@@ -80,7 +78,8 @@ export default class VerifyEmailPage {
       ? 'Enter your email and we will send a new verification link.'
       : undefined,
   );
-  protected readonly failure = signal<{ text: string } | null>(null);
+  protected readonly verifiedNote: Note = { kind: 'success', text: 'Your email is verified.' };
+  protected readonly failure = signal<Note | null>(null);
   /** Kept in memory once it has left the address bar, for Retry. */
   private spent?: string;
 
@@ -111,7 +110,7 @@ export default class VerifyEmailPage {
       if (error.code === 'TOKEN_EXPIRED') this.state.set('expired');
       else if (error.code === 'TOKEN_INVALID') this.state.set('invalid');
       else {
-        this.failure.set({ text: failureMessage(error) });
+        this.failure.set({ kind: 'error', text: failureMessage(error) });
         this.state.set('error');
       }
     }

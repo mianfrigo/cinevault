@@ -12,6 +12,7 @@ import { AuthApi } from './auth.api';
 import { failureMessage } from '@shared/utils/failure-message';
 import { AuthLayoutComponent } from './auth-layout.component';
 import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
+import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { FocusOnDirective } from '@shared/directives/focus-on.directive';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { emailRules } from '@shared/validators/auth.rules';
@@ -47,6 +48,7 @@ interface Banner {
     PasswordModule,
     AuthLayoutComponent,
     AuthFieldComponent,
+    FormNoteComponent,
     FocusOnDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,9 +58,7 @@ interface Banner {
       lead="Welcome back. Pick up your list where you left it."
       art="login"
     >
-      @if (noticeText(); as text) {
-        <p-message severity="success" role="status">{{ text }}</p-message>
-      }
+      <cv-form-note [note]="noticeNote()" />
       @if (banner(); as b) {
         <p-message [severity]="b.kind" role="alert" [cvFocusOn]="b">
           {{ b.text }}
@@ -89,7 +89,7 @@ interface Banner {
           <a
             slot="label-end"
             routerLink="/forgot-password"
-            class="-my-3 py-3 text-sm font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
+            class="-my-3 py-3 text-sm link-underline"
             >Forgot password?</a
           >
           <p-password
@@ -110,11 +110,7 @@ interface Banner {
       </form>
       <p class="mt-2 text-sm text-fg-2">
         New to Cinevault?
-        <a
-          routerLink="/register"
-          class="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
-          >Create an account</a
-        >
+        <a routerLink="/register" class="link-underline">Create an account</a>
       </p>
     </cv-auth-layout>
   `,
@@ -128,7 +124,10 @@ export default class LoginPage {
   readonly next = input<string | string[]>();
   readonly notice = input<string | string[]>();
 
-  protected readonly noticeText = computed(() => NOTICES.get(queryText(this.notice()) ?? ''));
+  protected readonly noticeNote = computed<Note | null>(() => {
+    const text = NOTICES.get(queryText(this.notice()) ?? '');
+    return text ? { kind: 'success', text } : null;
+  });
   protected readonly banner = signal<Banner | null>(null);
   protected readonly resending = signal(false);
   /** The address that failed to log in: the banner's Resend uses it, not whatever the field holds now. */

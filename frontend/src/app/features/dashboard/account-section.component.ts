@@ -12,7 +12,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   },
   template: `
     <div>
-      <h2 [id]="headingId()" class="text-h2 text-fg">{{ heading() }}</h2>
+      <h2 [id]="headingId()" class="section-title">{{ heading() }}</h2>
       <p class="mt-2 max-w-[34ch] text-sm text-fg-3">{{ description() }}</p>
     </div>
     <div class="grid max-w-110 content-start gap-4">

@@ -3,14 +3,13 @@ import { apply, form, FormField, FormRoot, required } from '@angular/forms/signa
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { ApiError } from '@core/models';
 import { AuthApi } from './auth.api';
 import { failureMessage } from '@shared/utils/failure-message';
 import { AuthLayoutComponent } from './auth-layout.component';
 import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
-import { FocusOnDirective } from '@shared/directives/focus-on.directive';
+import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import {
   confirmMatches,
@@ -27,11 +26,10 @@ import {
     FormRoot,
     ButtonModule,
     InputTextModule,
-    MessageModule,
     PasswordModule,
     AuthLayoutComponent,
     AuthFieldComponent,
-    FocusOnDirective,
+    FormNoteComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -40,9 +38,7 @@ import {
       lead="One account keeps your favorites across phone and laptop. We will email a link to verify your address."
       art="register"
     >
-      @if (problem(); as p) {
-        <p-message severity="error" role="alert" [cvFocusOn]="p">{{ p.text }}</p-message>
-      }
+      <cv-form-note [note]="problem()" />
       <form [formRoot]="registerForm" class="grid gap-4">
         <cv-auth-field label="Name" controlId="name" [field]="registerForm.name">
           <input
@@ -98,26 +94,14 @@ import {
         />
         <p class="text-label text-fg-3">
           By creating an account you agree to the
-          <a
-            routerLink="/terms"
-            class="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
-            >Terms</a
-          >
+          <a routerLink="/terms" class="link-underline">Terms</a>
           and
-          <a
-            routerLink="/privacy"
-            class="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
-            >Privacy Policy</a
-          >.
+          <a routerLink="/privacy" class="link-underline">Privacy Policy</a>.
         </p>
       </form>
       <p class="mt-2 text-sm text-fg-2">
         Already have an account?
-        <a
-          routerLink="/login"
-          class="font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
-          >Log in</a
-        >
+        <a routerLink="/login" class="link-underline">Log in</a>
       </p>
     </cv-auth-layout>
   `,
@@ -126,7 +110,7 @@ export default class RegisterPage {
   private readonly authApi = inject(AuthApi);
   private readonly router = inject(Router);
 
-  protected readonly problem = signal<{ text: string } | null>(null);
+  protected readonly problem = signal<Note | null>(null);
 
   private readonly model = signal({ name: '', email: '', password: '', confirm: '' });
   protected readonly registerForm = form(
@@ -153,7 +137,7 @@ export default class RegisterPage {
             // 202 whatever the address (no enumeration); only the email goes in the URL.
             await this.router.navigate(['/check-email'], { queryParams: { email } });
           } catch (e) {
-            this.problem.set({ text: failureMessage(e as ApiError) });
+            this.problem.set({ kind: 'error', text: failureMessage(e as ApiError) });
           }
         },
       },

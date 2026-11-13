@@ -26,6 +26,8 @@ function render(genre: GenreTile) {
 
 describe('GenreTileComponent', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter([])] }));
+  // Restores the `complete` / `naturalWidth` spies even when an assertion fails.
+  afterEach(() => vi.restoreAllMocks());
 
   it('links to the genre and shows the short label with the full name for screen readers', () => {
     const { a } = render(sciFi);
@@ -63,6 +65,5 @@ describe('GenreTileComponent', () => {
     const t = render(sciFi);
     t.fixture.detectChanges();
     expect(t.wrapper()?.className).not.toContain('opacity-0');
-    vi.restoreAllMocks();
   });
 });

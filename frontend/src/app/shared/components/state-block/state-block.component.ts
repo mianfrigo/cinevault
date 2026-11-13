@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { SkeletonModule } from 'primeng/skeleton';
-import { ResponseStatus } from '@core/ssr/response-status.service';
 
 @Component({
   selector: 'cv-state',
@@ -41,12 +40,4 @@ export class StateBlockComponent {
   readonly kind = input.required<'loading' | 'empty' | 'error'>();
   readonly message = input<string>();
   readonly retry = output<void>();
-
-  constructor() {
-    // A page that renders its error state (the API or TMDB is down) must not be cached as if it were fine.
-    const response = inject(ResponseStatus);
-    effect(() => {
-      if (this.kind() === 'error') response.set(503);
-    });
-  }
 }

@@ -6,9 +6,7 @@ import { join } from 'node:path';
  * shell win. The built server sits in dist/frontend/server, three levels below the project folder; the
  * dev server and `node dist/...` runs from the project folder find it through the working directory.
  */
-export function loadEnv(bundleDir: string): void {
-  const file = [join(bundleDir, '../../../.env'), join(process.cwd(), '.env')].find((f) =>
-    existsSync(f),
-  );
+export function loadEnv(bundleDir: string, cwd = process.cwd()): void {
+  const file = [join(bundleDir, '../../../.env'), join(cwd, '.env')].find((f) => existsSync(f));
   if (file) process.loadEnvFile(file);
 }

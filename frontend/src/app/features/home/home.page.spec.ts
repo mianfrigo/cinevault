@@ -1,5 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { RESPONSE_INIT } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { GenreCover, Paged, TitleSummary } from '@core/models';
@@ -54,6 +55,7 @@ const manyGenres: GenreCover[] = [
 
 describe('HomePage', () => {
   let http: HttpTestingController;
+  let serverResponse: ResponseInit;
 
   beforeEach(() => {
     // jsdom has no layout, so p-carousel's observers and scrollTo are stubbed (it only needs them to exist).
@@ -68,8 +70,14 @@ describe('HomePage', () => {
     };
     vi.stubGlobal('ResizeObserver', observer);
     vi.stubGlobal('IntersectionObserver', observer);
+    serverResponse = { status: 200, headers: new Headers() };
     TestBed.configureTestingModule({
-      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: RESPONSE_INIT, useValue: serverResponse },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
   });
@@ -97,6 +105,30 @@ describe('HomePage', () => {
     expect(
       document.head.querySelector('meta[name="description"]')?.getAttribute('content'),
     ).toContain('Browse movies and series');
+  });
+
+  it('stays a 200 that is not cached when a row fails', async () => {
+    const fixture = load();
+    request('trending', 'movie').flush(trending);
+    request('new', 'tv').flush(newTv);
+    request('top-rated', 'movie').flush(topRated);
+    request('genre-covers', 'movie').flush(null, { status: 502, statusText: 'TMDB_UNAVAILABLE' });
+    await fixture.whenStable();
+
+    expect(serverResponse.status).toBe(200);
+    expect(new Headers(serverResponse.headers).get('Cache-Control')).toBe('no-store');
+    expect(new Headers(serverResponse.headers).get('Retry-After')).toBeNull();
+  });
+
+  it('leaves the response alone when every row loads', async () => {
+    const fixture = load();
+    request('trending', 'movie').flush(trending);
+    request('new', 'tv').flush(newTv);
+    request('top-rated', 'movie').flush(topRated);
+    request('genre-covers', 'movie').flush(genres);
+    await fixture.whenStable();
+
+    expect(new Headers(serverResponse.headers).has('Cache-Control')).toBe(false);
   });
 
   it('renders every row when all requests succeed', async () => {

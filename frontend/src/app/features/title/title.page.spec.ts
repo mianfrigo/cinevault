@@ -279,14 +279,35 @@ describe('Title page', () => {
       expect(init.status).toBe(404);
     });
 
-    it('answers 503 with no-store when the API cannot reach TMDB', async () => {
+    it('answers 503 with Retry-After and no-store when the API cannot reach TMDB', async () => {
       const init = serverResponse();
       const failure = { status: 502, code: 'TMDB_UNAVAILABLE' };
       await open(failure, config(false), '/title/movie/603', init);
 
       expect(init.status).toBe(503);
       expect(new Headers(init.headers).get('Cache-Control')).toBe('no-store');
+      expect(new Headers(init.headers).get('Retry-After')).toBe('30');
       expect(document.title).toBe('Title unavailable | Cinevault');
+    });
+
+    it('keeps a 200 but forbids caching when only the first season fails to load', async () => {
+      const init = serverResponse();
+      const { http, request, next, settle } = await setup('/title/tv/1399', [
+        MessageService,
+        { provide: RESPONSE_INIT, useValue: init },
+      ]);
+      http.expectOne('/api/v1/config').flush(config(false));
+      request('tv/1399', {}).flush(series);
+      (await next('tv/1399/season/1', {})).flush(null, {
+        status: 502,
+        statusText: 'TMDB_UNAVAILABLE',
+      });
+      await settle();
+
+      expect(init.status).toBe(200);
+      expect(new Headers(init.headers).get('Cache-Control')).toBe('no-store');
+      expect(new Headers(init.headers).get('Retry-After')).toBeNull();
+      expect(document.title).toBe('Cold Meridian (2025) | Cinevault');
     });
 
     it('keeps the status 200 for a title that loads', async () => {

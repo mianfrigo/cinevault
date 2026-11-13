@@ -24,7 +24,7 @@ export interface SeoPage {
   /** The full document title. */
   title: string;
   description?: string | null;
-  /** Absolute image URL for link previews; the og:image tag is left out when empty. */
+  /** Absolute http(s) image URL for link previews; the og:image tag is left out when empty or not such a URL. */
   image?: string | null;
   /** Path of this page on the site ("/title/movie/603"); the canonical link is origin + path. */
   path?: string;
@@ -51,6 +51,9 @@ export class SeoService {
     const canonical =
       page.noindex || page.path === undefined ? null : this.origin.replace(/\/$/, '') + page.path;
 
+    // Only an absolute http(s) URL is a usable preview image.
+    const image = page.image && /^https?:/i.test(page.image) ? page.image : null;
+
     this.titleService.setTitle(page.title);
     this.tag('name', 'description', description);
     this.tag('name', 'robots', page.noindex ? 'noindex, nofollow' : null);
@@ -59,8 +62,8 @@ export class SeoService {
     this.tag('property', 'og:title', page.title);
     this.tag('property', 'og:description', description);
     this.tag('property', 'og:url', canonical);
-    this.tag('property', 'og:image', page.image || null);
-    this.tag('name', 'twitter:card', page.image ? 'summary_large_image' : 'summary');
+    this.tag('property', 'og:image', image);
+    this.tag('name', 'twitter:card', image ? 'summary_large_image' : 'summary');
     this.canonical(canonical);
   }
 

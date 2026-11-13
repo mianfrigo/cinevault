@@ -5,9 +5,9 @@ import {
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
 import express from 'express';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { loadEnv } from './server/load-env';
-import { SECURITY_HEADERS, cacheControlFor, staticCacheControl } from './server/response-headers';
+import { SECURITY_HEADERS, pageCacheControl, staticCacheControl } from './server/response-headers';
 
 // Before the engine below: it reads NG_ALLOWED_HOSTS when it is created.
 loadEnv(import.meta.dirname);
@@ -35,7 +35,8 @@ app.use(
     index: false,
     redirect: false,
     // Content-hashed build files are immutable; robots.txt and the favicon are not.
-    setHeaders: (res, filePath) => res.setHeader('Cache-Control', staticCacheControl(filePath)),
+    setHeaders: (res, filePath) =>
+      res.setHeader('Cache-Control', staticCacheControl(relative(browserDistFolder, filePath))),
   }),
 );
 
@@ -44,16 +45,14 @@ app.use(
  * a page that sets its own Cache-Control (not found and error pages: ResponseStatus) keeps it.
  */
 app.use((req, res, next) => {
+  // Every path out of here (errors, no answer) starts uncacheable; only a 200 catalog page is upgraded.
+  res.setHeader('Cache-Control', 'no-store');
   angularApp
     .handle(req)
     .then((response) => {
-      if (!response) {
-        res.setHeader('Cache-Control', 'no-store');
-        return next();
-      }
-      if (!response.headers.has('Cache-Control')) {
-        res.setHeader('Cache-Control', cacheControlFor(req.path, response.status));
-      }
+      if (!response) return next();
+      const cacheControl = pageCacheControl(req.path, response);
+      if (cacheControl) res.setHeader('Cache-Control', cacheControl);
       return writeResponseToNodeResponse(response, res);
     })
     .catch(next);

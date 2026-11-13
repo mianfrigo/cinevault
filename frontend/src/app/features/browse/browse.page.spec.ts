@@ -65,6 +65,52 @@ describe('Browse pages', () => {
     http.verify();
   });
 
+  it('answers 503 with Retry-After and no-store when the titles cannot be loaded', async () => {
+    const init: ResponseInit = { status: 200, headers: new Headers() };
+    const { settle, request } = await setup('/movies', [
+      { provide: RESPONSE_INIT, useValue: init },
+    ]);
+    request('popular', { type: 'movie', page: '1' }).flush(null, {
+      status: 502,
+      statusText: 'TMDB_UNAVAILABLE',
+    });
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+
+    expect(init.status).toBe(503);
+    expect(new Headers(init.headers).get('Retry-After')).toBe('30');
+    expect(new Headers(init.headers).get('Cache-Control')).toBe('no-store');
+  });
+
+  it('stays a 200 but is not cached when only the genre list fails', async () => {
+    const init: ResponseInit = { status: 200, headers: new Headers() };
+    const { settle, request } = await setup('/movies', [
+      { provide: RESPONSE_INIT, useValue: init },
+    ]);
+    request('popular', { type: 'movie', page: '1' }).flush(paged([title(1)]));
+    request('genres', { type: 'movie' }).flush(null, { status: 500, statusText: 'Server Error' });
+    await settle();
+
+    expect(init.status).toBe(200);
+    expect(new Headers(init.headers).get('Cache-Control')).toBe('no-store');
+    expect(new Headers(init.headers).get('Retry-After')).toBeNull();
+  });
+
+  it('marks a well-formed genre id that the genre list does not name noindex, without a 404', async () => {
+    const init: ResponseInit = { status: 200, headers: new Headers() };
+    const { settle, request } = await setup('/genre/movie/99999', [
+      { provide: RESPONSE_INIT, useValue: init },
+    ]);
+    request('discover', { type: 'movie', genre: '99999', page: '1' }).flush(paged([], 1, 0));
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+
+    expect(init.status).toBe(200);
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
+      'noindex, nofollow',
+    );
+  });
+
   it('serves /tv from the tv catalog', async () => {
     const { http, settle, request } = await setup('/tv');
     request('popular', { type: 'tv', page: '1' }).flush(paged([title(5)]));

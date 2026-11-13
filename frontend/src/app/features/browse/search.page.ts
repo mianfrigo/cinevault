@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input } f
 import { rxResource } from '@angular/core/rxjs-interop';
 import { CatalogService } from '@core/catalog/catalog.service';
 import { SeoService, pageTitle } from '@core/seo/seo.service';
+import { ResponseStatus } from '@core/ssr/response-status.service';
 import { cutUnits } from '@shared/utils/cut-units';
 import { latestValue } from '@shared/utils/latest-value';
 import { injectPageNavigator, MAX_PAGE, normalisePage } from '@shared/utils/page-param';
@@ -95,12 +96,19 @@ export default class SearchPage {
 
   constructor() {
     const seo = inject(SeoService);
+    const response = inject(ResponseStatus);
+    // The results are the page: when they cannot be loaded the page is a temporary failure, never cached.
+    effect(() => {
+      if (this.results.error()) response.set(503);
+    });
     // The query is user input: it only ever goes in as text (Title and Meta set it as such).
     effect(() => {
       const term = this.term();
       seo.set({
         title: pageTitle(term ? `Search: ${term}` : 'Search'),
         path: term ? `/search?q=${encodeURIComponent(term)}` : '/search',
+        // Result pages for arbitrary queries are not worth indexing; the bare search page is.
+        noindex: !!term,
       });
     });
   }

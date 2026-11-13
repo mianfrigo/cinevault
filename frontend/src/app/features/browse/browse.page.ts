@@ -164,7 +164,17 @@ export default class BrowsePage {
       seo.set({
         title: pageTitle(this.genreName() ?? 'Genre'),
         path: `/genre/${req.type}/${req.genre}`,
+        // A well-formed id TMDB has no genre for (the list is loaded and does not name it).
+        noindex: this.genreList.hasValue() && this.genreName() === undefined,
       });
+    });
+    // The titles are the page: when they cannot be loaded it is a temporary failure, never cached.
+    effect(() => {
+      if (this.titles.error()) response.set(503);
+    });
+    // The genre chips are secondary: the page stays a 200, but without them it is not cached.
+    effect(() => {
+      if (this.genreList.error()) response.noStore();
     });
   }
 

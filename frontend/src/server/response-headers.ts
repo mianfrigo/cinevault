@@ -20,16 +20,31 @@ export function cacheControlFor(pathname: string, status = 200): string {
     : 'no-store';
 }
 
-/** Build output names carry a content hash ("main-4NQ7JXKO.js", "chunk-B5lawOtB.js"); anything else (robots.txt, favicon) is not immutable. */
-export function staticCacheControl(filePath: string): string {
-  return /-[\w-]{8}\.[a-z0-9]+$/.test(filePath)
+/**
+ * What to set on a rendered page once the engine has answered, or undefined to leave the headers alone:
+ * the page chose its own Cache-Control (not found / error pages), or nothing was rendered. The caller
+ * starts every response at `no-store`, so only a 200 catalog page is ever upgraded.
+ */
+export function pageCacheControl(pathname: string, response: Response | null): string | undefined {
+  if (!response || response.headers.has('Cache-Control')) return undefined;
+  return cacheControlFor(pathname, response.status);
+}
+
+/**
+ * The Angular build names its scripts, styles and fonts with an 8 character content hash
+ * ("main-VQV576NW.js", "chunk-B5lawOtB.js", "primeicons-S6ICFECY.eot"): those never change under the same
+ * name. Anything else in the build folder (robots.txt, the favicon, other public files, source maps) can
+ * change and gets an hour. `path` is relative to the build output folder.
+ */
+export function staticCacheControl(path: string): string {
+  return /-[A-Za-z0-9_-]{8}\.(js|css|woff2?|eot|ttf)$/.test(path)
     ? 'public, max-age=31536000, immutable'
     : 'public, max-age=3600';
 }
 
 /**
  * Sent on every response. Referrer-Policy keeps the one-time tokens in the reset-password and
- * verify-email URLs out of Referer headers. No Content-Security-Policy yet (launch checklist).
+ * verify-email URLs out of Referer headers. No full Content-Security-Policy yet (launch checklist).
  */
 export const SECURITY_HEADERS: Record<string, string> = {
   'Referrer-Policy': 'no-referrer',

@@ -1,3 +1,4 @@
+import { RESPONSE_INIT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { paged, setup, title } from './browse.testing';
 
@@ -25,11 +26,42 @@ describe('Search page', () => {
 
     expect(document.title).toBe('Search: <b>dune</b> | Cinevault');
     expect(document.head.querySelector('b')).toBeNull();
-    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toMatch(
-      /\/search\?q=%3Cb%3Edune%3C%2Fb%3E$/,
+    expect(document.head.querySelector('meta[property="og:title"]')?.getAttribute('content')).toBe(
+      'Search: <b>dune</b> | Cinevault',
     );
     expect(el.querySelector('b')).toBeNull();
     http.verify();
+  });
+
+  it('answers 503 with Retry-After and no-store when the search cannot run', async () => {
+    const init: ResponseInit = { status: 200, headers: new Headers() };
+    const { settle, request } = await setup('/search?q=heat', [
+      { provide: RESPONSE_INIT, useValue: init },
+    ]);
+    request('search', { q: 'heat', page: '1' }).flush(null, {
+      status: 502,
+      statusText: 'TMDB_UNAVAILABLE',
+    });
+    await settle();
+
+    expect(init.status).toBe(503);
+    expect(new Headers(init.headers).get('Retry-After')).toBe('30');
+    expect(new Headers(init.headers).get('Cache-Control')).toBe('no-store');
+  });
+
+  it('marks the results of a query noindex, and the bare search page indexable', async () => {
+    const robots = () =>
+      document.head.querySelector('meta[name="robots"]')?.getAttribute('content');
+    const withQuery = await setup('/search?q=dune');
+    withQuery.request('search', { q: 'dune', page: '1' }).flush(paged([], 1, 0));
+    await withQuery.settle();
+    expect(robots()).toBe('noindex, nofollow');
+    expect(document.head.querySelector('link[rel="canonical"]')).toBeNull();
+    TestBed.resetTestingModule();
+
+    const bare = await setup('/search');
+    await bare.settle();
+    expect(robots()).toBeUndefined();
   });
 
   it('titles a search without a query "Search | Cinevault"', async () => {

@@ -55,6 +55,16 @@ describe('SeoService', () => {
     expect(content('meta[name="twitter:card"]')).toBe('summary');
   });
 
+  it.each(['/t/p/w500/relative.jpg', 'javascript:alert(1)', 'data:image/png;base64,AAAA', ''])(
+    'omits og:image for %j, which is not an absolute http(s) URL',
+    (image) => {
+      seo.set({ title: 'A', image, path: '/a' });
+
+      expect(doc.head.querySelector('meta[property="og:image"]')).toBeNull();
+      expect(content('meta[name="twitter:card"]')).toBe('summary');
+    },
+  );
+
   it('updates the tags on a second call instead of adding duplicates', () => {
     seo.set({ title: 'A', description: 'one', path: '/a' });
     seo.set({ title: 'B', description: 'two', path: '/b' });

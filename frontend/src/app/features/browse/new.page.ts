@@ -1,7 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { CatalogService } from '@core/catalog/catalog.service';
+import { ResponseStatus } from '@core/ssr/response-status.service';
 import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
 import { SectionHeaderComponent } from '@shared/components/section-header/section-header.component';
 import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
@@ -49,4 +50,14 @@ export default class NewPage {
   private readonly catalog = inject(CatalogService);
   protected readonly movies = rxResource({ stream: () => this.catalog.list('new', 'movie') });
   protected readonly tv = rxResource({ stream: () => this.catalog.list('new', 'tv') });
+
+  constructor() {
+    // The lists are the page: with neither loaded it is a temporary failure; with one missing it is a
+    // degraded 200. Neither is cached.
+    const response = inject(ResponseStatus);
+    effect(() => {
+      if (this.movies.error() && this.tv.error()) response.set(503);
+      else if (this.movies.error() || this.tv.error()) response.noStore();
+    });
+  }
 }

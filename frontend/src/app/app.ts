@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import {
   ActivatedRouteSnapshot,
   NavigationCancel,
+  NavigationCancellationCode,
   NavigationEnd,
   NavigationError,
   Router,
@@ -65,6 +66,9 @@ export class App {
         return;
       // Any activated route of the chain may carry the flag: a parent's data is not inherited by its
       // children when the parent has a component (the dashboard shell), so the whole chain is read.
+      // A guard redirect (a logged out visit to the dashboard) cancels the navigation only to start the next
+      // one: nothing is activated in between, so resyncing here would draw the nav and footer for a frame.
+      if (e instanceof NavigationCancel && e.code === NavigationCancellationCode.Redirect) return;
       let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
       let flagged = false;
       for (; route && !flagged; route = route.firstChild)

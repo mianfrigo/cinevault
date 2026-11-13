@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CatalogService } from '@core/catalog/catalog.service';
+import { SeoService, pageTitle } from '@core/seo/seo.service';
+import { ResponseStatus } from '@core/ssr/response-status.service';
 import { MediaTypeParam } from '@core/models';
 import { latestValue } from '@shared/utils/latest-value';
 import { injectPageNavigator, MAX_PAGE, normalisePage } from '@shared/utils/page-param';
@@ -132,17 +134,49 @@ export default class BrowsePage {
   /** The API serves at most 500 pages; an empty list reports 0. */
   protected readonly totalPages = computed(() => Math.min(this.shown()?.totalPages ?? 0, MAX_PAGE));
 
+  /** The name of the genre in the URL, once the genre list is loaded. */
+  private readonly genreName = computed(() => {
+    const genre = this.request()?.genre;
+    // value() throws while the genres request is in error, so read it only behind hasValue().
+    return this.genreList.hasValue()
+      ? this.genreList.value().find((g) => g.id === genre)?.name
+      : undefined;
+  });
+
   protected readonly heading = computed(() => {
     const req = this.request();
-    if (req?.genre !== undefined) {
-      // value() throws while the genres request is in error, so read it only behind hasValue().
-      const name = this.genreList.hasValue()
-        ? this.genreList.value().find((g) => g.id === req.genre)?.name
-        : undefined;
-      return name ?? 'Genre';
-    }
+    if (req?.genre !== undefined) return this.genreName() ?? 'Genre';
     return req?.type === 'tv' ? 'TV Shows' : req ? 'Movies' : 'Genre';
   });
+
+  constructor() {
+    const seo = inject(SeoService);
+    const response = inject(ResponseStatus);
+    // /movies and /tv have a static route title; a genre page is named after its genre.
+    effect(() => {
+      if (this.id() === undefined) return;
+      const req = this.request();
+      if (!req) {
+        response.set(404);
+        seo.set({ title: pageTitle('Genre not found'), noindex: true });
+        return;
+      }
+      seo.set({
+        title: pageTitle(this.genreName() ?? 'Genre'),
+        path: `/genre/${req.type}/${req.genre}`,
+        // A well-formed id TMDB has no genre for (the list is loaded and does not name it).
+        noindex: this.genreList.hasValue() && this.genreName() === undefined,
+      });
+    });
+    // The titles are the page: when they cannot be loaded it is a temporary failure, never cached.
+    effect(() => {
+      if (this.titles.error()) response.set(503);
+    });
+    // The genre chips are secondary: the page stays a 200, but without them it is not cached.
+    effect(() => {
+      if (this.genreList.error()) response.noStore();
+    });
+  }
 
   protected readonly subheading = computed(() => {
     const req = this.request();

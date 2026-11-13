@@ -1,8 +1,9 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CatalogService } from '@core/catalog/catalog.service';
+import { ResponseStatus } from '@core/ssr/response-status.service';
 import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 
 /** The episodes of one season. It exists only once its panel has been opened, so opening is what requests it. */
@@ -58,4 +59,12 @@ export class EpisodesComponent {
     params: () => ({ tvId: this.tvId(), n: this.number() }),
     stream: ({ params }) => this.catalog.season(params.tvId, params.n),
   });
+
+  constructor() {
+    // Secondary content: the title page stays a 200, but a page without its episodes is not cached.
+    const response = inject(ResponseStatus);
+    effect(() => {
+      if (this.episodes.error()) response.noStore();
+    });
+  }
 }

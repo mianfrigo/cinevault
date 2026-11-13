@@ -5,31 +5,56 @@ import {
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
 import express from 'express';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
+import { loadEnv } from './server/load-env';
+import { SECURITY_HEADERS, pageCacheControl, staticCacheControl } from './server/response-headers';
+
+// Before the engine below: it reads NG_ALLOWED_HOSTS when it is created.
+loadEnv(import.meta.dirname);
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
+app.disable('x-powered-by');
+
+/**
+ * Security headers on every response, static files included.
+ */
+app.use((_req, res, next) => {
+  res.set(SECURITY_HEADERS);
+  next();
+});
+
 /**
  * Serve static files from /browser
  */
 app.use(
   express.static(browserDistFolder, {
-    maxAge: '1y',
     index: false,
     redirect: false,
+    // Content-hashed build files are immutable; robots.txt and the favicon are not.
+    setHeaders: (res, filePath) =>
+      res.setHeader('Cache-Control', staticCacheControl(relative(browserDistFolder, filePath))),
   }),
 );
 
 /**
- * Handle all other requests by rendering the Angular application.
+ * Handle all other requests by rendering the Angular application. Only a 200 catalog page may be cached;
+ * a page that sets its own Cache-Control (not found and error pages: ResponseStatus) keeps it.
  */
 app.use((req, res, next) => {
+  // Every path out of here (errors, no answer) starts uncacheable; only a 200 catalog page is upgraded.
+  res.setHeader('Cache-Control', 'no-store');
   angularApp
     .handle(req)
-    .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
+    .then((response) => {
+      if (!response) return next();
+      const cacheControl = pageCacheControl(req.path, response);
+      if (cacheControl) res.setHeader('Cache-Control', cacheControl);
+      return writeResponseToNodeResponse(response, res);
+    })
     .catch(next);
 });
 

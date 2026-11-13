@@ -6,16 +6,17 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { TitleStrategy, provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { MessageService } from 'primeng/api';
-import { providePrimeNG } from 'primeng/config';
 
 import cinevaultPreset from './theme/cinevault-preset';
 import { routes } from './app.routes';
 import { authInterceptor } from '@core/auth/auth.interceptor';
 import { API_BASE } from '@core/api/api-client';
 import { AuthStore } from '@core/auth/auth.store';
+import { providePrimeNgWithLicense } from '@core/config/primeng-license';
+import { PageTitleStrategy } from '@core/seo/page-title.strategy';
 
 // provideAnimationsAsync() is deprecated since Angular 20.2 and PrimeNG 22 animates through
 // animate.enter/leave, so it is not registered (see task-12 report).
@@ -24,6 +25,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     MessageService,
     provideRouter(routes, withComponentInputBinding()),
+    { provide: TitleStrategy, useExisting: PageTitleStrategy },
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideClientHydration(withEventReplay()),
     // Absolute on purpose: the HTTP transfer cache keys responses by URL, and the server (which
@@ -33,7 +35,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       void inject(AuthStore).restoreSession();
     }),
-    providePrimeNG({
+    providePrimeNgWithLicense({
       theme: {
         preset: cinevaultPreset,
         options: {

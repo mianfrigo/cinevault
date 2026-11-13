@@ -1,8 +1,10 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CatalogService } from '@core/catalog/catalog.service';
+import { SeoService } from '@core/seo/seo.service';
+import { ResponseStatus } from '@core/ssr/response-status.service';
 import { PosterRowComponent } from '@shared/components/poster-row/poster-row.component';
 import { RowItemDirective } from '@shared/directives/row-item.directive';
 import { SectionHeaderComponent } from '@shared/components/section-header/section-header.component';
@@ -173,6 +175,17 @@ export default class HomePage {
   protected readonly tileWidth = TILE_WIDTH;
   protected readonly genreId = (g: { id: number }) => g.id;
   protected readonly skeletonTiles = [0, 1, 2, 3, 4, 5, 6, 7];
+
+  constructor() {
+    inject(SeoService).set({ title: 'Cinevault: discover movies and TV shows', path: '/' });
+    // Every row is secondary: a failed one keeps the page a 200, but a degraded page is not cached.
+    const response = inject(ResponseStatus);
+    effect(() => {
+      if ([this.trending, this.newTv, this.topRated, this.genres].some((r) => r.error())) {
+        response.noStore();
+      }
+    });
+  }
 
   protected readonly popularGenres = computed(() => {
     const all = this.genres.hasValue() ? this.genres.value() : [];

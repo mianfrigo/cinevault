@@ -1,3 +1,4 @@
+import { RESPONSE_INIT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Genre } from '@core/models';
 import { paged, setup, title } from './browse.testing';
@@ -30,6 +31,84 @@ describe('Browse pages', () => {
       'Science Fiction',
     );
     http.verify();
+  });
+
+  it('titles /movies "Movies | Cinevault"', async () => {
+    const { http, settle, request } = await setup('/movies');
+    request('popular', { type: 'movie', page: '1' }).flush(paged([title(1)]));
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+
+    expect(document.title).toBe('Movies | Cinevault');
+    http.verify();
+  });
+
+  it('titles a genre page after the genre once the list has loaded', async () => {
+    const { http, settle, request } = await setup('/genre/movie/878');
+    request('discover', { type: 'movie', genre: '878', page: '1' }).flush(paged([title(1)]));
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+
+    expect(document.title).toBe('Science Fiction | Cinevault');
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toMatch(
+      /\/genre\/movie\/878$/,
+    );
+    http.verify();
+  });
+
+  it('answers 404 for a genre route that names no such catalog', async () => {
+    const init: ResponseInit = { status: 200, headers: new Headers() };
+    const { http, el } = await setup('/genre/book/9', [{ provide: RESPONSE_INIT, useValue: init }]);
+
+    expect(init.status).toBe(404);
+    expect(el.textContent).toContain('This genre does not exist');
+    http.verify();
+  });
+
+  it('answers 503 with Retry-After and no-store when the titles cannot be loaded', async () => {
+    const init: ResponseInit = { status: 200, headers: new Headers() };
+    const { settle, request } = await setup('/movies', [
+      { provide: RESPONSE_INIT, useValue: init },
+    ]);
+    request('popular', { type: 'movie', page: '1' }).flush(null, {
+      status: 502,
+      statusText: 'TMDB_UNAVAILABLE',
+    });
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+
+    expect(init.status).toBe(503);
+    expect(new Headers(init.headers).get('Retry-After')).toBe('30');
+    expect(new Headers(init.headers).get('Cache-Control')).toBe('no-store');
+  });
+
+  it('stays a 200 but is not cached when only the genre list fails', async () => {
+    const init: ResponseInit = { status: 200, headers: new Headers() };
+    const { settle, request } = await setup('/movies', [
+      { provide: RESPONSE_INIT, useValue: init },
+    ]);
+    request('popular', { type: 'movie', page: '1' }).flush(paged([title(1)]));
+    request('genres', { type: 'movie' }).flush(null, { status: 500, statusText: 'Server Error' });
+    await settle();
+
+    expect(init.status).toBe(200);
+    expect(new Headers(init.headers).get('Cache-Control')).toBe('no-store');
+    expect(new Headers(init.headers).get('Retry-After')).toBeNull();
+  });
+
+  it('marks a well-formed genre id that the genre list does not name noindex, without a 404', async () => {
+    const init: ResponseInit = { status: 200, headers: new Headers() };
+    const { settle, request } = await setup('/genre/movie/99999', [
+      { provide: RESPONSE_INIT, useValue: init },
+    ]);
+    request('discover', { type: 'movie', genre: '99999', page: '1' }).flush(paged([], 1, 0));
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+
+    expect(init.status).toBe(200);
+    expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
+      'noindex, nofollow',
+    );
   });
 
   it('serves /tv from the tv catalog', async () => {

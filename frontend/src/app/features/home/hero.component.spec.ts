@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TitleSummary } from '@core/models';
+import { FavoritesStore } from '@core/favorites/favorites.store';
 import { HeroComponent } from './hero.component';
 
 const title = (tmdbId: number, name: string, backdropUrl: string | null): TitleSummary => ({
@@ -124,6 +125,42 @@ describe('HeroComponent', () => {
     expect(activeFill()?.classList.contains('scale-x-0')).toBe(true);
     expect(activeFill()?.classList.contains('scale-x-100')).toBe(false);
     expect(el.querySelector('button[aria-label="Pause automatic slide change"]')).not.toBeNull();
+  });
+
+  it('My List shows the saved state of each slide: label, icon and aria-pressed', async () => {
+    stubReducedMotion(false);
+    const { fixture, el } = await render(three);
+    TestBed.inject(FavoritesStore).setSaved('movie', 2, true);
+    fixture.detectChanges();
+    const list = () =>
+      Array.from(el.querySelectorAll<HTMLButtonElement>('article')).map((a) => {
+        const b = Array.from(a.querySelectorAll('button')).find((x) =>
+          /My List/.test(x.textContent ?? ''),
+        )!;
+        return [
+          b.textContent?.trim(),
+          b.getAttribute('aria-pressed'),
+          !!b.querySelector('.pi-check'),
+        ];
+      });
+    expect(list()).toEqual([
+      ['My List', 'false', false],
+      ['In My List', 'true', true],
+      ['My List', 'false', false],
+    ]);
+
+    TestBed.inject(FavoritesStore).setSaved('movie', 1, true);
+    fixture.detectChanges();
+    expect(list()[0]).toEqual(['In My List', 'true', true]);
+  });
+
+  it('names the media type of each slide', async () => {
+    stubReducedMotion(false);
+    const { el } = await render([three[0], { ...three[1], mediaType: 'tv' as const }]);
+    const types = Array.from(el.querySelectorAll('article')).map((a) =>
+      /Series/.test(a.textContent ?? '') ? 'Series' : 'Movie',
+    );
+    expect(types).toEqual(['Movie', 'Series']);
   });
 
   it('omits items without backdropUrl and renders nothing when none have one', async () => {

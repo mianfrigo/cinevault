@@ -23,6 +23,8 @@ Angular 22 (SSR) with PrimeNG 22 and Tailwind CSS v4. Design tokens live in `src
 - Forms use Angular Signal Forms only (`@angular/forms/signals`: `form()`, schema validators, `[formField]`, `[formRoot]`). No Reactive Forms (`FormControl`, `FormGroup`, `FormBuilder`, `ReactiveFormsModule`) and no template-driven forms (`ngModel`, `FormsModule`). PrimeNG controls bind with `[formField]` too.
 - Use PrimeNG components wherever one exists, styled with Tailwind utilities and the theme tokens.
 - Ratings use PrimeNG `p-rating` (see `cv-score`), never a custom star component.
+- No function or method calls in templates (they run on every change detection). Read signals and computeds, use a pure pipe (`initials`) or precompute a view-model `computed`. Signal reads, `track` expressions and `(event)` handlers are fine.
+- A custom form control implements `FormValueControl<T>` from `@angular/forms/signals` (a `value` model, optional `disabled`/`invalid` inputs, a `touch` output on blur, `focus()`) and is bound with `[formField]`. It wraps the PrimeNG control (`cv-password-input`, `cv-role-select`); no `ControlValueAccessor`.
 
 ### Code structure
 

@@ -22,7 +22,7 @@ import { ConfigService } from '@core/config/config.service';
 import { FavoritesStore } from '@core/favorites/favorites.store';
 import { MediaTypeParam, TitleDetail } from '@core/models';
 import NotFoundComponent from '../../pages/not-found.component';
-import { initials } from '@shared/utils/initials';
+import { InitialsPipe } from '@shared/pipes/initials.pipe';
 import { plural } from '@shared/utils/plural';
 import { PosterFrameComponent } from '@shared/components/poster-frame/poster-frame.component';
 import { mediaTypeLabel, titleAlt } from '@shared/utils/title-format';
@@ -54,11 +54,35 @@ function languageName(code: string): string {
   }
 }
 
+/** Runtime for a movie, "N seasons" for a series; empty when unknown. */
+function lengthOf(t: TitleDetail): string {
+  if (t.mediaType === 'tv') {
+    return t.seasons ? `${t.seasons} ${plural(t.seasons, 'season')}` : '';
+  }
+  return t.runtimeMinutes ? formatRuntime(t.runtimeMinutes) : '';
+}
+
+/** The facts list; a fact TMDB has no value for is left out. */
+function factsOf(t: TitleDetail, typeName: string, length: string): [string, string][] {
+  const tv = t.mediaType === 'tv';
+  const rows: [string, string | null][] = [
+    ['Type', typeName],
+    [tv ? 'Created by' : 'Director', t.director],
+    ['Original language', t.originalLanguage ? languageName(t.originalLanguage) : null],
+    ['Status', t.status],
+    [tv ? 'First aired' : 'Release year', t.year === null ? null : String(t.year)],
+    [tv ? 'Seasons' : 'Runtime', length || null],
+    ['TMDB score', t.rating === null ? null : `${t.rating.toFixed(1)} / 10`],
+  ];
+  return rows.filter((r): r is [string, string] => r[1] !== null);
+}
+
 /** /title/:type/:id. The route supplies `type` and `id` through component input binding. */
 @Component({
   selector: 'cv-title',
   imports: [
     RouterLink,
+    InitialsPipe,
     AvatarModule,
     ButtonModule,
     SkeletonModule,
@@ -76,8 +100,8 @@ function languageName(code: string): string {
     <div #page tabindex="-1">
       @if (!request()) {
         <cv-not-found />
-      } @else if (detail.hasValue()) {
-        @let t = detail.value();
+      } @else if (vm(); as v) {
+        @let t = v.title;
         <article>
           <div class="relative isolate">
             <div
@@ -97,7 +121,7 @@ function languageName(code: string): string {
                   class="md:col-start-1 md:row-span-2 md:row-start-1 md:self-end"
                   [src]="t.posterUrl"
                   [title]="t.title"
-                  [alt]="alt(t)"
+                  [alt]="v.alt"
                   [eager]="true"
                   [overlayRing]="true"
                 />
@@ -111,10 +135,10 @@ function languageName(code: string): string {
                     @if (t.year !== null) {
                       <span>{{ t.year }}</span>
                     }
-                    @if (length(t); as len) {
+                    @if (v.length; as len) {
                       <span>{{ len }}</span>
                     }
-                    <span>{{ typeName(t) }}</span>
+                    <span>{{ v.typeName }}</span>
                   </div>
                   @if (t.genres.length) {
                     <ul class="meta-row mt-1 md:text-base">
@@ -191,7 +215,7 @@ function languageName(code: string): string {
                   <ul data-testid="cast" class="grid gap-x-8 sm:grid-cols-2">
                     @for (c of t.cast; track $index) {
                       <li class="flex items-center gap-3 border-t border-line-soft py-3">
-                        <p-avatar [label]="initials(c.name)" shape="circle" aria-hidden="true" />
+                        <p-avatar [label]="c.name | initials" shape="circle" aria-hidden="true" />
                         <span class="min-w-0">
                           <b class="block text-sm leading-snug font-medium">{{ c.name }}</b>
                           @if (c.character) {
@@ -217,7 +241,7 @@ function languageName(code: string): string {
             <aside>
               <h2 class="sr-only">Facts</h2>
               <dl data-testid="facts" class="self-start border-b border-line-soft">
-                @for (f of facts(t); track f[0]) {
+                @for (f of v.facts; track f[0]) {
                   <div class="flex justify-between gap-4 border-t border-line-soft py-3 text-sm">
                     <dt class="text-fg-3">{{ f[0] }}</dt>
                     <dd class="text-right text-fg tabular-nums">{{ f[1] }}</dd>
@@ -295,6 +319,21 @@ export default class TitlePage {
   protected readonly notFound = computed(() => httpStatus(this.detail.error()) === 404);
   protected readonly downloadEnabled = computed(() => this.config.features().downloadButton);
 
+  /** What the template shows of the loaded title, derived once (null until there is one). */
+  protected readonly vm = computed(() => {
+    if (!this.detail.hasValue()) return null;
+    const title = this.detail.value();
+    const typeName = mediaTypeLabel(title.mediaType);
+    const length = lengthOf(title);
+    return {
+      title,
+      alt: titleAlt(title),
+      typeName,
+      length,
+      facts: factsOf(title, typeName, length),
+    };
+  });
+
   protected readonly saved = computed(() => {
     const req = this.request();
     return !!req && this.favorites.isFavorite(req.type, req.id);
@@ -318,39 +357,6 @@ export default class TitlePage {
       this.request();
       untracked(() => this.scroller.scrollToPosition([0, 0]));
     });
-  }
-
-  protected readonly initials = initials;
-
-  protected alt(t: TitleDetail): string {
-    return titleAlt(t);
-  }
-
-  protected typeName(t: TitleDetail): string {
-    return mediaTypeLabel(t.mediaType);
-  }
-
-  /** Runtime for a movie, "N seasons" for a series; empty when unknown. */
-  protected length(t: TitleDetail): string {
-    if (t.mediaType === 'tv') {
-      return t.seasons ? `${t.seasons} ${plural(t.seasons, 'season')}` : '';
-    }
-    return t.runtimeMinutes ? formatRuntime(t.runtimeMinutes) : '';
-  }
-
-  /** The facts list; a fact TMDB has no value for is left out. */
-  protected facts(t: TitleDetail): [string, string][] {
-    const tv = t.mediaType === 'tv';
-    const rows: [string, string | null][] = [
-      ['Type', this.typeName(t)],
-      [tv ? 'Created by' : 'Director', t.director],
-      ['Original language', t.originalLanguage ? languageName(t.originalLanguage) : null],
-      ['Status', t.status],
-      [tv ? 'First aired' : 'Release year', t.year === null ? null : String(t.year)],
-      [tv ? 'Seasons' : 'Runtime', this.length(t) || null],
-      ['TMDB score', t.rating === null ? null : `${t.rating.toFixed(1)} / 10`],
-    ];
-    return rows.filter((r): r is [string, string] => r[1] !== null);
   }
 
   protected toggleSaved(t: TitleDetail): void {

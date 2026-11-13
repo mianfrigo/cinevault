@@ -2,6 +2,7 @@ import { DOCUMENT, NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   contentChild,
   ElementRef,
   inject,
@@ -70,12 +71,12 @@ import { RowItemDirective } from '@shared/directives/row-item.directive';
           role="region"
           [attr.aria-label]="heading()"
         >
-          @for (t of items(); track trackKey()(t)) {
+          @for (row of rows(); track trackKey()(row.item)) {
             <p-carousel-item class="pr-4 lg:pr-5">
               @if (itemTemplate(); as item) {
-                <ng-container *ngTemplateOutlet="item.template; context: { $implicit: t }" />
+                <ng-container *ngTemplateOutlet="item.template; context: { $implicit: row.item }" />
               } @else {
-                <cv-poster-card [title]="poster(t)" class="w-35 md:w-40 lg:w-44 xl:w-46" />
+                <cv-poster-card [title]="row.poster" class="w-35 md:w-40 lg:w-44 xl:w-46" />
               }
             </p-carousel-item>
           }
@@ -98,10 +99,10 @@ export class PosterRowComponent<T = TitleSummary> {
   private readonly track = viewChild.required('track', { read: ElementRef });
   private readonly win = inject(DOCUMENT).defaultView;
 
-  /** Without an item template the items are titles. */
-  protected poster(t: T): TitleSummary {
-    return t as unknown as TitleSummary;
-  }
+  /** Each item with its title view (without an item template the items are titles). */
+  protected readonly rows = computed(() =>
+    this.items().map((item) => ({ item, poster: item as unknown as TitleSummary })),
+  );
 
   /** Arrows move 85% of the visible width, like the mockup (the carousel's own next() moves one item). */
   protected scroll(dir: 1 | -1): void {

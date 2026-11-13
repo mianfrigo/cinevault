@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, input, linkedSignal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, linkedSignal } from '@angular/core';
 import { AccordionModule } from 'primeng/accordion';
 import { TitleDetail } from '@core/models';
+import { plural } from '@shared/utils/plural';
 import { EpisodesComponent } from './episodes.component';
 
 /** Season panels (PrimeNG Accordion). A season's episodes are requested when its panel is first opened. */
@@ -13,17 +14,17 @@ import { EpisodesComponent } from './episodes.component';
   host: { ngSkipHydration: 'true' },
   template: `
     <p-accordion [multiple]="true" [value]="open()" (valueChange)="change($event)">
-      @for (s of seasons(); track s.number) {
+      @for (s of seasonRows(); track s.number) {
         <p-accordion-panel [value]="s.number">
           <p-accordion-header>
-            <span>{{ s.name || 'Season ' + s.number }}</span>
+            <span>{{ s.label }}</span>
             <small class="ml-auto pr-3 text-sm font-normal text-fg-3">
-              {{ s.episodeCount }} {{ s.episodeCount === 1 ? 'episode' : 'episodes' }}
+              {{ s.episodeCount }} {{ s.episodeNoun }}
             </small>
           </p-accordion-header>
           <p-accordion-content>
             <!-- Rendered (and so requested) only after the first opening, then kept. -->
-            @if (seen().seen.has(s.number)) {
+            @if (s.opened) {
               <cv-episodes [tvId]="tvId()" [number]="s.number" />
             }
           </p-accordion-content>
@@ -52,6 +53,18 @@ export class SeasonsComponent {
       tvId: src.tvId,
       seen: new Set([...(prev?.value.tvId === src.tvId ? prev.value.seen : []), ...src.open]),
     }),
+  });
+
+  /** Each season with its label, episode noun and whether it was opened yet, so the template calls nothing. */
+  protected readonly seasonRows = computed(() => {
+    const { seen } = this.seen();
+    return this.seasons().map((s) => ({
+      number: s.number,
+      label: s.name || 'Season ' + s.number,
+      episodeCount: s.episodeCount,
+      episodeNoun: plural(s.episodeCount, 'episode'),
+      opened: seen.has(s.number),
+    }));
   });
 
   protected change(value: unknown): void {

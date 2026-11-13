@@ -4,7 +4,6 @@ import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
-import { PasswordModule } from 'primeng/password';
 import { AuthStore } from '@core/auth/auth.store';
 import { safeNext } from '@core/auth/guards';
 import { ApiError } from '@core/models';
@@ -17,6 +16,7 @@ import { FocusOnDirective } from '@shared/directives/focus-on.directive';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { emailRules } from '@shared/validators/auth.rules';
 import { queryText } from '@shared/utils/query-text';
+import { PasswordInputComponent } from '@shared/components/password-input/password-input.component';
 
 /** Fixed set of notices a redirect can ask the login page to show: nothing else is ever rendered. */
 const NOTICES = new Map([
@@ -45,7 +45,7 @@ interface Banner {
     ButtonModule,
     InputTextModule,
     MessageModule,
-    PasswordModule,
+    PasswordInputComponent,
     AuthLayoutComponent,
     AuthFieldComponent,
     FormNoteComponent,
@@ -92,12 +92,9 @@ interface Banner {
             class="-my-3 py-3 text-sm link-underline"
             >Forgot password?</a
           >
-          <p-password
+          <cv-password-input
             inputId="password"
             autocomplete="current-password"
-            [feedback]="false"
-            [toggleMask]="true"
-            [fluid]="true"
             [formField]="loginForm.password"
           />
         </cv-auth-field>

@@ -83,6 +83,25 @@ describe('Title page', () => {
     http.verify();
   });
 
+  it('lists the facts of a movie, the poster alt, and leaves out what TMDB has no value for', async () => {
+    const { el, http } = await open(movie);
+    const facts = () =>
+      Array.from(el.querySelectorAll('[data-testid="facts"] > div')).map((d) =>
+        Array.from(d.children).map((c) => c.textContent?.trim()),
+      );
+    expect(facts()).toEqual([
+      ['Type', 'Movie'],
+      ['Director', 'Lana Wachowski'],
+      ['Original language', 'English'],
+      ['Status', 'Released'],
+      ['Release year', '1999'],
+      ['Runtime', '2h 16m'],
+      ['TMDB score', '8.2 / 10'],
+    ]);
+    expect(el.querySelector('cv-poster-frame img')?.getAttribute('alt')).toBe('The Matrix (1999)');
+    http.verify();
+  });
+
   it('shows "N seasons" for a series and loads the first season only', async () => {
     const { http, el, request, next, settle } = await setup('/title/tv/1399', [MessageService]);
     http.expectOne('/api/v1/config').flush(config(false));

@@ -34,7 +34,7 @@ import { MessageModule } from 'primeng/message';
         severity="error"
         size="small"
         variant="simple"
-        >{{ field()().errors()[0]?.message }}</p-message
+        >{{ message() }}</p-message
       >
     }
   `,
@@ -70,6 +70,8 @@ export class AuthFieldComponent {
       else control?.removeAttribute('aria-invalid');
     });
   }
+
+  protected readonly message = computed(() => this.field()().errors()[0]?.message);
 
   protected readonly showError = computed(() => {
     const state = this.field()();

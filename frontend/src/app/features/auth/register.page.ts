@@ -3,7 +3,6 @@ import { apply, form, FormField, FormRoot, required } from '@angular/forms/signa
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
 import { ApiError } from '@core/models';
 import { AuthApi } from './auth.api';
 import { failureMessage } from '@shared/utils/failure-message';
@@ -11,6 +10,7 @@ import { AuthLayoutComponent } from './auth-layout.component';
 import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
 import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
+import { PasswordInputComponent } from '@shared/components/password-input/password-input.component';
 import {
   confirmMatches,
   emailRules,
@@ -26,7 +26,7 @@ import {
     FormRoot,
     ButtonModule,
     InputTextModule,
-    PasswordModule,
+    PasswordInputComponent,
     AuthLayoutComponent,
     AuthFieldComponent,
     FormNoteComponent,
@@ -67,22 +67,16 @@ import {
           hint="At least 10 characters, at most 128."
           [field]="registerForm.password"
         >
-          <p-password
+          <cv-password-input
             inputId="password"
             autocomplete="new-password"
-            [feedback]="false"
-            [toggleMask]="true"
-            [fluid]="true"
             [formField]="registerForm.password"
           />
         </cv-auth-field>
         <cv-auth-field label="Confirm password" controlId="confirm" [field]="registerForm.confirm">
-          <p-password
+          <cv-password-input
             inputId="confirm"
             autocomplete="new-password"
-            [feedback]="false"
-            [toggleMask]="true"
-            [fluid]="true"
             [formField]="registerForm.confirm"
           />
         </cv-auth-field>

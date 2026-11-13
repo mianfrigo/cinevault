@@ -34,9 +34,9 @@ module.exports = defineConfig([
     },
   },
   {
-    // One class per file (component, directive, pipe, service); spec-local test hosts are exempt.
+    // One class per file (component, directive, pipe, service); spec-local and testing-helper hosts are exempt.
     files: ['**/*.ts'],
-    ignores: ['**/*.spec.ts'],
+    ignores: ['**/*.spec.ts', '**/*.testing.ts'],
     rules: { 'max-classes-per-file': ['error', 1] },
   },
   {

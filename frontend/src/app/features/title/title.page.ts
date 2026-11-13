@@ -23,8 +23,12 @@ import { FavoritesStore } from '@core/favorites/favorites.store';
 import { MediaTypeParam, TitleDetail } from '@core/models';
 import NotFoundComponent from '../../pages/not-found.component';
 import { initials } from '@shared/utils/initials';
+import { plural } from '@shared/utils/plural';
+import { PosterFrameComponent } from '@shared/components/poster-frame/poster-frame.component';
+import { mediaTypeLabel, titleAlt } from '@shared/utils/title-format';
 import { PosterRowComponent } from '@shared/components/poster-row/poster-row.component';
 import { ScoreComponent } from '@shared/components/score/score.component';
+import { SectionHeaderComponent } from '@shared/components/section-header/section-header.component';
 import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { SeasonsComponent } from './seasons.component';
 
@@ -59,9 +63,11 @@ function languageName(code: string): string {
     ButtonModule,
     SkeletonModule,
     NotFoundComponent,
+    PosterFrameComponent,
     PosterRowComponent,
     ScoreComponent,
     SeasonsComponent,
+    SectionHeaderComponent,
     StateBlockComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -83,32 +89,18 @@ function languageName(code: string): string {
               }
               <div class="title-scrim absolute inset-0"></div>
             </div>
-            <div class="mx-auto max-w-site px-6 md:px-8 xl:px-12">
+            <div class="site-gutter">
               <div
                 class="grid grid-cols-[7rem_1fr] items-end gap-4 pt-32 md:grid-cols-[14.5rem_1fr] md:grid-rows-[auto_auto] md:gap-x-8 md:gap-y-0 md:pt-56"
               >
-                <div
-                  class="relative aspect-[2/3] overflow-hidden rounded-md bg-surface-2 md:col-start-1 md:row-span-2 md:row-start-1 md:self-end"
-                >
-                  @if (t.posterUrl) {
-                    <img
-                      [src]="t.posterUrl"
-                      [alt]="alt(t)"
-                      fetchpriority="high"
-                      class="size-full object-cover"
-                    />
-                  } @else {
-                    <div
-                      class="grid size-full place-items-center bg-surface-3 p-3 text-center text-sm font-medium text-fg-2"
-                    >
-                      {{ t.title }}
-                    </div>
-                  }
-                  <div
-                    aria-hidden="true"
-                    class="absolute inset-0 rounded-[inherit] ring-1 ring-line ring-inset"
-                  ></div>
-                </div>
+                <cv-poster-frame
+                  class="md:col-start-1 md:row-span-2 md:row-start-1 md:self-end"
+                  [src]="t.posterUrl"
+                  [title]="t.title"
+                  [alt]="alt(t)"
+                  [eager]="true"
+                  [overlayRing]="true"
+                />
 
                 <div class="min-w-0 md:col-start-2 md:row-start-1 md:self-end">
                   <h1 class="text-title font-semibold text-fg">{{ t.title }}</h1>
@@ -183,11 +175,11 @@ function languageName(code: string): string {
           </div>
 
           <div
-            class="mx-auto mt-12 grid max-w-site gap-12 px-6 md:px-8 lg:mt-16 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16 xl:px-12"
+            class="site-gutter mt-12 grid gap-12 lg:mt-16 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-16"
           >
             <div class="min-w-0 [&>section+section]:mt-12">
               <section>
-                <h2 class="mb-4 text-h2 text-fg">Overview</h2>
+                <cv-section-header class="mb-4" heading="Overview" />
                 <p class="max-w-[66ch] text-lg leading-[1.65] text-fg-2">
                   {{ t.overview || 'No overview available.' }}
                 </p>
@@ -195,7 +187,7 @@ function languageName(code: string): string {
 
               @if (t.cast.length) {
                 <section>
-                  <h2 class="mb-4 text-h2 text-fg">Top cast</h2>
+                  <cv-section-header class="mb-4" heading="Top cast" />
                   <ul data-testid="cast" class="grid gap-x-8 sm:grid-cols-2">
                     @for (c of t.cast; track $index) {
                       <li class="flex items-center gap-3 border-t border-line-soft py-3">
@@ -216,7 +208,7 @@ function languageName(code: string): string {
 
               @if (t.mediaType === 'tv' && t.seasonList.length) {
                 <section>
-                  <h2 class="mb-4 text-h2 text-fg">Seasons &amp; episodes</h2>
+                  <cv-section-header class="mb-4" heading="Seasons &amp; episodes" />
                   <cv-seasons [tvId]="t.tmdbId" [seasons]="t.seasonList" />
                 </section>
               }
@@ -236,7 +228,7 @@ function languageName(code: string): string {
           </div>
 
           @if (t.similar.length) {
-            <div class="mx-auto mt-12 max-w-site px-6 pb-6 md:px-8 lg:mt-16 xl:px-12">
+            <div class="site-gutter mt-12 pb-6 lg:mt-16">
               <cv-poster-row heading="More like this" [items]="t.similar" />
             </div>
           }
@@ -244,7 +236,7 @@ function languageName(code: string): string {
       } @else if (notFound()) {
         <cv-not-found />
       } @else if (detail.error()) {
-        <section class="mx-auto max-w-site px-6 py-16 md:px-8 xl:px-12">
+        <section class="site-gutter py-16">
           <cv-state
             kind="error"
             message="Could not load this title. Check your connection and try again."
@@ -255,7 +247,7 @@ function languageName(code: string): string {
         <section
           role="status"
           aria-busy="true"
-          class="mx-auto grid max-w-site grid-cols-[7rem_1fr] items-end gap-4 px-6 pt-32 md:grid-cols-[14.5rem_1fr] md:gap-x-8 md:px-8 md:pt-56 xl:px-12"
+          class="site-gutter grid grid-cols-[7rem_1fr] items-end gap-4 pt-32 md:grid-cols-[14.5rem_1fr] md:gap-x-8 md:pt-56"
         >
           <span class="sr-only">Loading</span>
           <p-skeleton class="aspect-[2/3]" height="auto" />
@@ -331,17 +323,17 @@ export default class TitlePage {
   protected readonly initials = initials;
 
   protected alt(t: TitleDetail): string {
-    return t.year === null ? t.title : `${t.title} (${t.year})`;
+    return titleAlt(t);
   }
 
   protected typeName(t: TitleDetail): string {
-    return t.mediaType === 'tv' ? 'Series' : 'Movie';
+    return mediaTypeLabel(t.mediaType);
   }
 
   /** Runtime for a movie, "N seasons" for a series; empty when unknown. */
   protected length(t: TitleDetail): string {
     if (t.mediaType === 'tv') {
-      return t.seasons ? `${t.seasons} ${t.seasons === 1 ? 'season' : 'seasons'}` : '';
+      return t.seasons ? `${t.seasons} ${plural(t.seasons, 'season')}` : '';
     }
     return t.runtimeMinutes ? formatRuntime(t.runtimeMinutes) : '';
   }

@@ -17,7 +17,7 @@ import { AuthApi } from './auth.api';
 import { failureMessage } from '@shared/utils/failure-message';
 import { AuthLayoutComponent } from './auth-layout.component';
 import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
-import { FocusOnDirective } from '@shared/directives/focus-on.directive';
+import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { confirmMatches, newPasswordRules } from '@shared/validators/auth.rules';
 import { queryText } from '@shared/utils/query-text';
@@ -41,7 +41,7 @@ const HEADINGS: Record<View, string> = {
     PasswordModule,
     AuthLayoutComponent,
     AuthFieldComponent,
-    FocusOnDirective,
+    FormNoteComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -53,9 +53,7 @@ const HEADINGS: Record<View, string> = {
     >
       @switch (view()) {
         @case ('form') {
-          @if (problem(); as p) {
-            <p-message severity="error" role="alert" [cvFocusOn]="p">{{ p.text }}</p-message>
-          }
+          <cv-form-note [note]="problem()" />
           <form [formRoot]="resetForm" class="grid gap-4">
             <cv-auth-field
               label="New password"
@@ -115,7 +113,7 @@ export default class ResetPasswordPage {
   private readonly outcome = signal<View>('form');
   protected readonly view = computed<View>(() => (this.activeToken() ? this.outcome() : 'invalid'));
   protected readonly heading = computed(() => HEADINGS[this.view()]);
-  protected readonly problem = signal<{ text: string } | null>(null);
+  protected readonly problem = signal<Note | null>(null);
 
   constructor() {
     // Browser only: take the token out of the address bar and history once it has been read.
@@ -150,7 +148,7 @@ export default class ResetPasswordPage {
             const error = e as ApiError;
             if (error.code === 'TOKEN_EXPIRED') this.outcome.set('expired');
             else if (error.code === 'TOKEN_INVALID') this.outcome.set('invalid');
-            else this.problem.set({ text: failureMessage(error) });
+            else this.problem.set({ kind: 'error', text: failureMessage(error) });
             return;
           }
           await this.router.navigate(['/login'], { queryParams: { notice: 'password-reset' } });

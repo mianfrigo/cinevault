@@ -2,12 +2,11 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { apply, form, FormField, FormRoot } from '@angular/forms/signals';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { MessageModule } from 'primeng/message';
 import { ApiError } from '@core/models';
 import { AuthApi } from './auth.api';
 import { failureMessage } from '@shared/utils/failure-message';
 import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.component';
-import { FocusOnDirective } from '@shared/directives/focus-on.directive';
+import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { emailRules } from '@shared/validators/auth.rules';
 
@@ -19,21 +18,16 @@ import { emailRules } from '@shared/validators/auth.rules';
     FormRoot,
     ButtonModule,
     InputTextModule,
-    MessageModule,
     AuthFieldComponent,
-    FocusOnDirective,
+    FormNoteComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'grid gap-4' },
   template: `
     @if (done()) {
-      <p-message severity="success" role="status"
-        >If that account needs verifying, we sent a new link.</p-message
-      >
+      <cv-form-note [note]="sentNote" />
     } @else {
-      @if (problem(); as p) {
-        <p-message severity="error" role="alert" [cvFocusOn]="p">{{ p.text }}</p-message>
-      }
+      <cv-form-note [note]="problem()" />
       <form [formRoot]="resendForm" class="grid gap-4">
         <cv-auth-field label="Email" controlId="email" [field]="resendForm.email">
           <input
@@ -59,8 +53,12 @@ import { emailRules } from '@shared/validators/auth.rules';
 export class ResendFormComponent {
   private readonly authApi = inject(AuthApi);
 
+  protected readonly sentNote: Note = {
+    kind: 'success',
+    text: 'If that account needs verifying, we sent a new link.',
+  };
   protected readonly done = signal(false);
-  protected readonly problem = signal<{ text: string } | null>(null);
+  protected readonly problem = signal<Note | null>(null);
 
   private readonly model = signal({ email: '' });
   protected readonly resendForm = form(this.model, (path) => apply(path.email, emailRules), {
@@ -72,7 +70,7 @@ export class ResendFormComponent {
           await this.authApi.resendVerification(f.email().value().trim());
           this.done.set(true);
         } catch (e) {
-          this.problem.set({ text: failureMessage(e as ApiError) });
+          this.problem.set({ kind: 'error', text: failureMessage(e as ApiError) });
         }
       },
     },

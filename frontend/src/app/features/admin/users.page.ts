@@ -1,11 +1,10 @@
-import { DatePipe, isPlatformBrowser, ViewportScroller } from '@angular/common';
+import { DatePipe, DOCUMENT, isPlatformBrowser, ViewportScroller } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   effect,
-  ElementRef,
   inject,
   Injector,
   PLATFORM_ID,
@@ -27,6 +26,8 @@ import { ToastModule } from 'primeng/toast';
 import { AuthStore } from '@core/auth/auth.store';
 import { Role, UserDto } from '@core/models';
 import { initials } from '@shared/utils/initials';
+import { plural } from '@shared/utils/plural';
+import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
 import { PaginatorComponent } from '@shared/components/paginator/paginator.component';
 import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
 import { adminFailure } from './admin.messages';
@@ -84,6 +85,7 @@ const USER_CELL = CELL + ' md:w-full md:max-w-0 max-md:min-w-0 max-md:[grid-area
     SkeletonModule,
     TableModule,
     ToastModule,
+    PageHeaderComponent,
     PaginatorComponent,
     StateBlockComponent,
     RoleSelectComponent,
@@ -93,10 +95,7 @@ const USER_CELL = CELL + ' md:w-full md:max-w-0 max-md:min-w-0 max-md:[grid-area
   providers: [UsersPageStore, MessageService, ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="mb-8">
-      <h1 #heading tabindex="-1" class="text-h1 text-fg outline-none">Users</h1>
-      <p class="mt-2 text-sm text-fg-3">Change roles, block access, or remove accounts.</p>
-    </header>
+    <cv-page-header title="Users" lead="Change roles, block access, or remove accounts." />
 
     <div class="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
       <div class="w-full md:max-w-110">
@@ -278,7 +277,8 @@ export default class UsersPage {
   private readonly scroller = inject(ViewportScroller);
   private readonly injector = inject(Injector);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
-  private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
+  private readonly heading = viewChild.required(PageHeaderComponent);
+  private readonly doc = inject(DOCUMENT);
 
   protected readonly initials = initials;
   protected readonly skeletonRows = SKELETON_ROWS;
@@ -321,7 +321,7 @@ export default class UsersPage {
   protected readonly count = computed(() => {
     if (this.store.status() === 'error' || this.store.items().length === 0) return '';
     const n = this.store.total();
-    return `${n} ${n === 1 ? 'user' : 'users'}`;
+    return `${n} ${plural(n, 'user')}`;
   });
 
   constructor() {
@@ -385,7 +385,7 @@ export default class UsersPage {
     }
     this.toast(`Deleted ${user.name} and their favorites.`);
     // The Delete button is gone with its row: the keyboard goes to the page heading rather than to the body.
-    this.focusLater(this.heading().nativeElement);
+    this.focusLater(this.heading());
   }
 
   /** Shows the failure of a change in the toast. True when there was one ('BUSY' sent nothing: say nothing). */
@@ -410,14 +410,16 @@ export default class UsersPage {
    * focus back on whatever had it once the request has ended and the control is enabled again.
    */
   private async keepFocus(task: () => Promise<unknown>): Promise<void> {
-    const doc = this.heading().nativeElement.ownerDocument;
+    const doc = this.doc;
     const active = doc.activeElement as HTMLElement | null;
     await task();
     if (active && active !== doc.body) this.focusLater(active);
   }
 
-  private focusLater(el: HTMLElement): void {
+  private focusLater(target: { focus(): void; isConnected?: boolean }): void {
     if (!this.browser) return;
-    afterNextRender(() => (el.isConnected ? el.focus() : undefined), { injector: this.injector });
+    afterNextRender(() => (target.isConnected !== false ? target.focus() : undefined), {
+      injector: this.injector,
+    });
   }
 }

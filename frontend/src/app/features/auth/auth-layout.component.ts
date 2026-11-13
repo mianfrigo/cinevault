@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LogoComponent } from '@shared/components/logo/logo.component';
+import { TmdbCreditComponent } from '@shared/components/tmdb-credit/tmdb-credit.component';
 import { AUTH_ART, AuthArtComponent, AuthArtVariant } from './auth-art.component';
 
 /**
@@ -11,7 +12,7 @@ import { AUTH_ART, AuthArtComponent, AuthArtVariant } from './auth-art.component
  */
 @Component({
   selector: 'cv-auth-layout',
-  imports: [RouterLink, LogoComponent, AuthArtComponent],
+  imports: [RouterLink, LogoComponent, AuthArtComponent, TmdbCreditComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   // Controls are 44px here on every width (the preset drops them to 40px from 1024px; the input token is already resolved at :root). Inline: a utility per
   // custom property would add CSS to the initial stylesheet for two rules only this layout needs.
@@ -34,7 +35,7 @@ import { AUTH_ART, AuthArtComponent, AuthArtVariant } from './auth-art.component
         <div class="[&_a]:min-h-11"><cv-logo /></div>
         <a
           [routerLink]="back() === 'login' ? '/login' : '/'"
-          class="inline-flex min-h-11 items-center font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-current"
+          class="link-underline inline-flex min-h-11 items-center"
           >{{ back() === 'login' ? 'Back to log in' : 'Back to site' }}</a
         >
       </div>
@@ -67,9 +68,7 @@ import { AUTH_ART, AuthArtComponent, AuthArtVariant } from './auth-art.component
           <ng-content />
         </div>
       </div>
-      <p class="max-w-[60ch] text-label text-fg-3">
-        This product uses the TMDB API but is not endorsed or certified by TMDB.
-      </p>
+      <cv-tmdb-credit class="max-w-[60ch] text-label text-fg-3" />
     </div>
   `,
 })

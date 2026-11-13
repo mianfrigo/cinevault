@@ -70,9 +70,7 @@ const SWIPE_PX = 50;
                 [class.scale-105]="!active"
               />
               <div class="hero-scrim absolute inset-0"></div>
-              <div
-                class="relative mx-auto flex h-full max-w-site items-end px-6 pb-18 md:px-8 xl:px-12"
-              >
+              <div class="site-gutter relative flex h-full items-end pb-18">
                 <div class="max-w-[560px]">
                   <h2 class="text-hero font-semibold text-fg" [class.animate-hero-rise]="active">
                     {{ t.title }}
@@ -120,9 +118,7 @@ const SWIPE_PX = 50;
           }
         </div>
 
-        <div
-          class="absolute inset-x-0 bottom-3 z-10 mx-auto flex max-w-site items-center justify-between px-6 md:px-8 xl:px-12"
-        >
+        <div class="site-gutter absolute inset-x-0 bottom-3 z-10 flex items-center justify-between">
           <div class="flex gap-2" role="group" aria-label="Choose slide">
             @for (t of slides(); track t.mediaType + t.tmdbId; let i = $index) {
               <button

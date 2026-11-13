@@ -8,11 +8,11 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CarouselModule } from 'primeng/carousel';
 import { TitleSummary } from '@core/models';
 import { PosterCardComponent } from '@shared/components/poster-card/poster-card.component';
+import { SectionHeaderComponent } from '@shared/components/section-header/section-header.component';
 import { RowItemDirective } from '@shared/directives/row-item.directive';
 
 /**
@@ -26,46 +26,42 @@ import { RowItemDirective } from '@shared/directives/row-item.directive';
  */
 @Component({
   selector: 'cv-poster-row',
-  imports: [NgTemplateOutlet, RouterLink, ButtonModule, CarouselModule, PosterCardComponent],
+  imports: [
+    NgTemplateOutlet,
+    ButtonModule,
+    CarouselModule,
+    PosterCardComponent,
+    SectionHeaderComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
     <section class="group/row [--gutter:1.5rem] md:[--gutter:2rem] xl:[--gutter:3rem]">
       <p-carousel #carousel [autoSize]="true" [spacing]="0" snapType="proximity">
-        <div class="mb-2 flex items-center justify-between gap-4">
-          <h2 class="text-h2 text-fg">{{ heading() }}</h2>
-          <div class="flex items-center gap-2">
-            <div
-              class="hidden gap-1 opacity-0 transition-opacity duration-200 group-focus-within/row:opacity-100 group-hover/row:opacity-100 md:pointer-fine:flex"
-            >
-              <p-button
-                icon="pi pi-chevron-left"
-                severity="secondary"
-                variant="outlined"
-                size="small"
-                [ariaLabel]="'Scroll ' + heading() + ' left'"
-                [disabled]="carousel.isPrevDisabled()"
-                (onClick)="scroll(-1)"
-              />
-              <p-button
-                icon="pi pi-chevron-right"
-                severity="secondary"
-                variant="outlined"
-                size="small"
-                [ariaLabel]="'Scroll ' + heading() + ' right'"
-                [disabled]="carousel.isNextDisabled()"
-                (onClick)="scroll(1)"
-              />
-            </div>
-            @if (seeAllLink(); as link) {
-              <a
-                [routerLink]="link"
-                class="inline-flex min-h-11 items-center gap-0.5 px-1 text-sm font-medium text-fg-3 transition-colors duration-150 hover:text-fg lg:min-h-10"
-                >See all<i class="pi pi-angle-right" aria-hidden="true"></i
-              ></a>
-            }
+        <cv-section-header class="mb-2" [heading]="heading()" [link]="seeAllLink()">
+          <div
+            class="hidden gap-1 opacity-0 transition-opacity duration-200 group-focus-within/row:opacity-100 group-hover/row:opacity-100 md:pointer-fine:flex"
+          >
+            <p-button
+              icon="pi pi-chevron-left"
+              severity="secondary"
+              variant="outlined"
+              size="small"
+              [ariaLabel]="'Scroll ' + heading() + ' left'"
+              [disabled]="carousel.isPrevDisabled()"
+              (onClick)="scroll(-1)"
+            />
+            <p-button
+              icon="pi pi-chevron-right"
+              severity="secondary"
+              variant="outlined"
+              size="small"
+              [ariaLabel]="'Scroll ' + heading() + ' right'"
+              [disabled]="carousel.isNextDisabled()"
+              (onClick)="scroll(1)"
+            />
           </div>
-        </div>
+        </cv-section-header>
         <!-- Full-bleed track: negative margin and padding use the page gutter, and the ends fade out. -->
         <p-carousel-content
           #track

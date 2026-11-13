@@ -111,7 +111,12 @@ function factsOf(t: TitleDetail, typeName: string, length: string): [string, str
               class="absolute inset-x-0 top-0 -z-10 h-90 overflow-hidden md:h-130"
             >
               @if (t.backdropUrl) {
-                <img [src]="t.backdropUrl" alt="" class="size-full object-cover opacity-80" />
+                <img
+                  [src]="t.backdropUrl"
+                  alt=""
+                  fetchpriority="high"
+                  class="size-full object-cover opacity-80"
+                />
               }
               <div class="title-scrim absolute inset-0"></div>
             </div>

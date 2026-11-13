@@ -7,12 +7,13 @@ import {
   effect,
   inject,
   Injector,
+  linkedSignal,
   PLATFORM_ID,
   signal,
   untracked,
   viewChild,
 } from '@angular/core';
-import { form, FormField, maxLength } from '@angular/forms/signals';
+import { applyEach, disabled, form, FormField, maxLength } from '@angular/forms/signals';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
@@ -25,7 +26,7 @@ import { TableModule } from 'primeng/table';
 import { ToastModule } from 'primeng/toast';
 import { AuthStore } from '@core/auth/auth.store';
 import { Role, UserDto } from '@core/models';
-import { initials } from '@shared/utils/initials';
+import { InitialsPipe } from '@shared/pipes/initials.pipe';
 import { plural } from '@shared/utils/plural';
 import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
 import { PaginatorComponent } from '@shared/components/paginator/paginator.component';
@@ -75,6 +76,7 @@ const USER_CELL = CELL + ' md:w-full md:max-w-0 max-md:min-w-0 max-md:[grid-area
   selector: 'cv-users-page',
   imports: [
     DatePipe,
+    InitialsPipe,
     FormField,
     AvatarModule,
     ButtonModule,
@@ -179,7 +181,7 @@ const USER_CELL = CELL + ' md:w-full md:max-w-0 max-md:min-w-0 max-md:[grid-area
               <td [class]="userCell">
                 <div class="flex min-w-0 items-center gap-3">
                   <p-avatar
-                    [label]="initials(row.user.name)"
+                    [label]="row.user.name | initials"
                     shape="circle"
                     aria-hidden="true"
                     [class.opacity-60]="row.blocked"
@@ -202,11 +204,9 @@ const USER_CELL = CELL + ' md:w-full md:max-w-0 max-md:min-w-0 max-md:[grid-area
                 <span class="mb-1 block text-micro text-fg-3 md:hidden">Role</span>
                 <span class="block w-fit" [attr.title]="row.own ? reason.role : null">
                   <cv-role-select
-                    [role]="row.user.role"
+                    [formField]="roleForm[row.id]"
                     [label]="row.roleLabel"
-                    [disabled]="row.own || row.busy"
-                    [busy]="row.busy"
-                    (roleChange)="changeRole(row.user, $event)"
+                    (valueChange)="changeRole(row.user, $event)"
                   />
                 </span>
               </td>
@@ -280,7 +280,6 @@ export default class UsersPage {
   private readonly heading = viewChild.required(PageHeaderComponent);
   private readonly doc = inject(DOCUMENT);
 
-  protected readonly initials = initials;
   protected readonly skeletonRows = SKELETON_ROWS;
   protected readonly tableClass = TABLE;
   protected readonly th = TH;
@@ -316,6 +315,29 @@ export default class UsersPage {
       };
     });
   });
+
+  /**
+   * The role each select shows, by user id: the confirmed role of the row. A pick is written here by the
+   * select's field; while its request runs the pick stays, and once it ends (answered or refused) the row's
+   * real role replaces it, so a refused change never leaves the wrong role on screen.
+   */
+  private readonly roleValues = linkedSignal<
+    { items: UserDto[]; busy: string[] },
+    Record<string, Role>
+  >({
+    source: () => ({ items: this.store.items(), busy: this.store.busyIds() }),
+    computation: ({ items, busy }, previous) =>
+      Object.fromEntries(
+        items.map((u) => [u.id, (busy.includes(u.id) && previous?.value[u.id]) || u.role]),
+      ),
+  });
+  /** Rows whose role select is off: your own (the API refuses it) and the one with a request running. */
+  private readonly lockedIds = computed(
+    () => new Set(this.rows().flatMap((r) => (r.own || r.busy ? [r.id] : []))),
+  );
+  protected readonly roleForm = form(this.roleValues, (p) =>
+    applyEach(p, (role) => disabled(role, { when: ({ key }) => this.lockedIds().has(key()) })),
+  );
 
   /** "12 users" (the matches of the search, all pages); empty while there is nothing to count yet. */
   protected readonly count = computed(() => {

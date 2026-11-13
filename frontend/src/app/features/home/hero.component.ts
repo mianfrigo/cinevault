@@ -14,6 +14,7 @@ import { ButtonModule } from 'primeng/button';
 import { FavoritesStore } from '@core/favorites/favorites.store';
 import { TitleSummary } from '@core/models';
 import { ScoreComponent } from '@shared/components/score/score.component';
+import { mediaTypeLabel } from '@shared/utils/title-format';
 
 const SWIPE_PX = 50;
 
@@ -49,7 +50,13 @@ const SWIPE_PX = 50;
           (pointerup)="swipeEnd($event)"
           (pointercancel)="swipeX = null"
         >
-          @for (t of slides(); track t.mediaType + t.tmdbId; let i = $index; let first = $first) {
+          @for (
+            row of slideRows();
+            track row.t.mediaType + row.t.tmdbId;
+            let i = $index;
+            let first = $first
+          ) {
+            @let t = row.t;
             @let active = i === current();
             <article
               role="group"
@@ -86,7 +93,7 @@ const SWIPE_PX = 50;
                     @if (t.year !== null) {
                       <span>{{ t.year }}</span>
                     }
-                    <span>{{ t.mediaType === 'movie' ? 'Movie' : 'Series' }}</span>
+                    <span>{{ row.typeName }}</span>
                   </div>
                   @if (t.overview) {
                     <p
@@ -104,11 +111,11 @@ const SWIPE_PX = 50;
                   >
                     <p-button label="Details" [routerLink]="['/title', t.mediaType, t.tmdbId]" />
                     <p-button
-                      [label]="saved(t) ? 'In My List' : 'My List'"
-                      [icon]="saved(t) ? 'pi pi-check' : 'pi pi-plus'"
+                      [label]="row.listLabel"
+                      [icon]="row.listIcon"
                       severity="secondary"
                       variant="outlined"
-                      [pt]="listPt()[i]"
+                      [pt]="row.listPt"
                       (onClick)="toggleSaved(t)"
                     />
                   </div>
@@ -211,8 +218,18 @@ export class HeroComponent {
   protected readonly pausePt = computed(() => ({
     root: { 'aria-pressed': String(this.paused()) },
   }));
-  protected readonly listPt = computed(() =>
-    this.slides().map((t) => ({ root: { 'aria-pressed': String(this.saved(t)) } })),
+  /** Each slide with what its template shows, so the template calls nothing: type, My List label, icon and pt. */
+  protected readonly slideRows = computed(() =>
+    this.slides().map((t) => {
+      const saved = this.favorites.isFavorite(t.mediaType, t.tmdbId);
+      return {
+        t,
+        typeName: mediaTypeLabel(t.mediaType),
+        listLabel: saved ? 'In My List' : 'My List',
+        listIcon: saved ? 'pi pi-check' : 'pi pi-plus',
+        listPt: { root: { 'aria-pressed': String(saved) } },
+      };
+    }),
   );
 
   protected swipeX: number | null = null;
@@ -256,10 +273,6 @@ export class HeroComponent {
     const dx = e.clientX - this.swipeX;
     this.swipeX = null;
     if (Math.abs(dx) > SWIPE_PX) this.step(dx < 0 ? 1 : -1);
-  }
-
-  protected saved(t: TitleSummary): boolean {
-    return this.favorites.isFavorite(t.mediaType, t.tmdbId);
   }
 
   protected toggleSaved(t: TitleSummary): void {

@@ -1,5 +1,13 @@
-import { ChangeDetectionStrategy, Component, input, linkedSignal, output } from '@angular/core';
-import { disabled, form, FormField } from '@angular/forms/signals';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  input,
+  model,
+  output,
+} from '@angular/core';
+import { disabled, form, FormField, FormValueControl } from '@angular/forms/signals';
 import { SelectModule } from 'primeng/select';
 import { Role } from '@core/models';
 
@@ -9,9 +17,10 @@ const OPTIONS: { label: string; value: Role }[] = [
 ];
 
 /**
- * The role of one user. A Signal Forms field of its own (the row has no form), so the p-select binds with
- * `formField`. The choice is only a request: the parent sends it and passes the role the API confirms, and
- * when `busy` ends the select shows that role again, so a refused change never leaves the wrong one on screen.
+ * The role of one user, a Signal Forms control (`[formField]`, or `[(value)]` on its own) over PrimeNG
+ * `p-select`. PrimeNG only takes its value through a value accessor, so the control keeps a field of its
+ * own over `value` and mirrors `disabled` onto it. The pick is only a request: whoever owns the value
+ * (the users page) sends it and writes the confirmed role back, which is how a refused change reverts.
  */
 @Component({
   selector: 'cv-role-select',
@@ -19,7 +28,7 @@ const OPTIONS: { label: string; value: Role }[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <p-select
-      [formField]="f.role"
+      [formField]="inner"
       [options]="options"
       optionLabel="label"
       optionValue="value"
@@ -27,23 +36,24 @@ const OPTIONS: { label: string; value: Role }[] = [
       appendTo="body"
       class="w-26 [--p-select-sm-font-size:0.875rem] max-md:w-34 [&_.p-select]:h-8 [&_.p-select]:max-md:h-11"
       [ariaLabel]="label()"
-      (onChange)="roleChange.emit($event.value)"
+      (onBlur)="touch.emit()"
     />
   `,
 })
-export class RoleSelectComponent {
-  readonly role = input.required<Role>();
+export class RoleSelectComponent implements FormValueControl<Role> {
+  readonly value = model.required<Role>();
   /** Names the control for a screen reader: "Role for Ada Lovelace". */
   readonly label = input.required<string>();
   readonly disabled = input(false);
-  readonly busy = input(false);
-  readonly roleChange = output<Role>();
+  /** Blur of the select: marks the bound field as touched. */
+  readonly touch = output<void>();
 
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly options = OPTIONS;
-  // While the request is in flight the choice stays; once it ends the select shows the row's real role again.
-  private readonly model = linkedSignal<{ role: Role; busy: boolean }, { role: Role }>({
-    source: () => ({ role: this.role(), busy: this.busy() }),
-    computation: (src, previous) => (src.busy && previous ? previous.value : { role: src.role }),
-  });
-  protected readonly f = form(this.model, (p) => disabled(p.role, { when: () => this.disabled() }));
+  protected readonly inner = form(this.value, (p) => disabled(p, { when: () => this.disabled() }));
+
+  /** Focuses the select's combobox (the host and the p-select wrapper are not focusable). */
+  focus(options?: FocusOptions): void {
+    this.host.nativeElement.querySelector<HTMLElement>('[role=combobox]')?.focus(options);
+  }
 }

@@ -19,7 +19,6 @@ import {
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
 import { AuthStore } from '@core/auth/auth.store';
 import { ApiError } from '@core/models';
 import { failureMessage } from '@shared/utils/failure-message';
@@ -37,6 +36,7 @@ import { AccountApi } from './account.api';
 import { PASSWORD_WRONG } from './account.messages';
 import { AccountSectionComponent } from './account-section.component';
 import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
+import { PasswordInputComponent } from '@shared/components/password-input/password-input.component';
 import { DeleteAccountComponent } from './delete-account.component';
 
 /** /dashboard/account: name, password, email and the delete-account flow. Every form uses Signal Forms. */
@@ -47,7 +47,7 @@ import { DeleteAccountComponent } from './delete-account.component';
     FormRoot,
     ButtonModule,
     InputTextModule,
-    PasswordModule,
+    PasswordInputComponent,
     AuthFieldComponent,
     AccountSectionComponent,
     FormNoteComponent,
@@ -92,12 +92,9 @@ import { DeleteAccountComponent } from './delete-account.component';
           controlId="old-password"
           [field]="passwordForm.oldPassword"
         >
-          <p-password
+          <cv-password-input
             inputId="old-password"
             autocomplete="current-password"
-            [feedback]="false"
-            [toggleMask]="true"
-            [fluid]="true"
             [formField]="passwordForm.oldPassword"
           />
         </cv-auth-field>
@@ -107,12 +104,9 @@ import { DeleteAccountComponent } from './delete-account.component';
           hint="At least 10 characters."
           [field]="passwordForm.newPassword"
         >
-          <p-password
+          <cv-password-input
             inputId="new-password"
             autocomplete="new-password"
-            [feedback]="false"
-            [toggleMask]="true"
-            [fluid]="true"
             [formField]="passwordForm.newPassword"
           />
         </cv-auth-field>
@@ -121,12 +115,9 @@ import { DeleteAccountComponent } from './delete-account.component';
           controlId="confirm-password"
           [field]="passwordForm.confirm"
         >
-          <p-password
+          <cv-password-input
             inputId="confirm-password"
             autocomplete="new-password"
-            [feedback]="false"
-            [toggleMask]="true"
-            [fluid]="true"
             [formField]="passwordForm.confirm"
           />
         </cv-auth-field>
@@ -163,12 +154,9 @@ import { DeleteAccountComponent } from './delete-account.component';
           controlId="email-password"
           [field]="emailForm.password"
         >
-          <p-password
+          <cv-password-input
             inputId="email-password"
             autocomplete="current-password"
-            [feedback]="false"
-            [toggleMask]="true"
-            [fluid]="true"
             [formField]="emailForm.password"
           />
         </cv-auth-field>

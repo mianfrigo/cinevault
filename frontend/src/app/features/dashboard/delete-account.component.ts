@@ -14,7 +14,6 @@ import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
 import { AuthStore } from '@core/auth/auth.store';
 import { ApiError } from '@core/models';
 import { failureMessage } from '@shared/utils/failure-message';
@@ -25,6 +24,7 @@ import { AccountApi } from './account.api';
 import { PASSWORD_WRONG } from './account.messages';
 import { AccountSectionComponent } from './account-section.component';
 import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
+import { PasswordInputComponent } from '@shared/components/password-input/password-input.component';
 
 const CONFIRM_WORD = 'DELETE';
 const LAST_ADMIN =
@@ -43,7 +43,7 @@ const LAST_ADMIN =
     ButtonModule,
     DialogModule,
     InputTextModule,
-    PasswordModule,
+    PasswordInputComponent,
     AuthFieldComponent,
     AccountSectionComponent,
     FormNoteComponent,
@@ -101,12 +101,9 @@ const LAST_ADMIN =
           />
         </cv-auth-field>
         <cv-auth-field label="Password" controlId="delete-password" [field]="deleteForm.password">
-          <p-password
+          <cv-password-input
             inputId="delete-password"
             autocomplete="current-password"
-            [feedback]="false"
-            [toggleMask]="true"
-            [fluid]="true"
             [formField]="deleteForm.password"
           />
         </cv-auth-field>

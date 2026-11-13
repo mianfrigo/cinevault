@@ -143,6 +143,35 @@ describe('Admin users page', () => {
     http.match(() => true);
   });
 
+  it('a refused role change keeps the pick while it runs, then reverts the select to the real role', async () => {
+    const { row, patch, conflict, seeText, settle, harness, http } = await open();
+    const combobox = () => row('User 2').querySelector<HTMLElement>('[role=combobox]')!;
+    combobox().click();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+    Array.from(document.body.querySelectorAll<HTMLElement>('[role=option]'))
+      .find((o) => o.textContent?.trim() === 'Admin')!
+      .click();
+    harness.detectChanges();
+
+    const req = await patch('u2');
+    expect(req.request.body).toEqual({ role: 'ADMIN' });
+    // In flight: the choice stays on screen and the select is off.
+    harness.detectChanges();
+    expect(combobox().textContent).toContain('Admin');
+    expect(combobox().getAttribute('aria-disabled')).toBe('true');
+
+    const { body, init } = conflict('LAST_ADMIN');
+    req.flush(body, init);
+    await seeText(LAST_ADMIN_MESSAGE);
+    await settle();
+    expect(combobox().textContent).toContain('User');
+    expect(combobox().textContent).not.toContain('Admin');
+    expect(combobox().getAttribute('aria-disabled')).not.toBe('true');
+    http.match(() => true);
+  });
+
   it('a LAST_ADMIN error leaves the row unchanged and shows the message', async () => {
     const items = [mine, person(2, { role: 'ADMIN' })];
     const { row, button, patch, conflict, seeText, text, http } = await open(items);

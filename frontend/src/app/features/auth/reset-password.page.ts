@@ -11,7 +11,6 @@ import { form, FormField, FormRoot, required, apply } from '@angular/forms/signa
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
-import { PasswordModule } from 'primeng/password';
 import { ApiError } from '@core/models';
 import { AuthApi } from './auth.api';
 import { failureMessage } from '@shared/utils/failure-message';
@@ -21,6 +20,7 @@ import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { confirmMatches, newPasswordRules } from '@shared/validators/auth.rules';
 import { queryText } from '@shared/utils/query-text';
+import { PasswordInputComponent } from '@shared/components/password-input/password-input.component';
 
 type View = 'form' | 'expired' | 'invalid';
 
@@ -38,7 +38,7 @@ const HEADINGS: Record<View, string> = {
     FormRoot,
     ButtonModule,
     MessageModule,
-    PasswordModule,
+    PasswordInputComponent,
     AuthLayoutComponent,
     AuthFieldComponent,
     FormNoteComponent,
@@ -61,22 +61,16 @@ const HEADINGS: Record<View, string> = {
               hint="At least 10 characters, at most 128."
               [field]="resetForm.password"
             >
-              <p-password
+              <cv-password-input
                 inputId="password"
                 autocomplete="new-password"
-                [feedback]="false"
-                [toggleMask]="true"
-                [fluid]="true"
                 [formField]="resetForm.password"
               />
             </cv-auth-field>
             <cv-auth-field label="Confirm password" controlId="confirm" [field]="resetForm.confirm">
-              <p-password
+              <cv-password-input
                 inputId="confirm"
                 autocomplete="new-password"
-                [feedback]="false"
-                [toggleMask]="true"
-                [fluid]="true"
                 [formField]="resetForm.confirm"
               />
             </cv-auth-field>

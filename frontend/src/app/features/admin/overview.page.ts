@@ -7,7 +7,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { ApiClient } from '@core/api/api-client';
 import { AuthStore } from '@core/auth/auth.store';
 import { AdminOverview } from '@core/models';
-import { initials } from '@shared/utils/initials';
+import { InitialsPipe } from '@shared/pipes/initials.pipe';
 import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
 import { SectionHeaderComponent } from '@shared/components/section-header/section-header.component';
 import { StateBlockComponent } from '@shared/components/state-block/state-block.component';
@@ -21,6 +21,7 @@ import { UserStatusComponent } from './user-status.component';
   selector: 'cv-overview-page',
   imports: [
     DatePipe,
+    InitialsPipe,
     RouterLink,
     AvatarModule,
     SkeletonModule,
@@ -75,7 +76,7 @@ import { UserStatusComponent } from './user-status.component';
           <ul>
             @for (user of data.recentSignups; track user.id) {
               <li class="flex items-center gap-3 border-t border-line-soft py-3 last:border-b">
-                <p-avatar [label]="initials(user.name)" shape="circle" aria-hidden="true" />
+                <p-avatar [label]="user.name | initials" shape="circle" aria-hidden="true" />
                 <div class="min-w-0 flex-1">
                   <b class="block truncate leading-[1.3] font-medium">{{ user.name }}</b>
                   <small class="block truncate text-label text-fg-3">{{ user.email }}</small>
@@ -127,8 +128,6 @@ import { UserStatusComponent } from './user-status.component';
 export default class OverviewPage {
   private readonly api = inject(ApiClient);
   private readonly auth = inject(AuthStore);
-
-  protected readonly initials = initials;
 
   // `params` is undefined without a session (the server, or a visitor mid logout): the resource stays idle.
   protected readonly overview = rxResource({

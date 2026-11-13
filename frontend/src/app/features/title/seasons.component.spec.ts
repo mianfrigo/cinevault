@@ -53,6 +53,26 @@ describe('SeasonsComponent', () => {
     http.expectNone(season(2));
   });
 
+  it('labels each panel with its name (or "Season N") and a singular or plural episode count', () => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(SeasonsComponent);
+    fixture.componentRef.setInput('tvId', 1399);
+    fixture.componentRef.setInput('seasons', [
+      { number: 1, name: 'Specials', episodeCount: 1 },
+      { number: 2, name: '', episodeCount: 8 },
+    ]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const headers = Array.from(el.querySelectorAll('p-accordion-header')).map((h) =>
+      h.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    expect(headers).toEqual(['Specials 1 episode', 'Season 2 8 episodes']);
+    http.expectOne(season(1)).flush(season1);
+  });
+
   it('shows a loading state, then an error with Retry for a season that fails', async () => {
     const fixture = render();
     const el = fixture.nativeElement as HTMLElement;

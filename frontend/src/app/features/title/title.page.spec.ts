@@ -106,6 +106,13 @@ describe('Title page', () => {
     http.verify();
   });
 
+  it('loads the backdrop, the largest picture above the fold, with a high fetch priority', async () => {
+    const { el } = await open(movie);
+    const backdrop = el.querySelector(`img[src="${movie.backdropUrl}"]`);
+    expect(backdrop).not.toBeNull();
+    expect(backdrop?.getAttribute('fetchpriority')).toBe('high');
+  });
+
   it('shows "N seasons" for a series and loads the first season only', async () => {
     const { http, el, request, next, settle } = await setup('/title/tv/1399', [MessageService]);
     http.expectOne('/api/v1/config').flush(config(false));

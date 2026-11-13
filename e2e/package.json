@@ -1,0 +1,18 @@
+{
+  "name": "cinevault-e2e",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end smoke and Lighthouse run against an isolated local stack (own ports, database and Redis index).",
+  "scripts": {
+    "test": "playwright test",
+    "stack:up": "node stack.mjs up",
+    "stack:down": "node stack.mjs down",
+    "lighthouse": "node lighthouse.mjs",
+    "unit": "node --test mailpit.test.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/node": "^24.0.0",
+    "lighthouse": "13.6.0"
+  }
+}

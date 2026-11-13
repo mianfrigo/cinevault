@@ -6,6 +6,7 @@ import {
   type Page,
 } from '@playwright/test';
 import { deleteMessagesTo, waitForVerifyLink } from './mailpit.mjs';
+import { WEB_ORIGIN } from './stack.mjs';
 import {
   FAILING_ID,
   FIXTURE_MOVIE_ID,
@@ -14,7 +15,7 @@ import {
   NOT_FOUND_ID,
 } from './stub-tmdb.mjs';
 
-const BASE = 'http://localhost:4300';
+const BASE = WEB_ORIGIN;
 const TITLE_PATH = `/title/movie/${FIXTURE_MOVIE_ID}`;
 
 // One user per run. Fake address on a reserved domain; the name carries the suffix so the admin
@@ -54,8 +55,20 @@ const test = base.extend({
   },
 });
 
+/**
+ * Opens a page and waits until the app has booted in the browser: its first call is the session
+ * restore (POST /auth/refresh). Typing earlier would be wiped when hydration rebuilds the form.
+ */
+async function gotoBooted(page: Page, path: string) {
+  const booted = page.waitForResponse(
+    (r) => r.url().endsWith('/api/v1/auth/refresh') && r.request().method() === 'POST',
+  );
+  await page.goto(path);
+  await booted;
+}
+
 async function logIn(page: Page, email: string, password: string) {
-  await page.goto('/login');
+  await gotoBooted(page, '/login');
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Log in' }).click();
@@ -96,7 +109,7 @@ test.describe('user journey', () => {
     request,
   }) => {
     await test.step('register through the UI', async () => {
-      await page.goto('/register');
+      await gotoBooted(page, '/register');
       await page.getByLabel('Name').fill(user.name);
       await page.getByLabel('Email', { exact: true }).fill(user.email);
       await page.getByLabel('Password', { exact: true }).fill(user.password);
@@ -145,7 +158,11 @@ test.describe('user journey', () => {
       expect(ssr.status()).toBe(200);
       const html = await ssr.text();
       expect(html).toContain(`<title>${FIXTURE_MOVIE_TITLE} (2019) | Cinevault</title>`);
-      expect(html).toContain(FIXTURE_MOVIE_OVERVIEW);
+      // Without JavaScript the BODY already holds the title and the overview. The head's description
+      // and the transfer-state script also carry the overview, so they are cut out first.
+      const body = html.slice(html.indexOf('<body')).replace(/<script[\s\S]*?<\/script>/g, '');
+      expect(body).toMatch(new RegExp(`<h1[^>]*>\\s*${FIXTURE_MOVIE_TITLE}\\s*</h1>`));
+      expect(body).toContain(FIXTURE_MOVIE_OVERVIEW);
 
       await page.goto('/');
       // PRD section 7: the TMDB attribution is on every public page.
@@ -185,13 +202,21 @@ test.describe('user journey', () => {
   });
 });
 
+let userContext: BrowserContext | undefined;
+
 test.describe('admin blocks the user', () => {
+  // A step that throws must not leave the second browser context open.
+  test.afterEach(async () => {
+    await userContext?.close().catch(() => undefined);
+  });
+
   test('the blocked user is rejected on the very next API call and cannot log in again', async ({
     browser,
     page,
+    request,
   }) => {
     // 1. The user logs in BEFORE the block, in a second browser context: UI session plus an access token.
-    const userContext = await browser.newContext({ baseURL: BASE });
+    userContext = await browser.newContext({ baseURL: BASE });
     await stubExternal(userContext);
     const userPage = await userContext.newPage();
     await logIn(userPage, user.email, user.password);
@@ -240,6 +265,11 @@ test.describe('admin blocks the user', () => {
     await row.getByRole('button', { name: `Delete ${user.name}` }).click();
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(page.getByText(user.email)).toHaveCount(0);
+
+    // 7. The user is really gone: a login now is the generic wrong-credentials answer.
+    const gone = await apiLogin(request, user.email, user.password);
+    expect(gone.status()).toBe(401);
+    expect((await gone.json()).code).toBe('INVALID_CREDENTIALS');
   });
 });
 

@@ -6,7 +6,7 @@
 //   node lighthouse.mjs [runs] [--4g]   (default 3 runs per page; the median is reported;
 //                                        --4g: 9 Mbps, 170 ms RTT, 4x CPU instead of the default Slow 4G)
 //
-// Needs system Chrome (CHROME_PATH to override) and openssl (Git for Windows ships one) for a throwaway cert.
+// Needs Google Chrome (found by chrome-launcher; CHROME_PATH to override) and openssl (Git for Windows ships one) for a throwaway cert.
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:https';
@@ -15,15 +15,14 @@ import { fileURLToPath } from 'node:url';
 import { crc32, deflateSync } from 'node:zlib';
 import { launch } from 'chrome-launcher';
 import lighthouse from 'lighthouse';
-import { startStack, WEB_ORIGIN } from './stack.mjs';
+import { registerCleanup, startStack, WEB_ORIGIN } from './stack.mjs';
 
 const DIR = join(dirname(fileURLToPath(import.meta.url)), '.lighthouse');
 const IMAGE_PORT = 4011;
 const FOUR_G = process.argv.includes('--4g');
+const PROFILE = FOUR_G ? '4g' : 'default';
 const RUNS = Number(process.argv.find((a) => /^[0-9]+$/.test(a)) ?? 3);
 const PAGES = ['/', '/title/movie/603'];
-const CHROME =
-  process.env.CHROME_PATH ?? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 
 /** A smooth gradient PNG of the requested size (small on the wire: the numbers measure our code, not a CDN). */
 function png(w, h) {
@@ -105,6 +104,11 @@ const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 let stack;
 let images;
 let chrome;
+// Ctrl-C or SIGTERM at any point stops the image server and Chrome too (the stack registers its own).
+registerCleanup(async () => {
+  await chrome?.kill();
+  images?.close();
+});
 try {
   // Everything that gets started is torn down by the finally below, whichever step fails.
   images = imageServer();
@@ -114,7 +118,6 @@ try {
   });
   stack = await startStack();
   chrome = await launch({
-    chromePath: CHROME,
     chromeFlags: [
       '--headless=new',
       `--host-resolver-rules=MAP image.tmdb.org 127.0.0.1:${IMAGE_PORT}`,
@@ -143,7 +146,7 @@ try {
         }),
       });
       writeFileSync(
-        join(DIR, `${path === '/' ? 'home' : 'title'}-${i + 1}.json`),
+        join(DIR, `${path === '/' ? 'home' : 'title'}-${PROFILE}-${i + 1}.json`),
         JSON.stringify(lhr),
       );
       const num = (id) => lhr.audits[id].numericValue;

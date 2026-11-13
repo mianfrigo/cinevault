@@ -8,6 +8,13 @@ export function extractVerifyLink(text) {
   return m ? m[0] : null;
 }
 
+/** Only fake recipients on the reserved example.test domain: the mailbox is shared with the dev stack. */
+export function assertTestAddress(address) {
+  if (typeof address !== 'string' || !/^[^\s@]+@example\.test$/i.test(address)) {
+    throw new Error('refusing to touch mail for an address that does not end in @example.test');
+  }
+}
+
 async function json(path, init) {
   const res = await fetch(`${BASE}${path}`, init);
   if (!res.ok)
@@ -17,6 +24,7 @@ async function json(path, init) {
 
 /** Messages to this exact address (search `to:` is a substring match, so the result is filtered again). */
 export async function messagesTo(address) {
+  assertTestAddress(address);
   const { messages } = await json(`/api/v1/search?query=${encodeURIComponent(`to:${address}`)}`);
   return messages.filter((m) =>
     m.To.some((t) => t.Address.toLowerCase() === address.toLowerCase()),
@@ -40,6 +48,7 @@ export async function waitForVerifyLink(address, { timeoutMs = 15_000, stepMs = 
 
 /** Deletes the messages sent to this address (by id) and returns how many. */
 export async function deleteMessagesTo(address) {
+  assertTestAddress(address);
   const ids = (await messagesTo(address)).map((m) => m.ID);
   if (ids.length) {
     await json('/api/v1/messages', {

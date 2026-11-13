@@ -8,11 +8,16 @@
     "stack:up": "node stack.mjs up",
     "stack:down": "node stack.mjs down",
     "lighthouse": "node lighthouse.mjs",
-    "unit": "node --test mailpit.test.mjs"
+    "unit": "node --test mailpit.test.mjs",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",
     "@types/node": "^24.0.0",
-    "lighthouse": "13.6.0"
+    "chrome-launcher": "1.2.3",
+    "lighthouse": "13.6.0",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3"
   }
 }

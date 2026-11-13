@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { WEB_ORIGIN } from './stack.mjs';
 
 // The stack (stub TMDB, API, SSR server, reverse proxy) is started by global-setup.ts on its own
 // ports, database and Redis index; see stack.mjs. System Google Chrome, headless.
@@ -14,7 +15,7 @@ export default defineConfig({
   reporter: [['list']],
   outputDir: 'test-results',
   use: {
-    baseURL: 'http://localhost:4300',
+    baseURL: WEB_ORIGIN,
     channel: 'chrome',
     headless: true,
     trace: 'retain-on-failure',

@@ -16,3 +16,19 @@ test('returns null when there is no verification link', () => {
   assert.equal(extractVerifyLink('reset: http://x/reset-password?token=abc'), null);
   assert.equal(extractVerifyLink(undefined), null);
 });
+
+test('refuses any address that is not on example.test', async () => {
+  const { assertTestAddress, messagesTo, deleteMessagesTo } = await import('./mailpit.mjs');
+  assert.doesNotThrow(() => assertTestAddress('e2e-abc@example.test'));
+  for (const bad of [
+    'me@gmail.com',
+    'x@example.test.evil.com',
+    'a b@example.test',
+    '',
+    undefined,
+  ]) {
+    assert.throws(() => assertTestAddress(bad), /example\.test/);
+  }
+  await assert.rejects(messagesTo('owner@cinevault.local'), /example\.test/);
+  await assert.rejects(deleteMessagesTo('owner@cinevault.local'), /example\.test/);
+});

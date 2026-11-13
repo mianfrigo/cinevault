@@ -89,6 +89,16 @@ describe('HomePage', () => {
     return fixture;
   }
 
+  it('sets the site title and description', () => {
+    load();
+    http.match(() => true);
+
+    expect(document.title).toBe('Cinevault: discover movies and TV shows');
+    expect(
+      document.head.querySelector('meta[name="description"]')?.getAttribute('content'),
+    ).toContain('Browse movies and series');
+  });
+
   it('renders every row when all requests succeed', async () => {
     const fixture = load();
     request('trending', 'movie').flush(trending);

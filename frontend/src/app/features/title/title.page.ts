@@ -20,6 +20,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { CatalogService } from '@core/catalog/catalog.service';
 import { ConfigService } from '@core/config/config.service';
 import { FavoritesStore } from '@core/favorites/favorites.store';
+import { SeoService, pageTitle } from '@core/seo/seo.service';
 import { MediaTypeParam, TitleDetail } from '@core/models';
 import NotFoundComponent from '../../pages/not-found.component';
 import { InitialsPipe } from '@shared/pipes/initials.pipe';
@@ -294,6 +295,7 @@ export default class TitlePage {
   private readonly messages = inject(MessageService);
   private readonly scroller = inject(ViewportScroller);
   private readonly config = inject(ConfigService);
+  private readonly seo = inject(SeoService);
   private readonly page = viewChild.required<ElementRef<HTMLElement>>('page');
 
   // Route inputs. They come from the URL, so they are untrusted and validated in `request`.
@@ -356,6 +358,23 @@ export default class TitlePage {
     effect(() => {
       this.request();
       untracked(() => this.scroller.scrollToPosition([0, 0]));
+    });
+
+    // The head follows the loaded title. "Not found" sets its own (cv-not-found); a failed load is unavailable.
+    effect(() => {
+      const v = this.vm();
+      if (v) {
+        const t = v.title;
+        this.seo.set({
+          title: pageTitle(v.alt),
+          description: t.overview || `Overview, cast and similar titles for ${v.alt} on Cinevault.`,
+          image: t.backdropUrl || t.posterUrl,
+          path: `/title/${t.mediaType}/${t.tmdbId}`,
+          type: t.mediaType === 'tv' ? 'video.tv_show' : 'video.movie',
+        });
+      } else if (this.detail.error() && !this.notFound()) {
+        this.seo.set({ title: pageTitle('Title unavailable'), noindex: true });
+      }
     });
   }
 

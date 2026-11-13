@@ -2,10 +2,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
+import { Router, TitleStrategy, provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { Paged, TitleSummary } from '@core/models';
+import { PageTitleStrategy } from '@core/seo/page-title.strategy';
 
 export const title = (tmdbId: number, name = `Title ${tmdbId}`): TitleSummary => ({
   tmdbId,
@@ -30,6 +31,7 @@ export async function setup(url: string, extraProviders: Provider[] = []) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter(routes, withComponentInputBinding()),
+      { provide: TitleStrategy, useExisting: PageTitleStrategy },
       provideHttpClient(),
       provideHttpClientTesting(),
       ...extraProviders,

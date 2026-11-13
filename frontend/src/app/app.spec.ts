@@ -195,6 +195,29 @@ describe('App with the real route table', () => {
     expect(chrome()).toEqual([false, false]);
   });
 
+  it('never draws the nav or footer while a logged out hard reload of a guarded area is redirected to /login', async () => {
+    for (const url of ['/dashboard/favorites', '/admin/users']) {
+      const { fixture, chrome } = await boot(url);
+      const router = TestBed.inject(Router);
+      const frames: boolean[][] = [];
+      // After every router event (the app has already resynced on it) the page is drawn once.
+      router.events.subscribe(() => {
+        fixture.detectChanges();
+        frames.push(chrome());
+      });
+      await router.navigateByUrl(url);
+      await fixture.whenStable();
+
+      expect(router.url, url).toMatch(/^\/login/);
+      expect(frames.length, url).toBeGreaterThan(1);
+      expect(
+        frames.filter(([nav, footer]) => nav || footer),
+        url,
+      ).toEqual([]);
+      TestBed.resetTestingModule();
+    }
+  });
+
   it('keeps the chrome off on /login, brings it back on /terms and hides it again on /login', async () => {
     const { chrome, visit } = await boot('/login');
     await visit('/login');

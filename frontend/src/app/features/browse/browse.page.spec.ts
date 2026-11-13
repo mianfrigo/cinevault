@@ -1,3 +1,4 @@
+import { RESPONSE_INIT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Genre } from '@core/models';
 import { paged, setup, title } from './browse.testing';
@@ -29,6 +30,38 @@ describe('Browse pages', () => {
     expect(el.querySelector('a[href="/genre/movie/878"]')?.textContent).toContain(
       'Science Fiction',
     );
+    http.verify();
+  });
+
+  it('titles /movies "Movies | Cinevault"', async () => {
+    const { http, settle, request } = await setup('/movies');
+    request('popular', { type: 'movie', page: '1' }).flush(paged([title(1)]));
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+
+    expect(document.title).toBe('Movies | Cinevault');
+    http.verify();
+  });
+
+  it('titles a genre page after the genre once the list has loaded', async () => {
+    const { http, settle, request } = await setup('/genre/movie/878');
+    request('discover', { type: 'movie', genre: '878', page: '1' }).flush(paged([title(1)]));
+    request('genres', { type: 'movie' }).flush(genres);
+    await settle();
+
+    expect(document.title).toBe('Science Fiction | Cinevault');
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toMatch(
+      /\/genre\/movie\/878$/,
+    );
+    http.verify();
+  });
+
+  it('answers 404 for a genre route that names no such catalog', async () => {
+    const init: ResponseInit = { status: 200, headers: new Headers() };
+    const { http, el } = await setup('/genre/book/9', [{ provide: RESPONSE_INIT, useValue: init }]);
+
+    expect(init.status).toBe(404);
+    expect(el.textContent).toContain('This genre does not exist');
     http.verify();
   });
 

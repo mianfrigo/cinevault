@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, RESPONSE_INIT } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
@@ -45,8 +45,12 @@ describe('Title page', () => {
     detail: TitleDetail | { status: number; code: string },
     flags = config(false),
     url = '/title/movie/603',
+    serverResponse?: ResponseInit,
   ) {
-    const ctx = await setup(url, [MessageService]);
+    const ctx = await setup(url, [
+      MessageService,
+      ...(serverResponse ? [{ provide: RESPONSE_INIT, useValue: serverResponse }] : []),
+    ]);
     ctx.http.expectOne('/api/v1/config').flush(flags);
     const path = url.replace('/title/', '');
     const req = ctx.request(path, {});
@@ -223,6 +227,74 @@ describe('Title page', () => {
     expect(el.querySelector('h1')?.textContent).toContain('The Matrix');
     expect(el.querySelector('[role="alert"]')).toBeNull();
     http.verify();
+  });
+
+  describe('head and HTTP status', () => {
+    const meta = (selector: string) =>
+      document.head.querySelector(selector)?.getAttribute('content');
+    const serverResponse = (): ResponseInit => ({ status: 200, headers: new Headers() });
+
+    afterEach(() => {
+      document.head
+        .querySelectorAll('meta[name], meta[property], link[rel="canonical"]')
+        .forEach((e) => e.remove());
+    });
+
+    it('titles the page "{title} ({year}) | Cinevault" with the overview, the backdrop and a canonical link', async () => {
+      await open(movie);
+
+      expect(document.title).toBe('The Matrix (1999) | Cinevault');
+      expect(meta('meta[name="description"]')).toBe('A hacker learns the world is a simulation.');
+      expect(meta('meta[property="og:image"]')).toBe(movie.backdropUrl);
+      expect(meta('meta[property="og:type"]')).toBe('video.movie');
+      expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toMatch(
+        /\/title\/movie\/603$/,
+      );
+    });
+
+    it('leaves the year out of the title when it is unknown, and describes a title without an overview', async () => {
+      const unknown = { ...series, year: null, overview: null, backdropUrl: null, seasonList: [] };
+      await open(unknown, config(false), '/title/tv/1399');
+
+      expect(document.title).toBe('Cold Meridian | Cinevault');
+      expect(meta('meta[name="description"]')).toContain('Cold Meridian');
+      expect(meta('meta[property="og:image"]')).toBe(series.posterUrl);
+      expect(meta('meta[property="og:type"]')).toBe('video.tv_show');
+    });
+
+    it('answers 404 with no-store for an unknown title', async () => {
+      const init = serverResponse();
+      await open({ status: 404, code: 'NOT_FOUND' }, config(false), '/title/movie/603', init);
+
+      expect(init.status).toBe(404);
+      expect(new Headers(init.headers).get('Cache-Control')).toBe('no-store');
+      expect(document.title).toBe('Page not found | Cinevault');
+      expect(meta('meta[name="robots"]')).toBe('noindex, nofollow');
+    });
+
+    it('answers 404 for a title route that names no such title', async () => {
+      const init = serverResponse();
+      await setup('/title/book/12', [MessageService, { provide: RESPONSE_INIT, useValue: init }]);
+
+      expect(init.status).toBe(404);
+    });
+
+    it('answers 503 with no-store when the API cannot reach TMDB', async () => {
+      const init = serverResponse();
+      const failure = { status: 502, code: 'TMDB_UNAVAILABLE' };
+      await open(failure, config(false), '/title/movie/603', init);
+
+      expect(init.status).toBe(503);
+      expect(new Headers(init.headers).get('Cache-Control')).toBe('no-store');
+      expect(document.title).toBe('Title unavailable | Cinevault');
+    });
+
+    it('keeps the status 200 for a title that loads', async () => {
+      const init = serverResponse();
+      await open(movie, config(false), '/title/movie/603', init);
+
+      expect(init.status).toBe(200);
+    });
   });
 
   it('loads the next title when the route changes, without keeping the previous one', async () => {

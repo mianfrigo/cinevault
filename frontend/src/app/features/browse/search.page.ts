@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { CatalogService } from '@core/catalog/catalog.service';
+import { SeoService, pageTitle } from '@core/seo/seo.service';
+import { cutUnits } from '@shared/utils/cut-units';
 import { latestValue } from '@shared/utils/latest-value';
 import { injectPageNavigator, MAX_PAGE, normalisePage } from '@shared/utils/page-param';
 import { PageHeaderComponent } from '@shared/components/page-header/page-header.component';
@@ -9,16 +11,6 @@ import { PosterGridComponent } from './poster-grid.component';
 
 /** The backend rejects a longer query with 400. */
 const MAX_QUERY = 100;
-
-/** At most `max` UTF-16 units of `text`, cut between code points so no surrogate pair is split. */
-function cutUnits(text: string, max: number): string {
-  let out = '';
-  for (const ch of text) {
-    if (out.length + ch.length > max) break;
-    out += ch;
-  }
-  return out;
-}
 
 /** /search?q=&page=. The search box in the nav is the only input; this page just reads the URL. */
 @Component({
@@ -100,4 +92,16 @@ export default class SearchPage {
   protected readonly shown = latestValue(this.results, this.term);
 
   protected readonly totalPages = computed(() => Math.min(this.shown()?.totalPages ?? 0, MAX_PAGE));
+
+  constructor() {
+    const seo = inject(SeoService);
+    // The query is user input: it only ever goes in as text (Title and Meta set it as such).
+    effect(() => {
+      const term = this.term();
+      seo.set({
+        title: pageTitle(term ? `Search: ${term}` : 'Search'),
+        path: term ? `/search?q=${encodeURIComponent(term)}` : '/search',
+      });
+    });
+  }
 }

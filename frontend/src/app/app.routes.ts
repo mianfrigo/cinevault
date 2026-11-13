@@ -4,12 +4,15 @@ import { adminGuard, authGuard, guestGuard } from '@core/auth/guards';
 const placeholder = () => import('./pages/placeholder.component');
 const browse = () => import('./features/browse/browse.page');
 // The auth pages and the dashboard draw their own page; the app shell leaves out its nav and footer for them.
-const chromeless = { chromeless: true };
+// They are private or utility pages, so search engines are told to skip them (PageTitleStrategy).
+const chromeless = { chromeless: true, noindex: true };
 const legalNote = 'Placeholder page. The owner will supply the final text.';
 
 // Route map: docs/app-flow.md section 1. Each placeholder is replaced by its real screen in a later task.
+// A route with a `title` gets "{title} | Cinevault" from PageTitleStrategy; the routes without one (home,
+// genre, search, title, not found) set their own head through SeoService because it depends on their data.
 export const routes: Routes = [
-  { path: '', title: 'Cinevault', loadComponent: () => import('./features/home/home.page') },
+  { path: '', loadComponent: () => import('./features/home/home.page') },
   {
     path: 'movies',
     title: 'Movies',
@@ -22,11 +25,10 @@ export const routes: Routes = [
     title: 'New & Popular',
     loadComponent: () => import('./features/browse/new.page'),
   },
-  { path: 'genre/:type/:id', title: 'Genre', loadComponent: browse },
-  { path: 'search', title: 'Search', loadComponent: () => import('./features/browse/search.page') },
+  { path: 'genre/:type/:id', loadComponent: browse },
+  { path: 'search', loadComponent: () => import('./features/browse/search.page') },
   {
     path: 'title/:type/:id',
-    title: 'Title',
     loadComponent: () => import('./features/title/title.page'),
   },
   {
@@ -97,12 +99,12 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'overview' },
       {
         path: 'users',
-        title: 'Users',
+        title: 'Admin: Users',
         loadComponent: () => import('./features/admin/users.page'),
       },
       {
         path: 'overview',
-        title: 'Overview',
+        title: 'Admin: Overview',
         loadComponent: () => import('./features/admin/overview.page'),
       },
     ],
@@ -121,7 +123,6 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    title: 'Page not found',
     loadComponent: () => import('./pages/not-found.component'),
   },
 ];

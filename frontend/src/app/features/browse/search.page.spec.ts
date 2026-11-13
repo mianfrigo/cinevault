@@ -18,6 +18,28 @@ describe('Search page', () => {
     http.verify();
   });
 
+  it('titles the page "Search: {q}" and keeps markup in the query as text', async () => {
+    const { http, el, settle, request } = await setup('/search?q=%3Cb%3Edune%3C%2Fb%3E');
+    request('search', { q: '<b>dune</b>', page: '1' }).flush(paged([], 1, 0));
+    await settle();
+
+    expect(document.title).toBe('Search: <b>dune</b> | Cinevault');
+    expect(document.head.querySelector('b')).toBeNull();
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toMatch(
+      /\/search\?q=%3Cb%3Edune%3C%2Fb%3E$/,
+    );
+    expect(el.querySelector('b')).toBeNull();
+    http.verify();
+  });
+
+  it('titles a search without a query "Search | Cinevault"', async () => {
+    const { http, settle } = await setup('/search');
+    await settle();
+
+    expect(document.title).toBe('Search | Cinevault');
+    http.verify();
+  });
+
   it('Search page with q missing shows the prompt state and makes no request', async () => {
     for (const url of ['/search', '/search?q=', '/search?q=%20%20']) {
       const { http, el, settle, none } = await setup(url);

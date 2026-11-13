@@ -7,7 +7,15 @@ import {
   model,
   output,
 } from '@angular/core';
-import { disabled, form, FormField, FormValueControl, validate } from '@angular/forms/signals';
+import {
+  disabled,
+  form,
+  FormField,
+  FormValueControl,
+  metadata,
+  REQUIRED,
+  validate,
+} from '@angular/forms/signals';
 import { PasswordModule } from 'primeng/password';
 
 /**
@@ -32,6 +40,7 @@ import { PasswordModule } from 'primeng/password';
       [feedback]="false"
       [toggleMask]="true"
       [fluid]="true"
+      [name]="name() || undefined"
       [formField]="inner"
       (onBlur)="touch.emit()"
     />
@@ -44,12 +53,16 @@ export class PasswordInputComponent implements FormValueControl<string> {
   readonly autocomplete = input<string>();
   readonly disabled = input(false);
   readonly invalid = input(false);
+  /** Field state the native input shows (`required`, `name`), as when the field was bound to p-password itself. */
+  readonly required = input(false);
+  readonly name = input('');
   /** Blur of the input: marks the bound field as touched. */
   readonly touch = output<void>();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly inner = form(this.value, (p) => {
     disabled(p, { when: () => this.disabled() });
+    metadata(p, REQUIRED, () => this.required());
     validate(p, () => (this.invalid() ? { kind: 'invalid' } : undefined));
   });
 

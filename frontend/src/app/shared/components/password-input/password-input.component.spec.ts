@@ -120,6 +120,20 @@ describe('PasswordInputComponent', () => {
     expect(input().classList.contains('p-invalid')).toBe(true);
   });
 
+  it('gives the native input the required state and name of the field, as a bare p-password did', async () => {
+    const { component, input, settle } = await render(Host);
+    await settle();
+    expect(input().hasAttribute('required')).toBe(true);
+    expect(input().required).toBe(true);
+    expect(input().getAttribute('name')).toBe(component.f.password().name());
+    expect(input().getAttribute('name')).toBeTruthy();
+  });
+
+  it('has no required attribute when the field is not required', async () => {
+    const { input } = await render(OffHost);
+    expect(input().hasAttribute('required')).toBe(false);
+  });
+
   it('is disabled when the field is', async () => {
     const { input } = await render(OffHost);
     expect(input().disabled).toBe(true);

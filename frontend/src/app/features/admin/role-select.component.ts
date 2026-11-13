@@ -7,7 +7,15 @@ import {
   model,
   output,
 } from '@angular/core';
-import { disabled, form, FormField, FormValueControl } from '@angular/forms/signals';
+import {
+  disabled,
+  form,
+  FormField,
+  FormValueControl,
+  metadata,
+  readonly,
+  REQUIRED,
+} from '@angular/forms/signals';
 import { SelectModule } from 'primeng/select';
 import { Role } from '@core/models';
 
@@ -28,6 +36,7 @@ const OPTIONS: { label: string; value: Role }[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <p-select
+      [name]="name() || undefined"
       [formField]="inner"
       [options]="options"
       optionLabel="label"
@@ -45,12 +54,20 @@ export class RoleSelectComponent implements FormValueControl<Role> {
   /** Names the control for a screen reader: "Role for Ada Lovelace". */
   readonly label = input.required<string>();
   readonly disabled = input(false);
+  /** Field state the select shows (`required`, `readonly`, `name`), as when the field was bound to p-select itself. */
+  readonly required = input(false);
+  readonly readonly = input(false);
+  readonly name = input('');
   /** Blur of the select: marks the bound field as touched. */
   readonly touch = output<void>();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly options = OPTIONS;
-  protected readonly inner = form(this.value, (p) => disabled(p, { when: () => this.disabled() }));
+  protected readonly inner = form(this.value, (p) => {
+    disabled(p, { when: () => this.disabled() });
+    readonly(p, () => this.readonly());
+    metadata(p, REQUIRED, () => this.required());
+  });
 
   /** Focuses the select's combobox (the host and the p-select wrapper are not focusable). */
   focus(options?: FocusOptions): void {

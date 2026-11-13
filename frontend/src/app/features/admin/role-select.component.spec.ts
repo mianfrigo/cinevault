@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { disabled, form, FormField } from '@angular/forms/signals';
+import { disabled, form, FormField, required } from '@angular/forms/signals';
 import { Role } from '@core/models';
 import { RoleSelectComponent } from './role-select.component';
 
@@ -20,6 +20,15 @@ class Host {
 class OffHost {
   readonly model = signal<{ role: Role }>({ role: 'ADMIN' });
   readonly f = form(this.model, (p) => disabled(p.role));
+}
+
+@Component({
+  imports: [RoleSelectComponent, FormField],
+  template: `<cv-role-select label="Role for Ada" [formField]="f.role" />`,
+})
+class RequiredHost {
+  readonly model = signal<{ role: Role }>({ role: 'USER' });
+  readonly f = form(this.model, (p) => required(p.role));
 }
 
 @Component({
@@ -91,6 +100,17 @@ describe('RoleSelectComponent', () => {
     expect(combobox().textContent).toContain('Admin');
     await pick('User');
     expect(component.role()).toBe('USER');
+  });
+
+  it('gives the select the required state of the field (aria-required), as a bare p-select did', async () => {
+    const { el, settle } = await render(RequiredHost);
+    await settle();
+    expect(el.querySelector('[role=combobox]')!.getAttribute('aria-required')).toBe('true');
+  });
+
+  it('is not marked required when the field is not', async () => {
+    const { combobox } = await render(Host);
+    expect(combobox().getAttribute('aria-required')).not.toBe('true');
   });
 
   it('marks the field touched on blur, and not before', async () => {

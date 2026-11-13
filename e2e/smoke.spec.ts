@@ -5,6 +5,7 @@ import {
   type BrowserContext,
   type Page,
 } from '@playwright/test';
+import { randomBytes } from 'node:crypto';
 import { deleteMessagesTo, waitForVerifyLink } from './mailpit.mjs';
 import { WEB_ORIGIN } from './stack.mjs';
 import {
@@ -20,7 +21,7 @@ const TITLE_PATH = `/title/movie/${FIXTURE_MOVIE_ID}`;
 
 // One user per run. Fake address on a reserved domain; the name carries the suffix so the admin
 // table row and its buttons ("Block <name>") are unique.
-const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+const suffix = `${Date.now().toString(36)}${randomBytes(3).toString('hex')}`;
 const user = {
   name: `E2E Tester ${suffix}`,
   email: `e2e-${suffix}@example.test`,
@@ -107,6 +108,7 @@ test.describe('user journey', () => {
   test('register, verify through Mailpit, log in, add a title to My List, see it in Favorites, log out', async ({
     page,
     request,
+    browser,
   }) => {
     await test.step('register through the UI', async () => {
       await gotoBooted(page, '/register');
@@ -158,11 +160,18 @@ test.describe('user journey', () => {
       expect(ssr.status()).toBe(200);
       const html = await ssr.text();
       expect(html).toContain(`<title>${FIXTURE_MOVIE_TITLE} (2019) | Cinevault</title>`);
-      // Without JavaScript the BODY already holds the title and the overview. The head's description
-      // and the transfer-state script also carry the overview, so they are cut out first.
-      const body = html.slice(html.indexOf('<body')).replace(/<script[\s\S]*?<\/script>/g, '');
-      expect(body).toMatch(new RegExp(`<h1[^>]*>\\s*${FIXTURE_MOVIE_TITLE}\\s*</h1>`));
-      expect(body).toContain(FIXTURE_MOVIE_OVERVIEW);
+      // Without JavaScript the BODY already holds the title and the overview. Load the page in a
+      // context with scripts off and read the rendered DOM: the head's description and the
+      // transfer-state script also carry the overview, so a text match on the raw HTML proves nothing.
+      const noJs = await browser.newContext({ javaScriptEnabled: false });
+      try {
+        const bare = await noJs.newPage();
+        await bare.goto(`${BASE}${TITLE_PATH}`);
+        await expect(bare.locator('body h1')).toHaveText(FIXTURE_MOVIE_TITLE);
+        await expect(bare.locator('body')).toContainText(FIXTURE_MOVIE_OVERVIEW);
+      } finally {
+        await noJs.close();
+      }
 
       await page.goto('/');
       // PRD section 7: the TMDB attribution is on every public page.

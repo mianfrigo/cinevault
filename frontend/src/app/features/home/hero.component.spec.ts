@@ -60,6 +60,14 @@ async function render(items: TitleSummary[], settled = true) {
 describe('HeroComponent', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('offers each backdrop in two widths so a phone does not download the 1280 px picture', async () => {
+    stubReducedMotion(false);
+    const { el } = await render(three);
+    const img = el.querySelector('img');
+    expect(img?.getAttribute('srcset')).toMatch(/\/w780\/.* 780w, .*\/w1280\/.* 1280w$/);
+    expect(img?.getAttribute('sizes')).toBe('100vw');
+  });
+
   it('shows the first item and the next control advances', async () => {
     stubReducedMotion(false);
     const { el, activeSlide, click } = await render(three);

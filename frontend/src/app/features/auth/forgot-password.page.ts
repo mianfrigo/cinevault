@@ -11,6 +11,7 @@ import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.com
 import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { emailRules } from '@shared/validators/auth.rules';
+import { PreHydrationFormDirective } from '@shared/directives/pre-hydration-form.directive';
 
 @Component({
   selector: 'cv-forgot-password-page',
@@ -18,6 +19,7 @@ import { emailRules } from '@shared/validators/auth.rules';
     RouterLink,
     FormField,
     FormRoot,
+    PreHydrationFormDirective,
     ButtonModule,
     InputTextModule,
     AuthLayoutComponent,
@@ -60,7 +62,7 @@ import { emailRules } from '@shared/validators/auth.rules';
         </div>
       } @else {
         <cv-form-note [note]="problem()" />
-        <form [formRoot]="forgotForm" class="grid gap-4">
+        <form cvPreHydration [formRoot]="forgotForm" class="grid gap-4">
           <cv-auth-field label="Email" controlId="email" [field]="forgotForm.email">
             <input
               pInputText

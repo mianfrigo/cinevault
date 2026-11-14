@@ -21,6 +21,7 @@ import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { confirmMatches, newPasswordRules } from '@shared/validators/auth.rules';
 import { queryText } from '@shared/utils/query-text';
 import { PasswordInputComponent } from '@shared/components/password-input/password-input.component';
+import { PreHydrationFormDirective } from '@shared/directives/pre-hydration-form.directive';
 
 type View = 'form' | 'expired' | 'invalid';
 
@@ -36,6 +37,7 @@ const HEADINGS: Record<View, string> = {
     RouterLink,
     FormField,
     FormRoot,
+    PreHydrationFormDirective,
     ButtonModule,
     MessageModule,
     PasswordInputComponent,
@@ -54,7 +56,7 @@ const HEADINGS: Record<View, string> = {
       @switch (view()) {
         @case ('form') {
           <cv-form-note [note]="problem()" />
-          <form [formRoot]="resetForm" class="grid gap-4">
+          <form cvPreHydration [formRoot]="resetForm" class="grid gap-4">
             <cv-auth-field
               label="New password"
               controlId="password"

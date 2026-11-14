@@ -17,6 +17,7 @@ import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { emailRules } from '@shared/validators/auth.rules';
 import { queryText } from '@shared/utils/query-text';
 import { PasswordInputComponent } from '@shared/components/password-input/password-input.component';
+import { PreHydrationFormDirective } from '@shared/directives/pre-hydration-form.directive';
 
 /** Fixed set of notices a redirect can ask the login page to show: nothing else is ever rendered. */
 const NOTICES = new Map([
@@ -42,6 +43,7 @@ interface Banner {
     RouterLink,
     FormField,
     FormRoot,
+    PreHydrationFormDirective,
     ButtonModule,
     InputTextModule,
     MessageModule,
@@ -73,7 +75,7 @@ interface Banner {
           }
         </p-message>
       }
-      <form [formRoot]="loginForm" class="grid gap-4">
+      <form cvPreHydration [formRoot]="loginForm" class="grid gap-4">
         <cv-auth-field label="Email" controlId="email" [field]="loginForm.email">
           <input
             pInputText

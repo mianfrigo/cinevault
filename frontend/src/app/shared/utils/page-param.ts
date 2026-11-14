@@ -1,4 +1,3 @@
-import { ViewportScroller } from '@angular/common';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 
@@ -13,18 +12,15 @@ export function normalisePage(raw: unknown): number {
 
 /**
  * Returns a function that puts a page into the `?page=` query param (page 1 leaves it out so the
- * first page keeps its clean URL), keeps the other query params and scrolls to the top.
+ * first page keeps its clean URL) and keeps the other query params. The router scrolls to the top.
  * Must be called in an injection context.
  */
 export function injectPageNavigator(): (page: number) => void {
   const router = inject(Router);
-  const scroller = inject(ViewportScroller);
   return (page) => {
-    void router
-      .navigate([], {
-        queryParams: { page: page > 1 ? page : null },
-        queryParamsHandling: 'merge',
-      })
-      .then(() => scroller.scrollToPosition([0, 0]));
+    void router.navigate([], {
+      queryParams: { page: page > 1 ? page : null },
+      queryParamsHandling: 'merge',
+    });
   };
 }

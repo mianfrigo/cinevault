@@ -1,4 +1,3 @@
-import { ViewportScroller } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -8,7 +7,6 @@ import {
   ElementRef,
   inject,
   input,
-  untracked,
   viewChild,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -302,7 +300,6 @@ export default class TitlePage {
   private readonly catalog = inject(CatalogService);
   private readonly favorites = inject(FavoritesStore);
   private readonly messages = inject(MessageService);
-  private readonly scroller = inject(ViewportScroller);
   private readonly config = inject(ConfigService);
   private readonly seo = inject(SeoService);
   private readonly response = inject(ResponseStatus);
@@ -365,12 +362,6 @@ export default class TitlePage {
   };
 
   constructor() {
-    // Another title (a "More like this" poster) starts at the top, not where the last page was scrolled.
-    effect(() => {
-      this.request();
-      untracked(() => this.scroller.scrollToPosition([0, 0]));
-    });
-
     // The head follows the loaded title. "Not found" sets its own (cv-not-found); a failed load is unavailable.
     effect(() => {
       const v = this.vm();

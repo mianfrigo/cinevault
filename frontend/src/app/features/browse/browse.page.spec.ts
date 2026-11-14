@@ -164,7 +164,6 @@ describe('Browse pages', () => {
     (await next('popular', { type: 'movie', page: '2' })).flush(paged([title(2)], 2, 9));
     await settle();
     expect(url()).toBe('/movies?page=2');
-    expect(window.scrollTo).toHaveBeenCalled();
 
     el.querySelector<HTMLButtonElement>('[aria-label="Page 1"]')!.click();
     (await next('popular', { type: 'movie', page: '1' })).flush(paged([title(1)], 1, 9));

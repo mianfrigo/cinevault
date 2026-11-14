@@ -11,6 +11,7 @@ import {
 import { ACCEPTED } from '../auth/auth.service';
 import { CurrentUser, type AuthUser } from '../auth/decorators';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PasswordCheckThrottle } from '../common/throttle';
 import type { UserDto } from './user.dto';
 import {
   ChangeEmailDto,
@@ -40,6 +41,7 @@ export class MeController {
 
   @Post('change-password')
   @HttpCode(204)
+  @PasswordCheckThrottle()
   async changePassword(
     @CurrentUser() u: AuthUser,
     @Body() dto: ChangePasswordDto,
@@ -49,6 +51,7 @@ export class MeController {
 
   @Post('change-email')
   @HttpCode(202)
+  @PasswordCheckThrottle()
   changeEmail(
     @CurrentUser() u: AuthUser,
     @Body() dto: ChangeEmailDto,
@@ -58,6 +61,7 @@ export class MeController {
 
   @Delete()
   @HttpCode(204)
+  @PasswordCheckThrottle()
   async remove(
     @CurrentUser() u: AuthUser,
     @Body() dto: PasswordDto,

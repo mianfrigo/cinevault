@@ -172,6 +172,92 @@ describe('Hardening (e2e)', () => {
     });
   });
 
+  describe('login and the password checks', () => {
+    const PASSWORD = 'correct horse battery';
+    const NEW_PASSWORD = 'a brand new passphrase';
+
+    /** An active user and an access token, through the real login (one of its five tries). */
+    async function signedIn() {
+      const prisma = app.get(PrismaService);
+      await resetDb(prisma);
+      await prisma.user.create({
+        data: {
+          email: 'ana@example.com',
+          name: 'Ana',
+          passwordHash: await app.get(PasswordService).hash(PASSWORD),
+          status: UserStatus.ACTIVE,
+        },
+      });
+      const res = await http
+        .post('/api/v1/auth/login')
+        .send({ email: 'ana@example.com', password: PASSWORD })
+        .expect(200);
+      return (res.body as { accessToken: string }).accessToken;
+    }
+
+    it('login only takes a JSON body: a cross-site form cannot plant a session cookie', async () => {
+      await start({ THROTTLE_DISABLED: 'true' });
+      await signedIn();
+      for (const send of [
+        http
+          .post('/api/v1/auth/login')
+          .type('form')
+          .send({ email: 'ana@example.com', password: PASSWORD }),
+        http
+          .post('/api/v1/auth/login')
+          .type('text/plain')
+          .send(
+            JSON.stringify({ email: 'ana@example.com', password: PASSWORD }),
+          ),
+      ]) {
+        const res = await send.expect(415);
+        expect(res.body).toMatchObject({
+          statusCode: 415,
+          code: 'UNSUPPORTED_MEDIA_TYPE',
+        });
+        expect(res.headers['set-cookie']).toBeUndefined();
+      }
+      const ok = await http
+        .post('/api/v1/auth/login')
+        .send({ email: 'ana@example.com', password: PASSWORD })
+        .expect(200);
+      expect(ok.headers['set-cookie']).toBeDefined();
+    });
+
+    it('the routes that check the current password share the strict limit: the 6th try within a minute is 429', async () => {
+      await start();
+      const token = await signedIn();
+      const auth = { Authorization: `Bearer ${token}` };
+      const wrong = {
+        changePassword: () =>
+          http
+            .post('/api/v1/me/change-password')
+            .set(auth)
+            .send({ oldPassword: 'not-it', newPassword: NEW_PASSWORD }),
+        changeEmail: () =>
+          http
+            .post('/api/v1/me/change-email')
+            .set(auth)
+            .send({ newEmail: 'new@example.com', password: 'not-it' }),
+        deleteAccount: () =>
+          http.delete('/api/v1/me').set(auth).send({ password: 'not-it' }),
+      };
+      // Five guesses spread over the three routes spend one shared budget.
+      await wrong.changePassword().expect(400);
+      await wrong.changePassword().expect(400);
+      await wrong.changeEmail().expect(400);
+      await wrong.deleteAccount().expect(400);
+      await wrong.changePassword().expect(400);
+      for (const attempt of Object.values(wrong)) {
+        const res = await attempt();
+        expect(res.status).toBe(429);
+        expect((res.body as { code: string }).code).toBe('RATE_LIMITED');
+      }
+      // Reading the profile is not a password check.
+      await http.get('/api/v1/me').set(auth).expect(200);
+    });
+  });
+
   describe('admin seed', () => {
     let prisma: PrismaService;
     const seed = (extra: Record<string, string | undefined> = {}) =>

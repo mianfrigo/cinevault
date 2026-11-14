@@ -7,6 +7,7 @@ import {
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AppException } from '../common/app.exception';
@@ -22,6 +23,7 @@ import {
 } from './auth.dto';
 import { ACCEPTED, AuthService } from './auth.service';
 import { clearRefreshCookie, REFRESH_COOKIE, setRefreshCookie } from './cookie';
+import { JsonOnlyGuard } from './json-only.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -52,6 +54,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @UseGuards(JsonOnlyGuard)
   @AuthThrottle()
   async login(
     @Body() dto: LoginDto,
@@ -68,24 +71,16 @@ export class AuthController {
    * and SameSite=Lax already keeps the cookie off cross-site POSTs.
    *
    * It also requires `Content-Type: application/json` (checked first, before
-   * anything is consumed): a cross-site form or text/plain POST cannot set it
-   * without a CORS preflight. `req.is` is falsy for a request without a body,
-   * so clients must send a JSON body (`{}` is enough).
+   * anything is consumed): see JsonOnlyGuard.
    */
   @Post('refresh')
   @HttpCode(200)
+  @UseGuards(JsonOnlyGuard)
   async refresh(
     @Req() req: Request,
     @Headers('origin') origin: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ accessToken: string; user: UserDto }> {
-    if (!req.is('application/json')) {
-      throw new AppException(
-        415,
-        'UNSUPPORTED_MEDIA_TYPE',
-        'Content-Type must be application/json',
-      );
-    }
     if (origin !== undefined && origin !== this.env.webOrigin) {
       throw new AppException(403, 'FORBIDDEN', 'Origin not allowed');
     }

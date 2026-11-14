@@ -6,7 +6,7 @@ Status as of Task 20B (2026-11-13). A box is checked only when the repository, a
 
 - [ ] **1. All features in section 5 work on phone (390px) and laptop (1440px) widths.**
   - Evidence so far: Chrome checks at 390 and 1440 were done per task (see each `task-*-report.md`), and the smoke runs a desktop viewport (1280x720) only. Nothing automated covers 390px. Owner: you. Next: one manual pass of every screen at 390 and 1440, or add a 390px Playwright project to `e2e/playwright.config.ts`.
-- [x] **2a. Backend tests and frontend tests pass.** Backend 80 unit + 183 e2e, frontend 539 (see Results). Commands: `cd backend && npm test && npm run test:e2e`, `cd frontend && npx ng test --watch=false`.
+- [x] **2a. Backend tests and frontend tests pass.** Backend 80 unit + 185 e2e, frontend 539 (see Results). Commands: `cd backend && npm test && npm run test:e2e`, `cd frontend && npx ng test --watch=false`.
 - [x] **2b. The end-to-end smoke passes against the local stack.** `cd e2e && npm test`: 5 tests pass, twice back to back (see Results). Covers register, Mailpit verification, login, title, My List, Favorites, logout, admin block with the next call refused, 404 and 503 statuses, response headers.
 - [ ] **3. The `downloadButton` flag is off in production config.**
   - Evidence so far: the code default is off (`FEATURE_DOWNLOAD_BUTTON` defaults to `false` in `backend/src/config/env.ts`, `.env.example` says `false`, the e2e stack sets `false`, and the Download button is absent in the smoke). There is no production config yet (hosting is undecided). Owner: ops. Next: leave `FEATURE_DOWNLOAD_BUTTON` unset or `false` in the production environment and re-check `GET /api/v1/config` returns `downloadButton: false` after the first deploy.
@@ -75,8 +75,8 @@ Backend (audit `run-1`, none are confirmed vulnerabilities; the two confirmed fi
 
 - [ ] **P2** Block-list marker lives in the shared, evictable cache with attacker-fillable catalog keys: with a Redis eviction policy, or Redis down (memory LRU), a block marker can be evicted early. Check production `maxmemory-policy`; consider a separate store or a longer-lived key.
 - [ ] **P2** Email issuance has no per-recipient or per-account budget (an anonymous caller can repeatedly mail an address and void its earlier verify/reset link). Per-IP limit only (5/min).
-- [ ] **P2** Login CSRF: `POST /auth/login` accepts a form-encoded body, so a cross-site form can plant the attacker's refresh cookie. Restrict to `application/json`.
-- [ ] **P2** Password-checking `/me` routes use the global 100/min limit, not the strict auth limit (a faster password oracle than login and per-IP argon2 load).
+- [x] Login CSRF: FIXED. `POST /auth/login` (and `/auth/refresh`) sit behind `JsonOnlyGuard` (`auth/json-only.guard.ts`): a form-encoded or text/plain body is 415 `UNSUPPORTED_MEDIA_TYPE` with no `Set-Cookie`, before the validation pipe. Test: `hardening.e2e-spec.ts`.
+- [x] Password-checking `/me` routes on the global limit: FIXED. Change password, change email and delete account share one `PasswordCheckThrottle` (5 per minute per IP, one bucket across the three, `common/throttle.ts`): the 6th guess in a minute is 429 whichever route it goes to. Per IP, not per account (the throttler runs before the JWT guard); the per-account lockout stays in the account-policies item. Test: `hardening.e2e-spec.ts`.
 - [ ] **P2** TMDB outbound budget: uncached catalog misses and `GET /me/favorites` for deleted titles spend the single operator token, bounded only by a per-IP, per-process throttle. Check TMDB's real limits.
 - [ ] **P3** A unit test that the TMDB token never appears in logs or in an `AppException` body (the token is not logged today; keep it so).
 - [ ] **P3** Hardening notes: a `cv_refresh=j:{}` cookie reaches `hashOpaque` and answers 500 (treat non-strings as absent); a BLOCKED user with a live token and no marker can still rename the account and write favorites (reuse `authenticate()`'s status check); `class-validator` `IsEmail` accepts quoted local parts; the throttler tracker keys the full IPv6 address instead of the /64; `runInBackground` and the unpooled SMTP transport have no concurrency bound; `lockAndLoad` raises `LAST_ADMIN` before the actor check (one bit to a demoted admin); `prisma.config.ts` loads `.env` from the working directory; no `ignore-scripts` policy.
@@ -99,10 +99,10 @@ Run on 2026-11-13, Windows 11, Node 24.18.0, Chrome (system, headless), Docker c
 | ------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `backend`: `npm run format:check`, `npm run lint:ci`, `npm run typecheck` | pass, pass, pass                                           |
 | `backend`: unit (`jest`)                                                  | 11 suites, 80 tests, all pass                              |
-| `backend`: e2e (`jest --config ./test/jest-e2e.json`)                     | 11 suites, 183 tests, all pass                             |
+| `backend`: e2e (`jest --config ./test/jest-e2e.json`)                     | 11 suites, 185 tests, all pass                             |
 | `frontend`: `npx ng test --watch=false`                                   | 66 files, 539 tests, all pass                              |
 | `frontend`: `npm run lint`, `npm run format:check`, `npm run build`       | pass, pass, pass (initial 670.98 kB, warning limit 750 kB) |
-| `e2e`: `npm test` (Playwright, run twice back to back)                    | 11 passed (about 42 s)                                     |
+| `e2e`: `npm test` (Playwright, run twice back to back)                    | 11 passed (about 43 s)                                     |
 
 (The backend commands were run as `npx jest` and `node scripts/migrate-test.js && npx jest --config ./test/jest-e2e.json`, i.e. `npm test` and `npm run test:e2e` without their `prisma generate` pre-step, so the generated client that a running dev watcher compiles was not rewritten.)
 

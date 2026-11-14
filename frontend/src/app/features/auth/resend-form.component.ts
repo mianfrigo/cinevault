@@ -9,6 +9,7 @@ import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.com
 import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { emailRules } from '@shared/validators/auth.rules';
+import { PreHydrationFormDirective } from '@shared/directives/pre-hydration-form.directive';
 
 /** Asks for an address and requests a new verification link (used when the page does not know the email). */
 @Component({
@@ -16,6 +17,7 @@ import { emailRules } from '@shared/validators/auth.rules';
   imports: [
     FormField,
     FormRoot,
+    PreHydrationFormDirective,
     ButtonModule,
     InputTextModule,
     AuthFieldComponent,
@@ -28,7 +30,7 @@ import { emailRules } from '@shared/validators/auth.rules';
       <cv-form-note [note]="sentNote" />
     } @else {
       <cv-form-note [note]="problem()" />
-      <form [formRoot]="resendForm" class="grid gap-4">
+      <form cvPreHydration [formRoot]="resendForm" class="grid gap-4">
         <cv-auth-field label="Email" controlId="email" [field]="resendForm.email">
           <input
             pInputText

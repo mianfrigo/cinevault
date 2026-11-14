@@ -346,6 +346,75 @@ test.describe('public pages and headers', () => {
     await expect(toggle).toBeFocused();
   });
 
+  test('text typed before the page hydrates is kept, and the form model has it', async ({
+    page,
+  }) => {
+    // Hold every script back, as a slow link does, and type into the server-rendered form meanwhile.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    await page.route('**/*.js', async (route) => {
+      await gate;
+      await route.continue();
+    });
+    await page.goto('/register', { waitUntil: 'commit' });
+    const name = page.getByLabel('Name', { exact: true });
+    await name.waitFor(); // the server-rendered input, no script has run
+    await name.fill('Ada Lovelace');
+
+    const booted = page.waitForResponse(
+      (r) => r.url().endsWith('/api/v1/auth/refresh') && r.request().method() === 'POST',
+    );
+    release();
+    await booted;
+    await expect(name).toHaveValue('Ada Lovelace');
+
+    // The model took it too: submitting the rest blank flags email and password, not the name.
+    await page.getByRole('button', { name: 'Create account' }).click();
+    await expect(page.getByText('Enter your email address.')).toBeVisible();
+    await expect(page.getByText('Enter your name.')).toHaveCount(0);
+  });
+
+  test('a submit before the page hydrates does not put the password in the URL', async ({
+    browser,
+  }) => {
+    // No script runs here, as on a slow link before hydration: Enter submits the form natively.
+    const bare = await browser.newContext({ javaScriptEnabled: false });
+    try {
+      const page = await bare.newPage();
+      await page.goto('/login');
+      await page.getByLabel('Email', { exact: true }).fill('someone@example.test');
+      const password = page.getByLabel('Password', { exact: true });
+      await password.fill('Secret-Pass-123');
+      await password.press('Enter');
+      await page.waitForLoadState();
+      expect(page.url()).not.toMatch(/Secret|password|someone/);
+    } finally {
+      await bare.close();
+    }
+  });
+
+  test('a new page starts at the top and Back returns to where the list was scrolled', async ({
+    page,
+  }) => {
+    await gotoBooted(page, '/');
+    // The Home rows are long; the sticky nav stays reachable, so the next page is chosen from it.
+    await page.evaluate(() => window.scrollTo(0, 1200));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(1200);
+
+    await page
+      .getByRole('navigation', { name: 'Primary', exact: true })
+      .getByRole('link', { name: 'Movies' })
+      .click();
+    await expect(page).toHaveURL(/\/movies$/);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+    // Back lands where the list was scrolled, give or take: the rows load after the router restores the
+    // position, so the page can be a little shorter at that moment (see the launch checklist).
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(800);
+  });
+
   test('responses carry Referrer-Policy: no-referrer; /login is no-store and a catalog page is cacheable', async ({
     request,
   }) => {

@@ -11,6 +11,7 @@ import { AuthFieldComponent } from '@shared/components/auth-field/auth-field.com
 import { FormNoteComponent, Note } from '@shared/components/form-note/form-note.component';
 import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { PasswordInputComponent } from '@shared/components/password-input/password-input.component';
+import { PreHydrationFormDirective } from '@shared/directives/pre-hydration-form.directive';
 import {
   confirmMatches,
   emailRules,
@@ -24,6 +25,7 @@ import {
     RouterLink,
     FormField,
     FormRoot,
+    PreHydrationFormDirective,
     ButtonModule,
     InputTextModule,
     PasswordInputComponent,
@@ -39,7 +41,7 @@ import {
       art="register"
     >
       <cv-form-note [note]="problem()" />
-      <form [formRoot]="registerForm" class="grid gap-4">
+      <form cvPreHydration [formRoot]="registerForm" class="grid gap-4">
         <cv-auth-field label="Name" controlId="name" [field]="registerForm.name">
           <input
             pInputText

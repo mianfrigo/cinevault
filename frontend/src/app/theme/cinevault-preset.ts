@@ -58,6 +58,10 @@ const line = 'rgba(255,255,255,.10)';
 const lineStrong = 'rgba(255,255,255,.20)';
 const hover = 'rgba(255,255,255,.08)';
 
+// The keyboard-focused row of the account menu. One function, so the slim and the full preset compare equal.
+const menuFocusRing = () =>
+  '.p-menu-item.p-focus > .p-menu-item-content { outline: 2px solid #A9B5F6; outline-offset: -2px; }';
+
 // Quiet status message: tinted fill, hairline border in the status hue, status text colour.
 const statusMessage = (fill: string, text: string) => ({
   background: `color-mix(in srgb, ${fill}, transparent 85%)`,
@@ -168,6 +172,24 @@ export const buildCinevaultPreset = (aura: typeof Aura) =>
           detailColor: '#A7ABB6',
           shadow: 'none',
         },
+      },
+      // Account menu (mockup .menu): surface-3 panel with a hairline, no shadow, 4px inside, 44px rows with
+      // a 12px icon gap, quiet text that lights up on hover. The keyboard-focused row gets the focus ring.
+      menu: {
+        root: { background: '#1A1D23', borderColor: line, borderRadius: '8px', shadow: 'none' },
+        list: { padding: '4px', gap: '0' },
+        item: {
+          padding: '0.71875rem 0.75rem',
+          borderRadius: '6px',
+          gap: '0.75rem',
+          color: '#A7ABB6',
+          focusColor: '#ECEDF0',
+          focusBackground: hover,
+          icon: { color: '#A7ABB6', focusColor: '#ECEDF0', size: '1.125rem' },
+          label: { fontWeight: '500', fontSize: '0.875rem' },
+        },
+        separator: { borderColor: 'rgba(255,255,255,.06)' },
+        css: menuFocusRing,
       },
       button: {
         root: { fontSize: '0.875rem', paddingX: '1.25rem', paddingY: '0.53125rem' },

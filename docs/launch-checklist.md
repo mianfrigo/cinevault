@@ -6,7 +6,7 @@ Status as of Task 20B (2026-11-13). A box is checked only when the repository, a
 
 - [ ] **1. All features in section 5 work on phone (390px) and laptop (1440px) widths.**
   - Evidence so far: Chrome checks at 390 and 1440 were done per task (see each `task-*-report.md`), and the smoke runs a desktop viewport (1280x720) only. Nothing automated covers 390px. Owner: you. Next: one manual pass of every screen at 390 and 1440, or add a 390px Playwright project to `e2e/playwright.config.ts`.
-- [x] **2a. Backend tests and frontend tests pass.** Backend 80 unit + 183 e2e, frontend 531 (see Results). Commands: `cd backend && npm test && npm run test:e2e`, `cd frontend && npx ng test --watch=false`.
+- [x] **2a. Backend tests and frontend tests pass.** Backend 80 unit + 183 e2e, frontend 539 (see Results). Commands: `cd backend && npm test && npm run test:e2e`, `cd frontend && npx ng test --watch=false`.
 - [x] **2b. The end-to-end smoke passes against the local stack.** `cd e2e && npm test`: 5 tests pass, twice back to back (see Results). Covers register, Mailpit verification, login, title, My List, Favorites, logout, admin block with the next call refused, 404 and 503 statuses, response headers.
 - [ ] **3. The `downloadButton` flag is off in production config.**
   - Evidence so far: the code default is off (`FEATURE_DOWNLOAD_BUTTON` defaults to `false` in `backend/src/config/env.ts`, `.env.example` says `false`, the e2e stack sets `false`, and the Download button is absent in the smoke). There is no production config yet (hosting is undecided). Owner: ops. Next: leave `FEATURE_DOWNLOAD_BUTTON` unset or `false` in the production environment and re-check `GET /api/v1/config` returns `downloadButton: false` after the first deploy.
@@ -66,7 +66,7 @@ Frontend:
 - [x] Route changes did not scroll to the top or restore the scroll position: FIXED with `withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' })` in `app.config.ts`; the manual scroll-to-top calls of the title page and `injectPageNavigator` are gone. Smoke: Home scrolled, to Movies, Back returns well below the top. Known limit: Back restores to where the page can be at that moment, and the Home rows load after the router restores, so it lands close to, not exactly on, the old position (1406 px for 1614 px in one run). Every navigation scrolls to the top now, including a filter or page change in the query string (the favorites filter pills too).
 - [ ] **P3** 20A minors: the `primeicons` `.svg` file is cached for one hour (not hashed like the other font files); no spec for `ResponseStatus.set(503)` followed by `noStore()`.
 - [ ] **P3** The nav search box is a deferred block that hydrates on first use (`@defer (hydrate on interaction; hydrate when searchOpen())`, code prefetched on idle), so Angular Forms is not in the initial bundle. The smoke covers laptop and phone use, and no NG error in the console. Not covered: typing and pressing Enter in the first milliseconds on a very slow link, before the box has hydrated (Angular replays the events, but a native form submit cannot be replayed).
-- [ ] **P3** The PrimeIcons font is a 22-icon subset (`frontend/src/styles/primeicons.css`, `fonts/primeicons-subset.woff2`). Adding an icon means re-subsetting the font; `theme/primeicons.spec.ts` fails when app code uses a `pi-*` class that is missing. Same for `theme/cinevault-preset.spec.ts`, which fails when a `primeng/<component>` import has no Aura tokens in the slim preset.
+- [ ] **P3** The PrimeIcons font is a 23-icon subset (`frontend/src/styles/primeicons.css`, `fonts/primeicons-subset.woff2`). Adding an icon means re-subsetting the font; `theme/primeicons.spec.ts` fails when app code uses a `pi-*` class that is missing. Same for `theme/cinevault-preset.spec.ts`, which fails when a `primeng/<component>` import has no Aura tokens in the slim preset.
 - [x] The logged-out hard reload of `/dashboard/**` showing the nav for a frame is FIXED (Task 20A, #29: `app.ts` ignores a guard-redirect `NavigationCancel`; spec in `app.spec.ts`, verified in Chrome at CPU x1 and x6).
 - [ ] **P3** `users.page.spec` has a cold-start timing flake under machine load (seen in about 2 of 6 loaded runs, clean when run alone; run `ng test` on its own).
 - [ ] **P3** `ng build` crashed once with a native exit code (3221225477) during Task 20B on this Windows machine; the e2e build retries once. Not reproduced since.
@@ -100,8 +100,8 @@ Run on 2026-11-13, Windows 11, Node 24.18.0, Chrome (system, headless), Docker c
 | `backend`: `npm run format:check`, `npm run lint:ci`, `npm run typecheck` | pass, pass, pass                                           |
 | `backend`: unit (`jest`)                                                  | 11 suites, 80 tests, all pass                              |
 | `backend`: e2e (`jest --config ./test/jest-e2e.json`)                     | 11 suites, 183 tests, all pass                             |
-| `frontend`: `npx ng test --watch=false`                                   | 64 files, 531 tests, all pass                              |
-| `frontend`: `npm run lint`, `npm run format:check`, `npm run build`       | pass, pass, pass (initial 669.69 kB, warning limit 750 kB) |
+| `frontend`: `npx ng test --watch=false`                                   | 66 files, 539 tests, all pass                              |
+| `frontend`: `npm run lint`, `npm run format:check`, `npm run build`       | pass, pass, pass (initial 670.98 kB, warning limit 750 kB) |
 | `e2e`: `npm test` (Playwright, run twice back to back)                    | 10 passed (about 40 s)                                     |
 
 (The backend commands were run as `npx jest` and `node scripts/migrate-test.js && npx jest --config ./test/jest-e2e.json`, i.e. `npm test` and `npm run test:e2e` without their `prisma generate` pre-step, so the generated client that a running dev watcher compiles was not rewritten.)
@@ -110,9 +110,9 @@ Run on 2026-11-13, Windows 11, Node 24.18.0, Chrome (system, headless), Docker c
 
 | Asset                                                                            | Raw       | Estimated transfer |
 | -------------------------------------------------------------------------------- | --------- | ------------------ |
-| Initial total (JS + CSS)                                                         | 669.69 kB | 170.06 kB          |
-| CSS (`styles-*.css`, Tailwind + PrimeNG)                                         | 53.45 kB  | 9.53 kB            |
-| Initial JS (`main` 201.78 kB, two shared chunks 222.81 and 190.74 kB, one small) | 616.24 kB | 160.53 kB          |
+| Initial total (JS + CSS)                                                         | 670.98 kB | 170.34 kB          |
+| CSS (`styles-*.css`, Tailwind + PrimeNG)                                         | 54.17 kB  | 9.60 kB            |
+| Initial JS (`main` 202.36 kB, two shared chunks 222.81 and 190.74 kB, one small) | 616.82 kB | 160.74 kB          |
 
 ### Lighthouse 13.6.0, mobile, production build behind the e2e proxy (brotli), stub TMDB, median of 3 runs
 

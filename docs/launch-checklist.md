@@ -54,7 +54,7 @@ Collected from the SDD ledger, the PR descriptions (#2 to #29), the security aud
 
 Performance (Task 20B Lighthouse, see Results):
 
-- [ ] **P1, owner decision needed: the LCP on Lighthouse's default Slow 4G misses the 2.5 s target.** Measured (median of 3, `/` and `/title/movie/603`): 3.62 s and 3.32 s at 1.6 Mbps / 150 ms RTT; 2.07 s and 1.90 s on a 9 Mbps / 170 ms "4G" profile (the literal PRD wording), which passes. Choose: (a) vendor a PrimeIcons stylesheet without the legacy `eot`/`ttf`/`woff`/`svg` entries (the critical-CSS step preloads an 89 KB `primeicons.eot` that browsers never use) and re-measure, then trim the initial chunk, or (b) accept the 9 Mbps reading as the PRD's "4G" and record that here. Evidence: about 510 KB on the wire per page (initial JS 760.66 kB raw / 182.35 kB transfer plus route chunks, PrimeNG, fonts); observed (unthrottled) LCP is about 0.4 s, so the simulated figure is bandwidth-bound. A single experiment with the EOT preload stripped gave Title 3.3 s to 2.9 s (plausible) and Home 4.3 s to 3.3 s (inside the Home run-to-run spread of 3.2 to 4.1 s, so not conclusive). The Angular budget warns at 850 kB; the initial total is 827.00 kB (23 kB of headroom).
+- [ ] **P1, owner decision needed: the LCP on Lighthouse's default Slow 4G still misses the 2.5 s target on Home.** Median of 3 on Slow 4G (1.6 Mbps / 150 ms RTT): `/` 3.19 s (runs 2.72 to 3.99), title page 2.72 s (2.72 to 2.88). The PrimeIcons change (vendored stylesheet with woff2 only, so the 89 KB `eot` is no longer bundled or preloaded) took them from 3.62 s and 3.32 s. On the 9 Mbps / 170 ms "4G" profile (the literal PRD wording) both pass: 2.07 s and 2.06 s. Remaining: about 510 KB per page on the wire (initial JS 760.66 kB raw / 182.35 kB transfer plus route chunks, PrimeNG, fonts); the unthrottled LCP is about 0.4 s, so the simulated figure is bandwidth-bound. Choose: (a) trim the initial chunk (23 kB of headroom under the 850 kB warning) and the Home hero path, or (b) accept the 9 Mbps reading as the PRD's "4G" and record that here.
 - [ ] **P3** **A visitor without a session logs a console error on every page load**: the first `POST /api/v1/auth/refresh` answers 401 (Lighthouse Best Practices 96 instead of 100, "errors in console"). A non-401 "no session" answer or a non-HttpOnly marker cookie would avoid the red console line.
 - [x] Title backdrop `fetchpriority="high"` and `preconnect` to `image.tmdb.org` added in Task 20B (test: `title.page.spec.ts`, smoke header check). No measurable lab effect, kept as correct practice.
 
@@ -114,21 +114,21 @@ Run on 2026-11-13, Windows 11, Node 24.18.0, Chrome (system, headless), Docker c
 
 ### Lighthouse 13.6.0, mobile, production build behind the e2e proxy (brotli), stub TMDB, median of 3 runs
 
-Default throttling (simulated Slow 4G: 150 ms RTT, 1.6 Mbps, 4x CPU slowdown):
+After the PrimeIcons change (woff2-only vendored stylesheet, no 89 KB `eot` preload; before it: Slow 4G `/` 86 / 3.62 s, title 92 / 3.32 s). Default throttling (simulated Slow 4G: 150 ms RTT, 1.6 Mbps, 4x CPU slowdown):
 
 | Page               | Performance          | Accessibility | Best Practices | SEO | FCP    | LCP                   | CLS   | TBT    |
 | ------------------ | -------------------- | ------------- | -------------- | --- | ------ | --------------------- | ----- | ------ |
-| `/`                | 86 (runs 77, 86, 92) | 100           | 96             | 100 | 0.94 s | 3.62 s (3.17 to 4.14) | 0.002 | 241 ms |
-| `/title/movie/603` | 92                   | 100           | 96             | 100 | 0.88 s | 3.32 s (3.32 to 3.32) | 0.019 | 82 ms  |
+| `/`                | 88 (runs 78, 88, 94) | 100           | 96             | 100 | 0.99 s | 3.19 s (2.72 to 3.99) | 0     | 274 ms |
+| `/title/movie/603` | 96 (runs 94, 96, 96) | 100           | 96             | 100 | 0.88 s | 2.72 s (2.72 to 2.88) | 0.019 | 69 ms  |
 
 "4G" profile (simulated 170 ms RTT, 9 Mbps, 4x CPU; `node lighthouse.mjs 3 --4g`), the literal reading of PRD section 4:
 
 | Page               | Performance | Accessibility | Best Practices | SEO | FCP    | LCP    | CLS   | TBT    |
 | ------------------ | ----------- | ------------- | -------------- | --- | ------ | ------ | ----- | ------ |
-| `/`                | 91          | 100           | 96             | 100 | 1.03 s | 2.07 s | 0.001 | 339 ms |
-| `/title/movie/603` | 99          | 100           | 96             | 100 | 0.98 s | 1.90 s | 0.019 | 107 ms |
+| `/`                | 94          | 100           | 96             | 100 | 1.03 s | 2.07 s | 0.002 | 234 ms |
+| `/title/movie/603` | 97          | 100           | 96             | 100 | 0.98 s | 2.06 s | 0.019 | 151 ms |
 
-Against the PRD targets: CLS under 0.1 passes everywhere. LCP under 2.5 s passes on the 4G profile and misses on Lighthouse's default Slow 4G (open item in 2.3, owner decision). Caveats of the setup, all of which make the lab numbers differ from production:
+Against the PRD targets: CLS under 0.1 passes everywhere. LCP under 2.5 s passes on the 4G profile and misses on Lighthouse's default Slow 4G for Home and is within 0.25 s on the title page (open item in 2.3, owner decision). Caveats of the setup, all of which make the lab numbers differ from production:
 
 - TMDB images are tiny generated PNGs from a local HTTPS stand-in for `image.tmdb.org` (so the numbers measure our HTML, CSS, JS and fonts, not TMDB's CDN; a real 100 KB backdrop adds time on a slow link, and the image-delivery insight on the title page is an artifact of the PNG stand-ins).
 - The proxy in front is HTTP/1.1 and compresses with brotli level 5; a real HTTP/2 or HTTP/3 edge changes request scheduling.

@@ -3,7 +3,7 @@ import { provideLocationMocks } from '@angular/common/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet, withComponentInputBinding } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { App } from './app';
@@ -105,6 +105,9 @@ describe('App with the real route table', () => {
   /** The address bar is already at `url` when the app boots, as on a hard reload; the router has not navigated yet. */
   async function boot(url: string, user?: UserDto) {
     TestBed.configureTestingModule({
+      // The toast host is a deferred block (a dynamic import): nothing here needs it, and an import still
+      // running when the spec ends fails the suite (EnvironmentTeardownError).
+      deferBlockBehavior: DeferBlockBehavior.Manual,
       imports: [App],
       providers: [
         provideRouter(routes, withComponentInputBinding()),

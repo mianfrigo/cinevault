@@ -2,7 +2,7 @@ import { Location } from '@angular/common';
 import { provideLocationMocks } from '@angular/common/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { App } from '../../app';
@@ -108,6 +108,9 @@ describe('/admin routes', () => {
   describe('chromeless', () => {
     function render(path: string) {
       TestBed.configureTestingModule({
+        // The toast host is a deferred block (a dynamic import): nothing here needs it, and an import still
+        // running when the spec ends fails the suite (EnvironmentTeardownError).
+        deferBlockBehavior: DeferBlockBehavior.Manual,
         imports: [App],
         providers: [
           provideRouter(routes, withComponentInputBinding()),

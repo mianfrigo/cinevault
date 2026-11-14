@@ -13,3 +13,18 @@ export const AuthThrottle = () =>
         `${ctx.getClass().name}-${ctx.getHandler().name}-${name}-${tracker}`,
     },
   });
+
+/**
+ * The routes that check the account's current password (change password, change email, delete
+ * account): one shared 5 per minute per IP across all three. Left on the 100/min API-wide counter
+ * they would be a faster password oracle than login; counted per route they would give three
+ * budgets of guesses.
+ */
+export const PasswordCheckThrottle = () =>
+  Throttle({
+    default: {
+      limit: 5,
+      ttl: 60_000,
+      generateKey: (_ctx, tracker, name) => `password-check-${name}-${tracker}`,
+    },
+  });

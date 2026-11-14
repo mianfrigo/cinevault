@@ -133,6 +133,7 @@ describe('/admin routes', () => {
       const fixture = render('/admin/users');
       expect((fixture.nativeElement as HTMLElement).querySelector('cv-nav')).toBeNull();
       expect((fixture.nativeElement as HTMLElement).querySelector('cv-footer')).toBeNull();
+      await fixture.whenStable(); // nothing may still be loading when the test ends
       TestBed.inject(HttpTestingController).match(() => true);
     });
 

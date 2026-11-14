@@ -111,6 +111,8 @@ describe('Title page', () => {
     const backdrop = el.querySelector(`img[src="${movie.backdropUrl}"]`);
     expect(backdrop).not.toBeNull();
     expect(backdrop?.getAttribute('fetchpriority')).toBe('high');
+    expect(backdrop?.getAttribute('srcset')).toMatch(/ 780w, .* 1280w$/);
+    expect(backdrop?.getAttribute('sizes')).toBe('100vw');
   });
 
   it('shows "N seasons" for a series and loads the first season only', async () => {

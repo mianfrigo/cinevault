@@ -89,11 +89,19 @@ describe('NavComponent', () => {
     });
   });
 
+  /** The search box is a deferred block: it renders from an idle callback, which `whenStable` does not wait for. */
+  async function searchBoxRendered(fixture: ComponentFixture<NavComponent>): Promise<void> {
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await fixture.whenStable();
+  }
+
   async function submitSearch(
     fixture: ComponentFixture<NavComponent>,
     el: HTMLElement,
     text: string,
   ): Promise<Event> {
+    await searchBoxRendered(fixture);
     const input = el.querySelector<HTMLInputElement>('input[type="search"]')!;
     input.value = text;
     input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -119,8 +127,9 @@ describe('NavComponent', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('does not paint the untouched search box as invalid', () => {
-    const { el } = setup();
+  it('does not paint the untouched search box as invalid', async () => {
+    const { fixture, el } = setup();
+    await searchBoxRendered(fixture);
     // Signal Forms passes the raw invalid state (empty) on to PrimeNG, which would draw a red border
     // on a pristine box. The form resets the invalid tokens to the neutral ones, as cv-auth-field does.
     const input = el.querySelector<HTMLInputElement>('input[type="search"]')!;

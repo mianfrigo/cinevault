@@ -14,6 +14,7 @@ import { ButtonModule } from 'primeng/button';
 import { FavoritesStore } from '@core/favorites/favorites.store';
 import { TitleSummary } from '@core/models';
 import { ScoreComponent } from '@shared/components/score/score.component';
+import { backdropSrcset } from '@shared/utils/tmdb-image';
 import { mediaTypeLabel } from '@shared/utils/title-format';
 
 const SWIPE_PX = 50;
@@ -70,6 +71,8 @@ const SWIPE_PX = 50;
             >
               <img
                 [src]="t.backdropUrl"
+                [attr.srcset]="row.srcset"
+                sizes="100vw"
                 alt=""
                 [attr.fetchpriority]="first ? 'high' : null"
                 [attr.loading]="first ? null : 'lazy'"
@@ -224,6 +227,7 @@ export class HeroComponent {
       const saved = this.favorites.isFavorite(t.mediaType, t.tmdbId);
       return {
         t,
+        srcset: backdropSrcset(t.backdropUrl),
         typeName: mediaTypeLabel(t.mediaType),
         listLabel: saved ? 'In My List' : 'My List',
         listIcon: saved ? 'pi pi-check' : 'pi pi-plus',

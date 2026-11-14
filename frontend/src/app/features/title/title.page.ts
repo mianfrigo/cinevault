@@ -27,6 +27,7 @@ import NotFoundComponent from '../../pages/not-found.component';
 import { InitialsPipe } from '@shared/pipes/initials.pipe';
 import { plural } from '@shared/utils/plural';
 import { PosterFrameComponent } from '@shared/components/poster-frame/poster-frame.component';
+import { backdropSrcset } from '@shared/utils/tmdb-image';
 import { mediaTypeLabel, titleAlt } from '@shared/utils/title-format';
 import { PosterRowComponent } from '@shared/components/poster-row/poster-row.component';
 import { ScoreComponent } from '@shared/components/score/score.component';
@@ -113,6 +114,8 @@ function factsOf(t: TitleDetail, typeName: string, length: string): [string, str
               @if (t.backdropUrl) {
                 <img
                   [src]="t.backdropUrl"
+                  [attr.srcset]="v.backdropSrcset"
+                  sizes="100vw"
                   alt=""
                   fetchpriority="high"
                   class="size-full object-cover opacity-80"
@@ -337,6 +340,7 @@ export default class TitlePage {
     return {
       title,
       alt: titleAlt(title),
+      backdropSrcset: backdropSrcset(title.backdropUrl),
       typeName,
       length,
       facts: factsOf(title, typeName, length),

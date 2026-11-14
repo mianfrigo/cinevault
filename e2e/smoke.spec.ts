@@ -301,6 +301,51 @@ test.describe('public pages and headers', () => {
     await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
   });
 
+  test('the nav search box is in the server HTML, hydrates on first use and finds a title', async ({
+    page,
+    request,
+  }) => {
+    // Angular Forms is loaded and hydrated lazily (a deferred block): the server must still render the box.
+    const html = await (await request.get('/')).text();
+    expect(html).toContain('role="search"');
+    expect(html).toContain('placeholder="Search movies and shows"');
+
+    const problems: string[] = [];
+    page.on('console', (m) => {
+      if (/NG\d{4}/.test(m.text())) problems.push(m.text());
+    });
+    page.on('pageerror', (e) => problems.push(e.message));
+
+    await gotoBooted(page, '/');
+    const box = page.getByRole('searchbox', { name: 'Search movies and shows' });
+    await box.click();
+    await box.fill(FIXTURE_MOVIE_TITLE);
+    await box.press('Enter');
+    await expect(page).toHaveURL(
+      new RegExp(`/search\\?q=${encodeURIComponent(FIXTURE_MOVIE_TITLE)}`),
+    );
+    await expect(
+      page.getByRole('link', { name: new RegExp(FIXTURE_MOVIE_TITLE) }).first(),
+    ).toBeVisible();
+    // A hydration mismatch (NG0500...) or an uncaught error would surface here.
+    expect(problems).toEqual([]);
+  });
+
+  test('on a phone the search toggle hydrates the box, focuses it and Escape returns to the toggle', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await gotoBooted(page, '/');
+    const box = page.getByRole('searchbox', { name: 'Search movies and shows' });
+    await expect(box).toBeHidden();
+    const toggle = page.getByRole('button', { name: 'Search titles' });
+    await toggle.click();
+    await expect(box).toBeFocused();
+    await box.press('Escape');
+    await expect(box).toBeHidden();
+    await expect(toggle).toBeFocused();
+  });
+
   test('responses carry Referrer-Policy: no-referrer; /login is no-store and a catalog page is cacheable', async ({
     request,
   }) => {

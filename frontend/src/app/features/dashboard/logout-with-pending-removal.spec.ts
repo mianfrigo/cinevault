@@ -1,6 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { App } from '../../app';
@@ -14,6 +14,9 @@ const noContent = { status: 204, statusText: 'No Content' };
 describe('Logging out with a removal pending', () => {
   it('sends the pending DELETE with the session token and ends on /, not /login', async () => {
     TestBed.configureTestingModule({
+      // The toast host is a deferred block (a dynamic import): nothing here needs it, and an import still
+      // running when the spec ends fails the suite (EnvironmentTeardownError).
+      deferBlockBehavior: DeferBlockBehavior.Manual,
       providers: [
         provideRouter(routes, withComponentInputBinding()),
         provideHttpClient(withInterceptors([authInterceptor])),

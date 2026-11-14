@@ -102,7 +102,7 @@ Run on 2026-11-13, Windows 11, Node 24.18.0, Chrome (system, headless), Docker c
 | `backend`: e2e (`jest --config ./test/jest-e2e.json`)                     | 11 suites, 183 tests, all pass                             |
 | `frontend`: `npx ng test --watch=false`                                   | 66 files, 539 tests, all pass                              |
 | `frontend`: `npm run lint`, `npm run format:check`, `npm run build`       | pass, pass, pass (initial 670.98 kB, warning limit 750 kB) |
-| `e2e`: `npm test` (Playwright, run twice back to back)                    | 10 passed (about 40 s)                                     |
+| `e2e`: `npm test` (Playwright, run twice back to back)                    | 11 passed (about 42 s)                                     |
 
 (The backend commands were run as `npx jest` and `node scripts/migrate-test.js && npx jest --config ./test/jest-e2e.json`, i.e. `npm test` and `npm run test:e2e` without their `prisma generate` pre-step, so the generated client that a running dev watcher compiles was not rewritten.)
 

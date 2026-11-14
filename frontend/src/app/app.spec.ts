@@ -3,7 +3,7 @@ import { provideLocationMocks } from '@angular/common/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet, withComponentInputBinding } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { App } from './app';
@@ -105,6 +105,9 @@ describe('App with the real route table', () => {
   /** The address bar is already at `url` when the app boots, as on a hard reload; the router has not navigated yet. */
   async function boot(url: string, user?: UserDto) {
     TestBed.configureTestingModule({
+      // The toast host is a deferred block (a dynamic import): nothing here needs it, and an import still
+      // running when the spec ends fails the suite (EnvironmentTeardownError).
+      deferBlockBehavior: DeferBlockBehavior.Manual,
       imports: [App],
       providers: [
         provideRouter(routes, withComponentInputBinding()),
@@ -146,8 +149,9 @@ describe('App with the real route table', () => {
       '/verify-email?token=t',
       '/reset-password?token=t',
     ]) {
-      const { chrome } = await boot(url);
+      const { chrome, go } = await boot(url);
       expect(chrome(), url).toEqual([false, false]);
+      await go(url); // let the lazy page finish loading: an import still running at teardown fails the suite
       TestBed.resetTestingModule();
     }
   });
@@ -159,8 +163,9 @@ describe('App with the real route table', () => {
       '/dashboard/favorites?type=tv&page=2',
       '/dashboard/account',
     ]) {
-      const { chrome } = await boot(url);
+      const { chrome, go } = await boot(url);
       expect(chrome(), url).toEqual([false, false]);
+      await go(url); // let the lazy page finish loading: an import still running at teardown fails the suite
       TestBed.resetTestingModule();
     }
   });
@@ -168,8 +173,9 @@ describe('App with the real route table', () => {
   it('renders the nav and footer in the first frame of other routes', async () => {
     // '/dashboarding' shares a prefix with a chromeless route but is not below it.
     for (const url of ['/', '/movies', '/terms', '/dashboarding']) {
-      const { chrome } = await boot(url);
+      const { chrome, go } = await boot(url);
       expect(chrome(), url).toEqual([true, true]);
+      await go(url);
       TestBed.resetTestingModule();
     }
   });

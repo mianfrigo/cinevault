@@ -6,7 +6,7 @@ Status as of Task 20B (2026-11-13). A box is checked only when the repository, a
 
 - [ ] **1. All features in section 5 work on phone (390px) and laptop (1440px) widths.**
   - Evidence so far: Chrome checks at 390 and 1440 were done per task (see each `task-*-report.md`), and the smoke runs a desktop viewport (1280x720) only. Nothing automated covers 390px. Owner: you. Next: one manual pass of every screen at 390 and 1440, or add a 390px Playwright project to `e2e/playwright.config.ts`.
-- [x] **2a. Backend tests and frontend tests pass.** Backend 80 unit + 183 e2e, frontend 478 (see Results). Commands: `cd backend && npm test && npm run test:e2e`, `cd frontend && npx ng test --watch=false`.
+- [x] **2a. Backend tests and frontend tests pass.** Backend 80 unit + 183 e2e, frontend 527 (see Results). Commands: `cd backend && npm test && npm run test:e2e`, `cd frontend && npx ng test --watch=false`.
 - [x] **2b. The end-to-end smoke passes against the local stack.** `cd e2e && npm test`: 5 tests pass, twice back to back (see Results). Covers register, Mailpit verification, login, title, My List, Favorites, logout, admin block with the next call refused, 404 and 503 statuses, response headers.
 - [ ] **3. The `downloadButton` flag is off in production config.**
   - Evidence so far: the code default is off (`FEATURE_DOWNLOAD_BUTTON` defaults to `false` in `backend/src/config/env.ts`, `.env.example` says `false`, the e2e stack sets `false`, and the Download button is absent in the smoke). There is no production config yet (hosting is undecided). Owner: ops. Next: leave `FEATURE_DOWNLOAD_BUTTON` unset or `false` in the production environment and re-check `GET /api/v1/config` returns `downloadButton: false` after the first deploy.
@@ -54,7 +54,7 @@ Collected from the SDD ledger, the PR descriptions (#2 to #29), the security aud
 
 Performance (Task 20B Lighthouse, see Results):
 
-- [ ] **P1, owner decision needed: the LCP on Lighthouse's default Slow 4G still misses the 2.5 s target on Home.** Median of 3 on Slow 4G (1.6 Mbps / 150 ms RTT): `/` 3.19 s (runs 2.72 to 3.99), title page 2.72 s (2.72 to 2.88). The PrimeIcons change (vendored stylesheet with woff2 only, so the 89 KB `eot` is no longer bundled or preloaded) took them from 3.62 s and 3.32 s. On the 9 Mbps / 170 ms "4G" profile (the literal PRD wording) both pass: 2.07 s and 2.06 s. Remaining: about 510 KB per page on the wire (initial JS 760.66 kB raw / 182.35 kB transfer plus route chunks, PrimeNG, fonts); the unthrottled LCP is about 0.4 s, so the simulated figure is bandwidth-bound. Choose: (a) trim the initial chunk (23 kB of headroom under the 850 kB warning) and the Home hero path, or (b) accept the 9 Mbps reading as the PRD's "4G" and record that here.
+- [ ] **P2, owner decision needed: the LCP on Lighthouse's default Slow 4G is at the 2.5 s target, not clearly under it.** Median of 3 on Slow 4G (1.6 Mbps / 150 ms RTT): `/` 2.42 s (runs 2.42 to 3.05, the first run of a batch is the slow one), title page 2.50 s (2.499 to 2.503: a coin flip on the threshold). On the 9 Mbps / 170 ms "4G" profile (the literal PRD wording) both pass at 1.72 s. What moved it (from 3.62 s and 3.32 s): the PrimeIcons font cut to the 22 icons in use (32 KB to 2 KB; the build had preloaded it), the Aura theme cut to the components the app imports (about 70 KB raw off the initial JS), Angular Forms out of the initial bundle (the nav search is a deferred, lazily hydrated block), and hero and title backdrops with a 780 px and a 1280 px `srcset` (a phone no longer downloads the 1280 px picture; with real TMDB files that is roughly half the bytes, the lab stand-ins understate it). Left on the table: the two Google Fonts variable families (one render-blocking CSS request plus about 46 KB of woff2 on a third-party origin; self-hosting them also removes the IP disclosure to Google, a privacy-policy point), `@primeui/license-manager` (about 21 KB raw) and the rest of PrimeNG's base. Choose: accept this as met (the lab is simulated and the unthrottled LCP is about 0.3 s), or self-host and subset the fonts to clear the threshold with margin.
 - [ ] **P3** **A visitor without a session logs a console error on every page load**: the first `POST /api/v1/auth/refresh` answers 401 (Lighthouse Best Practices 96 instead of 100, "errors in console"). A non-401 "no session" answer or a non-HttpOnly marker cookie would avoid the red console line.
 - [x] Title backdrop `fetchpriority="high"` and `preconnect` to `image.tmdb.org` added in Task 20B (test: `title.page.spec.ts`, smoke header check). No measurable lab effect, kept as correct practice.
 
@@ -65,6 +65,8 @@ Frontend:
 - [ ] **P2** Input typed before hydration is wiped on the auth forms: Signal Forms writes the model value into the control when the page hydrates, and the lazy route chunk (`loadComponent`) widens the window (seconds on a slow link; Lighthouse Slow 4G LCP is about 3.4 to 3.6 s). Found by the e2e smoke (the Name field on `/register` was cleared; the harness now waits for the app's first `POST /auth/refresh` in `gotoBooted`, which is only a proxy for "hydrated"). Options: re-apply a pending DOM value on hydrate, disable the inputs until hydrated, or load the auth pages eagerly.
 - [ ] **P2** Route changes do not scroll to the top or restore the scroll position (the router has no `scrollPositionRestoration`; only the title page scrolls itself): a long list page reached from a scrolled page keeps the old offset.
 - [ ] **P3** 20A minors: the `primeicons` `.svg` file is cached for one hour (not hashed like the other font files); no spec for `ResponseStatus.set(503)` followed by `noStore()`.
+- [ ] **P3** The nav search box is a deferred block that hydrates on first use (`@defer (hydrate on interaction; hydrate when searchOpen())`, code prefetched on idle), so Angular Forms is not in the initial bundle. The smoke covers laptop and phone use, and no NG error in the console. Not covered: typing and pressing Enter in the first milliseconds on a very slow link, before the box has hydrated (Angular replays the events, but a native form submit cannot be replayed).
+- [ ] **P3** The PrimeIcons font is a 22-icon subset (`frontend/src/styles/primeicons.css`, `fonts/primeicons-subset.woff2`). Adding an icon means re-subsetting the font; `theme/primeicons.spec.ts` fails when app code uses a `pi-*` class that is missing. Same for `theme/cinevault-preset.spec.ts`, which fails when a `primeng/<component>` import has no Aura tokens in the slim preset.
 - [x] The logged-out hard reload of `/dashboard/**` showing the nav for a frame is FIXED (Task 20A, #29: `app.ts` ignores a guard-redirect `NavigationCancel`; spec in `app.spec.ts`, verified in Chrome at CPU x1 and x6).
 - [ ] **P3** `users.page.spec` has a cold-start timing flake under machine load (seen in about 2 of 6 loaded runs, clean when run alone; run `ng test` on its own).
 - [ ] **P3** `ng build` crashed once with a native exit code (3221225477) during Task 20B on this Windows machine; the e2e build retries once. Not reproduced since.
@@ -98,9 +100,9 @@ Run on 2026-11-13, Windows 11, Node 24.18.0, Chrome (system, headless), Docker c
 | `backend`: `npm run format:check`, `npm run lint:ci`, `npm run typecheck` | pass, pass, pass                                           |
 | `backend`: unit (`jest`)                                                  | 11 suites, 80 tests, all pass                              |
 | `backend`: e2e (`jest --config ./test/jest-e2e.json`)                     | 11 suites, 183 tests, all pass                             |
-| `frontend`: `npx ng test --watch=false`                                   | 60 files, 478 tests, all pass                              |
-| `frontend`: `npm run lint`, `npm run format:check`, `npm run build`       | pass, pass, pass (initial 827.00 kB, warning limit 850 kB) |
-| `e2e`: `npm test` (Playwright, run twice back to back)                    | 5 passed, 5 passed (about 34 s each)                       |
+| `frontend`: `npx ng test --watch=false`                                   | 63 files, 527 tests, all pass                              |
+| `frontend`: `npm run lint`, `npm run format:check`, `npm run build`       | pass, pass, pass (initial 669.69 kB, warning limit 750 kB) |
+| `e2e`: `npm test` (Playwright, run twice back to back)                    | 7 passed (about 36 s)                                      |
 
 (The backend commands were run as `npx jest` and `node scripts/migrate-test.js && npx jest --config ./test/jest-e2e.json`, i.e. `npm test` and `npm run test:e2e` without their `prisma generate` pre-step, so the generated client that a running dev watcher compiles was not rewritten.)
 
@@ -108,27 +110,27 @@ Run on 2026-11-13, Windows 11, Node 24.18.0, Chrome (system, headless), Docker c
 
 | Asset                                                                            | Raw       | Estimated transfer |
 | -------------------------------------------------------------------------------- | --------- | ------------------ |
-| Initial total (JS + CSS)                                                         | 827.00 kB | 193.81 kB          |
-| CSS (`styles-*.css`, Tailwind + PrimeNG)                                         | 66.34 kB  | 11.46 kB           |
-| Initial JS (`main` 346.31 kB, two shared chunks 213.72 and 192.02 kB, two small) | 760.66 kB | 182.35 kB          |
+| Initial total (JS + CSS)                                                         | 669.69 kB | 170.06 kB          |
+| CSS (`styles-*.css`, Tailwind + PrimeNG)                                         | 53.45 kB  | 9.53 kB            |
+| Initial JS (`main` 201.78 kB, two shared chunks 222.81 and 190.74 kB, one small) | 616.24 kB | 160.53 kB          |
 
 ### Lighthouse 13.6.0, mobile, production build behind the e2e proxy (brotli), stub TMDB, median of 3 runs
 
-After the PrimeIcons change (woff2-only vendored stylesheet, no 89 KB `eot` preload; before it: Slow 4G `/` 86 / 3.62 s, title 92 / 3.32 s). Default throttling (simulated Slow 4G: 150 ms RTT, 1.6 Mbps, 4x CPU slowdown):
+After the bundle and hero changes of the LCP work (before them: Slow 4G `/` 86 / 3.62 s, title 92 / 3.32 s; 4G `/` 2.07 s, title 1.90 s). Default throttling (simulated Slow 4G: 150 ms RTT, 1.6 Mbps, 4x CPU slowdown):
 
 | Page               | Performance          | Accessibility | Best Practices | SEO | FCP    | LCP                   | CLS   | TBT    |
 | ------------------ | -------------------- | ------------- | -------------- | --- | ------ | --------------------- | ----- | ------ |
-| `/`                | 88 (runs 78, 88, 94) | 100           | 96             | 100 | 0.99 s | 3.19 s (2.72 to 3.99) | 0     | 274 ms |
-| `/title/movie/603` | 96 (runs 94, 96, 96) | 100           | 96             | 100 | 0.88 s | 2.72 s (2.72 to 2.88) | 0.019 | 69 ms  |
+| `/`                | 95 (runs 92, 95, 96) | 100           | 96             | 100 | 0.93 s | 2.42 s (2.42 to 3.05) | 0.002 | 172 ms |
+| `/title/movie/603` | 97 (runs 96, 97, 97) | 100           | 96             | 100 | 0.88 s | 2.50 s (2.50 to 2.50) | 0.019 | 86 ms  |
 
 "4G" profile (simulated 170 ms RTT, 9 Mbps, 4x CPU; `node lighthouse.mjs 3 --4g`), the literal reading of PRD section 4:
 
 | Page               | Performance | Accessibility | Best Practices | SEO | FCP    | LCP    | CLS   | TBT    |
 | ------------------ | ----------- | ------------- | -------------- | --- | ------ | ------ | ----- | ------ |
-| `/`                | 94          | 100           | 96             | 100 | 1.03 s | 2.07 s | 0.002 | 234 ms |
-| `/title/movie/603` | 97          | 100           | 96             | 100 | 0.98 s | 2.06 s | 0.019 | 151 ms |
+| `/`                | 93          | 100           | 96             | 100 | 0.98 s | 1.72 s | 0.002 | 315 ms |
+| `/title/movie/603` | 99          | 100           | 96             | 100 | 0.95 s | 1.72 s | 0.019 | 92 ms  |
 
-Against the PRD targets: CLS under 0.1 passes everywhere. LCP under 2.5 s passes on the 4G profile and misses on Lighthouse's default Slow 4G for Home and is within 0.25 s on the title page (open item in 2.3, owner decision). Caveats of the setup, all of which make the lab numbers differ from production:
+Against the PRD targets: CLS under 0.1 passes everywhere. LCP under 2.5 s passes on the 4G profile and is at the threshold on Lighthouse's default Slow 4G (2.42 s Home, 2.50 s title; open item in 2.3). Caveats of the setup, all of which make the lab numbers differ from production:
 
 - TMDB images are tiny generated PNGs from a local HTTPS stand-in for `image.tmdb.org` (so the numbers measure our HTML, CSS, JS and fonts, not TMDB's CDN; a real 100 KB backdrop adds time on a slow link, and the image-delivery insight on the title page is an artifact of the PNG stand-ins).
 - The proxy in front is HTTP/1.1 and compresses with brotli level 5; a real HTTP/2 or HTTP/3 edge changes request scheduling.

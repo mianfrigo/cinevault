@@ -10,14 +10,11 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { form, FormField, FormRoot, validate, requiredError } from '@angular/forms/signals';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { InputTextModule } from 'primeng/inputtext';
 import { AuthStore } from '@core/auth/auth.store';
 import { LogoComponent } from '@shared/components/logo/logo.component';
+import { NavSearchComponent } from './nav-search.component';
 import { UserMenuComponent } from './user-menu.component';
 
 const LINK =
@@ -36,13 +33,9 @@ interface NavLink {
     NgTemplateOutlet,
     RouterLink,
     RouterLinkActive,
-    FormField,
-    FormRoot,
     ButtonModule,
-    IconFieldModule,
-    InputIconModule,
-    InputTextModule,
     LogoComponent,
+    NavSearchComponent,
     UserMenuComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -65,31 +58,15 @@ interface NavLink {
           [pt]="toggleAttrs()"
           (onClick)="toggleSearch()"
         />
-        <!-- Signal Forms hands PrimeNG the raw invalid state, so the empty box would be red. The search
-             never shows a field error (a blank query just does not submit): the invalid tokens stay neutral. -->
-        <form
-          role="search"
-          autocomplete="off"
-          class="absolute inset-x-0 top-full border-b border-line-soft bg-surface-1 px-6 pt-2 pb-4 md:px-8 lg:static lg:ml-auto lg:block lg:w-80 lg:border-0 lg:bg-transparent lg:p-0 [--p-inputtext-invalid-border-color:var(--p-inputtext-border-color)] [--p-inputtext-invalid-placeholder-color:var(--p-inputtext-placeholder-color)]"
-          [class.hidden]="!searchOpen()"
-          [formRoot]="searchForm"
-          (keydown.escape)="closeSearch()"
-        >
-          <label for="nav-search" class="sr-only">Search movies and shows</label>
-          <p-iconfield class="block">
-            <p-inputicon class="pi pi-search" />
-            <input
-              #q
-              id="nav-search"
-              [formField]="searchForm.q"
-              pInputText
-              type="search"
-              class="w-full"
-              placeholder="Search movies and shows"
-              enterkeyhint="search"
-            />
-          </p-iconfield>
-        </form>
+        <!-- The search box (and Angular Forms with it) loads when the phone toggle opens it or the first
+             time the box is used; the server still renders it, so it is there before any script. -->
+        @defer (on idle; prefetch on idle; hydrate on interaction; hydrate when searchOpen()) {
+          <cv-nav-search
+            [open]="searchOpen()"
+            (submitted)="searchOpen.set(false)"
+            (dismissed)="closeSearch()"
+          />
+        }
         <div class="flex flex-none items-center gap-1 md:gap-2">
           @if (auth.ready()) {
             @if (auth.isLoggedIn()) {
@@ -129,10 +106,8 @@ interface NavLink {
 })
 export class NavComponent {
   protected readonly auth = inject(AuthStore);
-  private readonly router = inject(Router);
   private readonly injector = inject(Injector);
   private readonly toggle = viewChild.required('toggle', { read: ElementRef });
-  private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('q');
 
   /** Link classes of the desktop bar and of the small-screen tab row. */
   protected readonly wide = {
@@ -147,20 +122,6 @@ export class NavComponent {
   };
 
   protected readonly searchOpen = signal(false);
-
-  private readonly searchModel = signal({ q: '' });
-  protected readonly searchForm = form(
-    this.searchModel,
-    (path) => validate(path.q, ({ value }) => (value().trim() ? undefined : requiredError())),
-    {
-      submission: {
-        action: async (f) => {
-          this.searchOpen.set(false);
-          await this.router.navigate(['/search'], { queryParams: { q: f.q().value().trim() } });
-        },
-      },
-    },
-  );
 
   // p-button only forwards ariaLabel; aria-expanded reaches the inner <button> through pt.
   protected readonly toggleAttrs = computed(() => ({
@@ -181,7 +142,6 @@ export class NavComponent {
   protected toggleSearch(): void {
     if (this.searchOpen()) return this.closeSearch();
     this.searchOpen.set(true);
-    afterNextRender(() => this.input().nativeElement.focus(), { injector: this.injector });
   }
 
   /** Closes the mobile panel; focus goes back to the toggle only if it was inside the panel. */

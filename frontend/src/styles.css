@@ -1,4 +1,5 @@
 @import 'tailwindcss';
 @import 'tailwindcss-primeui';
-@import './styles/primeicons.css';
+/* In the base layer: the icon font's .pi rule (display: inline-block) must not beat Tailwind utilities such as grid. */
+@import './styles/primeicons.css' layer(base);
 @import './styles/theme.css';

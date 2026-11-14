@@ -415,6 +415,15 @@ test.describe('public pages and headers', () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(800);
   });
 
+  test('the heart chip on a poster card is a centering grid (Tailwind beats the icon font rule)', async ({
+    page,
+  }) => {
+    await gotoBooted(page, '/movies');
+    const chip = page.locator('cv-poster-card p-button button span.pi').first();
+    await expect(chip).toHaveCSS('display', 'grid');
+    await expect(chip).toHaveCSS('place-items', 'center');
+  });
+
   test('responses carry Referrer-Policy: no-referrer; /login is no-store and a catalog page is cacheable', async ({
     request,
   }) => {

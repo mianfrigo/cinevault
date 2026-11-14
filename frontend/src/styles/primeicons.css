@@ -1,4 +1,4 @@
-/* PrimeIcons 8.0.2, cut down to the 22 icons the app uses.
+/* PrimeIcons 8.0.2, cut down to the 23 icons the app uses.
    The package ships a 363-icon font (32 KB) in five formats; only woff2 is kept, subset to these glyphs.
    The Angular build preloads the font on the critical path, so its size is part of the first paint.
    A spec (primeicons.spec.ts) fails when app code uses a pi-* class that is not listed here.
@@ -103,6 +103,9 @@
 }
 .pi-check:before {
     content: "\e94f";
+}
+.pi-chevron-down:before {
+    content: "\e954";
 }
 .pi-chevron-left:before {
     content: "\e955";

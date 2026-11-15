@@ -60,7 +60,7 @@ interface NavLink {
         />
         <!-- The search box (and Angular Forms with it) loads when the phone toggle opens it or the first
              time the box is used; the server still renders it, so it is there before any script. -->
-        @defer (on idle; prefetch on idle; hydrate on interaction; hydrate when searchOpen()) {
+        @defer (on idle; hydrate on interaction; hydrate when searchOpen()) {
           <cv-nav-search
             [open]="searchOpen()"
             (submitted)="searchOpen.set(false)"

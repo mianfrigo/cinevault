@@ -10,7 +10,7 @@ import type { Role, UserStatus } from '../src/generated/prisma/client';
 import { MAIL_TRANSPORT } from '../src/mail/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { resetDb } from './helpers/db';
-import { flushTestRedis } from './helpers/redis';
+import { clearAppCache, flushTestRedis } from './helpers/redis';
 import { waitForMail } from './helpers/wait';
 
 interface Sent {
@@ -60,6 +60,7 @@ describe('Outstanding email tokens vs credential changes (e2e)', () => {
   beforeEach(async () => {
     await resetDb(prisma);
     await flushTestRedis();
+    await clearAppCache(app);
     mail.reset();
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   });

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { createTransport } from 'nodemailer';
 import { ENV, type Env } from '../config/env';
+import { MailBudgetService } from './mail-budget.service';
 import { MAIL_TRANSPORT, MailService } from './mail.service';
 
 export { MAIL_TRANSPORT };
@@ -21,9 +22,10 @@ export const createMailTransport = (env: Env) =>
 
 @Module({
   providers: [
+    MailBudgetService,
     { provide: MAIL_TRANSPORT, useFactory: createMailTransport, inject: [ENV] },
     MailService,
   ],
-  exports: [MailService, MAIL_TRANSPORT],
+  exports: [MailService, MailBudgetService, MAIL_TRANSPORT],
 })
 export class MailModule {}

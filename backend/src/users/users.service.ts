@@ -7,6 +7,7 @@ import { SessionsService } from '../auth/sessions.service';
 import { AppException } from '../common/app.exception';
 import { runInBackground } from '../common/background';
 import type { User } from '../generated/prisma/client';
+import { MailBudgetService } from '../mail/mail-budget.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { lockActiveAdmins } from './admin-lock';
@@ -22,6 +23,7 @@ export class UsersService {
     private readonly emailTokens: EmailTokensService,
     private readonly sessions: SessionsService,
     private readonly mail: MailService,
+    private readonly budget: MailBudgetService,
   ) {}
 
   /** The token outlives the account (deleted meanwhile): same answer as a bad token. */
@@ -111,6 +113,13 @@ export class UsersService {
     const taken = await this.prisma.user.findUnique({ where: { email } });
     if (!taken) {
       runInBackground(this.logger, 'change-email mail', async () => {
+        // The new address first: a refused address must not spend the account's budget.
+        if (
+          !(await this.budget.take('change-email', email)) ||
+          !(await this.budget.take('change-email-account', id))
+        ) {
+          return;
+        }
         const token = await this.emailTokens.issue(id, 'CHANGE_EMAIL', {
           newEmail: email,
         });

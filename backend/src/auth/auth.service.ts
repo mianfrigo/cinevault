@@ -3,6 +3,7 @@ import { AppException } from '../common/app.exception';
 import { runInBackground } from '../common/background';
 import { Prisma } from '../generated/prisma/client';
 import type { User } from '../generated/prisma/client';
+import { MailBudgetService } from '../mail/mail-budget.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUserDto, type UserDto } from '../users/user.dto';
@@ -32,10 +33,12 @@ export class AuthService {
     private readonly emailTokens: EmailTokensService,
     private readonly sessions: SessionsService,
     private readonly mail: MailService,
+    private readonly budget: MailBudgetService,
   ) {}
 
   private sendVerification(user: Pick<User, 'id' | 'email' | 'name'>): void {
     runInBackground(this.logger, 'verification mail', async () => {
+      if (!(await this.budget.take('verify', user.email))) return;
       const token = await this.emailTokens.issue(user.id, 'VERIFY_EMAIL');
       await this.mail.sendVerifyEmail(user.email, user.name, token);
     });
@@ -68,9 +71,11 @@ export class AuthService {
       });
       if (count === 1) this.sendVerification({ ...existing, name: dto.name });
     } else {
-      runInBackground(this.logger, 'already-registered mail', () =>
-        this.mail.sendAlreadyRegistered(existing.email, existing.name),
-      );
+      runInBackground(this.logger, 'already-registered mail', async () => {
+        if (!(await this.budget.take('already-registered', existing.email)))
+          return;
+        await this.mail.sendAlreadyRegistered(existing.email, existing.name);
+      });
     }
     return ACCEPTED;
   }
@@ -169,6 +174,7 @@ export class AuthService {
     });
     if (user?.status === 'ACTIVE') {
       runInBackground(this.logger, 'reset mail', async () => {
+        if (!(await this.budget.take('reset', user.email))) return;
         const token = await this.emailTokens.issue(user.id, 'RESET_PASSWORD');
         await this.mail.sendResetPassword(user.email, user.name, token);
       });

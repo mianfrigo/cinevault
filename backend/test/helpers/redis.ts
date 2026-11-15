@@ -1,3 +1,5 @@
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { createClient } from '@keyv/redis';
 
 const open = () => createClient({ url: process.env.REDIS_URL });
@@ -20,3 +22,8 @@ export const flushTestRedis = () => withTestRedis((c) => c.flushDb());
 
 /** Remaining TTL in ms of a key (-2 when the key does not exist). */
 export const redisPttl = (key: string) => withTestRedis((c) => c.pTTL(key));
+
+/** Empties the app's cache in every store, the per-process memory one too (flushTestRedis cannot reach it). */
+export const clearAppCache = (app: {
+  get: (token: typeof CACHE_MANAGER) => Cache;
+}) => app.get(CACHE_MANAGER).clear();

@@ -1,0 +1,34 @@
+name: Delete merged branch
+
+# Removes the head branch of a merged pull request. No checkout and no third-party action: it only calls the
+# GitHub API. Branches from forks are skipped (the token cannot touch them), and so is the default branch.
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  delete:
+    name: Delete head branch
+    if: >-
+      github.event.pull_request.merged
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.event.pull_request.head.ref != github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # The branch name is user-controlled: it goes in through the environment, never into the script text.
+      - name: Delete the branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if ! out=$(gh api --method DELETE "repos/$REPO/git/refs/heads/$BRANCH" 2>&1); then
+            echo "$out"
+            # Already deleted (for example by hand) is fine; anything else fails the run.
+            echo "$out" | grep -q "Reference does not exist"
+          fi

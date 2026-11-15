@@ -10,8 +10,8 @@ import type { Role } from '../src/generated/prisma/client';
 import { MAIL_TRANSPORT } from '../src/mail/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { resetDb } from './helpers/db';
-import { flushTestRedis } from './helpers/redis';
-import { sleep, waitForMail } from './helpers/wait';
+import { clearAppCache, flushTestRedis } from './helpers/redis';
+import { expectNoMoreMail, sleep, waitForMail } from './helpers/wait';
 
 interface Sent {
   to: string;
@@ -71,6 +71,7 @@ describe('Me endpoints (e2e)', () => {
   beforeEach(async () => {
     await resetDb(prisma);
     await flushTestRedis();
+    await clearAppCache(app);
     mail.reset();
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   });
@@ -292,6 +293,19 @@ describe('Me endpoints (e2e)', () => {
       ).toBe('new@example.com');
       await login('ana@example.com').expect(401);
       await login('new@example.com').expect(200);
+    });
+
+    it('change-email mails one new address at most 3 times an hour, and one account at most 3 times an hour, always 202', async () => {
+      await makeUser();
+      const { token } = await signIn();
+      const ask = (newEmail: string) =>
+        changeEmail(token, { newEmail, password: PASSWORD }).expect(202);
+      for (let i = 0; i < 5; i++) await ask('same@example.com');
+      await waitForMail(mail, 3);
+      await expectNoMoreMail(mail, 3);
+      // The 3 allowed mails used the account's budget: other addresses get nothing from it.
+      for (const name of ['b', 'c', 'd']) await ask(`${name}@example.com`);
+      await expectNoMoreMail(mail, 3);
     });
 
     it('change-email to an existing address returns 202 and sends nothing', async () => {

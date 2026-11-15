@@ -17,7 +17,7 @@ import type { Role } from '../src/generated/prisma/client';
 import { MAIL_TRANSPORT } from '../src/mail/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { resetDb } from './helpers/db';
-import { flushTestRedis, redisPttl } from './helpers/redis';
+import { clearAppCache, flushTestRedis, redisPttl } from './helpers/redis';
 import { expectNoMoreMail, sleep, waitForMail } from './helpers/wait';
 
 interface Sent {
@@ -90,6 +90,7 @@ describe('Auth sessions: refresh, logout, reset, guards (e2e)', () => {
   beforeEach(async () => {
     await resetDb(prisma);
     await flushTestRedis();
+    await clearAppCache(app);
     mail.reset();
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   });
@@ -464,6 +465,19 @@ describe('Auth sessions: refresh, logout, reset, guards (e2e)', () => {
 
     it('rejects a malformed email with 400', async () => {
       await forgot('nope').expect(400);
+    });
+
+    it('mails one address at most 3 times an hour, answers the same 202 and leaves the last link working', async () => {
+      await makeUser();
+      for (let i = 0; i < 5; i++) {
+        const res = await forgot('ana@example.com').expect(202);
+        expect(res.body).toEqual(accepted);
+        await sleep(30);
+      }
+      await waitForMail(mail, 3);
+      await expectNoMoreMail(mail, 3);
+      // The refused calls issued nothing, so they did not void the link of the third mail.
+      await reset(tokenOf(mail.sent[2])).expect(204);
     });
   });
 

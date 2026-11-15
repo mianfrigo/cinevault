@@ -10,6 +10,7 @@ import { TokensService } from '../src/auth/tokens.service';
 import { MAIL_TRANSPORT } from '../src/mail/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { resetDb } from './helpers/db';
+import { clearAppCache, flushTestRedis } from './helpers/redis';
 import { expectNoMoreMail, sleep, waitForMail } from './helpers/wait';
 
 interface Sent {
@@ -61,6 +62,8 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
 
   beforeEach(async () => {
     await resetDb(prisma);
+    await flushTestRedis();
+    await clearAppCache(app);
     mail.reset();
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   });
@@ -205,6 +208,13 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
         0,
       );
       expect(await prisma.user.count()).toBe(1);
+    });
+
+    it('register with a verified email sends the already-registered email at most 3 times an hour', async () => {
+      await activeUser();
+      for (let i = 0; i < 5; i++) await register(ana).expect(202);
+      await waitForMail(mail, 3);
+      await expectNoMoreMail(mail, 3);
     });
 
     it('register with a blocked email answers the same 202 and sends only the already-registered email', async () => {
@@ -464,6 +474,17 @@ describe('Auth: register, verify, resend, login (e2e)', () => {
       await expectNoMoreMail(mail, 2);
       await verify(tokenOf(mail.sent[0])).expect(400);
       await verify(tokenOf(mail.sent[1])).expect(204);
+    });
+
+    it('a PENDING address gets at most 3 verify mails an hour, however it is asked (register or resend), with the same 202', async () => {
+      await register(ana).expect(202);
+      for (let i = 0; i < 2; i++) await resend(ana.email).expect(202);
+      await register(ana).expect(202);
+      await resend(ana.email).expect(202);
+      await waitForMail(mail, 3);
+      await expectNoMoreMail(mail, 3);
+      // The refused asks issued nothing: the newest of the three links is still the valid one.
+      await verify(tokenOf(mail.sent[2])).expect(204);
     });
 
     it('unknown, active and blocked addresses get the same 202 and no mail', async () => {

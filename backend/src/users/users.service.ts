@@ -113,10 +113,10 @@ export class UsersService {
     const taken = await this.prisma.user.findUnique({ where: { email } });
     if (!taken) {
       runInBackground(this.logger, 'change-email mail', async () => {
-        // The new address first: a refused address must not spend the account's budget.
+        // The account first: an account that is out of budget must not use up another address's budget.
         if (
-          !(await this.budget.take('change-email', email)) ||
-          !(await this.budget.take('change-email-account', id))
+          !(await this.budget.take('change-email-account', id)) ||
+          !(await this.budget.take('change-email', email))
         ) {
           return;
         }

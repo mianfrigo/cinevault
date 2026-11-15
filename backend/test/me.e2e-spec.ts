@@ -303,7 +303,7 @@ describe('Me endpoints (e2e)', () => {
       for (let i = 0; i < 5; i++) await ask('same@example.com');
       await waitForMail(mail, 3);
       await expectNoMoreMail(mail, 3);
-      // The 3 allowed mails used the account's budget too (a refused address does not spend it).
+      // The 3 allowed mails used the account's budget: other addresses get nothing from it.
       for (const name of ['b', 'c', 'd']) await ask(`${name}@example.com`);
       await expectNoMoreMail(mail, 3);
     });

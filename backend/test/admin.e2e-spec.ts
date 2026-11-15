@@ -4,14 +4,12 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { AdminService } from '../src/admin/admin.service';
-import { BlockListService } from '../src/auth/blocklist.service';
 import { PasswordService } from '../src/auth/password.service';
 import type { Role, UserStatus } from '../src/generated/prisma/client';
 import { MAIL_TRANSPORT } from '../src/mail/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { resetDb } from './helpers/db';
-import { flushTestRedis, redisPttl } from './helpers/redis';
+import { clearAppCache, flushTestRedis } from './helpers/redis';
 
 const PASSWORD = 'correct horse battery';
 const UUID = '00000000-0000-4000-8000-000000000000';
@@ -349,15 +347,23 @@ describe('Admin endpoints (e2e)', () => {
           where: { userId: ana.id, revokedAt: null },
         }),
       ).toBe(0);
-      const ttl = await redisPttl(`blocked:${ana.id}`);
-      expect(ttl).toBeGreaterThan(590_000);
-      expect(ttl).toBeLessThanOrEqual(600_000);
       const res = await me(s1.token).expect(403);
       expect(res.body).toMatchObject({ code: 'ACCOUNT_BLOCKED' });
       for (const s of [s1, s2]) {
         const r = await refresh(s.raw).expect(401);
         expect(r.body).toMatchObject({ code: 'REFRESH_INVALID' });
       }
+    });
+
+    it('a block does not depend on the cache: with Redis and the memory store emptied the user is still refused', async () => {
+      const a = await admin();
+      const ana = await makeUser('ana@example.com');
+      const s = await signIn('ana@example.com');
+      await patch(a.token, ana.id, { status: 'BLOCKED' }).expect(200);
+      await flushTestRedis();
+      await clearAppCache(app);
+      const res = await me(s.token).expect(403);
+      expect(res.body).toMatchObject({ code: 'ACCOUNT_BLOCKED' });
     });
 
     it('unblocking restores access', async () => {
@@ -368,7 +374,6 @@ describe('Admin endpoints (e2e)', () => {
       await me(s.token).expect(403);
 
       await patch(a.token, ana.id, { status: 'ACTIVE' }).expect(200);
-      expect(await redisPttl(`blocked:${ana.id}`)).toBe(-2);
       await me(s.token).expect(200);
       const again = await signIn('ana@example.com');
       await me(again.token).expect(200);
@@ -390,7 +395,6 @@ describe('Admin endpoints (e2e)', () => {
       ).toMatchObject({ status: 'PENDING', emailVerifiedAt: null });
       const res = await login('p@example.com').expect(403);
       expect(res.body).toMatchObject({ code: 'EMAIL_NOT_VERIFIED' });
-      expect(await redisPttl(`blocked:${pending.id}`)).toBe(-2);
     });
 
     it('blocking then unblocking a verified user returns them to ACTIVE and login works', async () => {
@@ -578,29 +582,6 @@ describe('Admin endpoints (e2e)', () => {
           }),
         ).toBe(1);
       }
-    });
-  });
-
-  describe('block list reconcile', () => {
-    it('the block list is rewritten from the DB status, whatever the request intended', async () => {
-      const ana = await makeUser('ana@example.com');
-      const svc = app.get(AdminService);
-      const blocklist = app.get(BlockListService);
-      // DB says BLOCKED but the cache lost the key (a concurrent unblock wrote last).
-      await prisma.user.update({
-        where: { id: ana.id },
-        data: { status: 'BLOCKED' },
-      });
-      await blocklist.unblock(ana.id);
-      await svc.syncBlockList(ana.id);
-      expect(await redisPttl(`blocked:${ana.id}`)).toBeGreaterThan(0);
-      // DB says ACTIVE but a stale key is left behind.
-      await prisma.user.update({
-        where: { id: ana.id },
-        data: { status: 'ACTIVE' },
-      });
-      await svc.syncBlockList(ana.id);
-      expect(await redisPttl(`blocked:${ana.id}`)).toBe(-2);
     });
   });
 

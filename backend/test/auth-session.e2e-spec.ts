@@ -6,7 +6,6 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { AuthModule } from '../src/auth/auth.module';
-import { BlockListService } from '../src/auth/blocklist.service';
 import { CurrentUser, Roles } from '../src/auth/decorators';
 import { EmailTokensService } from '../src/auth/email-tokens.service';
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
@@ -17,7 +16,7 @@ import type { Role } from '../src/generated/prisma/client';
 import { MAIL_TRANSPORT } from '../src/mail/mail.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { resetDb } from './helpers/db';
-import { clearAppCache, flushTestRedis, redisPttl } from './helpers/redis';
+import { clearAppCache, flushTestRedis } from './helpers/redis';
 import { expectNoMoreMail, sleep, waitForMail } from './helpers/wait';
 
 interface Sent {
@@ -67,7 +66,6 @@ describe('Auth sessions: refresh, logout, reset, guards (e2e)', () => {
   let mail: MailRecorder;
   let http: ReturnType<typeof request>;
   let tokens: TokensService;
-  let blocklist: BlockListService;
 
   beforeAll(async () => {
     mail = new MailRecorder();
@@ -83,7 +81,6 @@ describe('Auth sessions: refresh, logout, reset, guards (e2e)', () => {
     await app.init();
     prisma = app.get(PrismaService);
     tokens = app.get(TokensService);
-    blocklist = app.get(BlockListService);
     http = request(app.getHttpServer());
   });
 
@@ -633,23 +630,20 @@ describe('Auth sessions: refresh, logout, reset, guards (e2e)', () => {
       const user = await makeUser();
       const { accessToken } = await session();
       await get('user', `Bearer ${accessToken}`).expect(200);
-      await blocklist.block(user.id);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'BLOCKED' },
+      });
       const res = await get('user', `Bearer ${accessToken}`).expect(403);
       expect(res.body).toMatchObject({
         statusCode: 403,
         code: 'ACCOUNT_BLOCKED',
       });
-      await blocklist.unblock(user.id);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'ACTIVE' },
+      });
       await get('user', `Bearer ${accessToken}`).expect(200);
-    });
-
-    it('block stores blocked:<id> in Redis with a 600s TTL', async () => {
-      const user = await makeUser();
-      await blocklist.block(user.id);
-      expect(await blocklist.isBlocked(user.id)).toBe(true);
-      const ttl = await redisPttl(`blocked:${user.id}`);
-      expect(ttl).toBeGreaterThan(590_000);
-      expect(ttl).toBeLessThanOrEqual(600_000);
     });
 
     it('RolesGuard: USER on an ADMIN route is 403', async () => {

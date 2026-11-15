@@ -120,7 +120,6 @@ Notes:
 | Key | Value | TTL |
 |---|---|---|
 | `tmdb:<path>?<sorted query>` | cached TMDB JSON (normalized) | per endpoint, see TRD |
-| `blocked:<userId>` | `1` | access token lifetime (600s); set on block, deleted on unblock |
 | `throttle:*` | rate-limit counters | managed by the throttler |
 
 ## 4. API contract
@@ -209,7 +208,7 @@ interface SeasonDetail { number:number; episodes:{number:number,name:string,airD
 | Method and path | Body | Result and errors |
 |---|---|---|
 | `GET /admin/users?q=&page=` | | `Paged<UserDto>`, 20 per page, newest first; `q` matches name or email, case-insensitive |
-| `PATCH /admin/users/:id` | `{role?,status?}` (`status` is `ACTIVE` or `BLOCKED`) | `UserDto`. 409 `SELF_ACTION`, 409 `LAST_ADMIN`. Blocking revokes refresh tokens and sets `blocked:<id>`. |
+| `PATCH /admin/users/:id` | `{role?,status?}` (`status` is `ACTIVE` or `BLOCKED`) | `UserDto`. 409 `SELF_ACTION`, 409 `LAST_ADMIN`. Blocking revokes refresh tokens; the guard reads the user status on every request, so the block applies at once. |
 | `DELETE /admin/users/:id` | | 204. 409 `SELF_ACTION`, 409 `LAST_ADMIN` |
 | `GET /admin/overview` | | `{totalUsers:number,newThisWeek:number,recentSignups:UserDto[5]}` |
 

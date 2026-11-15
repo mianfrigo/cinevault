@@ -4,7 +4,6 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { BlockListService } from '../src/auth/blocklist.service';
 import { PasswordService } from '../src/auth/password.service';
 import type { Role } from '../src/generated/prisma/client';
 import { MAIL_TRANSPORT } from '../src/mail/mail.service';
@@ -48,7 +47,6 @@ describe('Me endpoints (e2e)', () => {
   let prisma: PrismaService;
   let mail: MailRecorder;
   let http: ReturnType<typeof request>;
-  let blocklist: BlockListService;
   let passwordHash: string;
 
   beforeAll(async () => {
@@ -63,7 +61,6 @@ describe('Me endpoints (e2e)', () => {
     configureApp(app);
     await app.init();
     prisma = app.get(PrismaService);
-    blocklist = app.get(BlockListService);
     http = request(app.getHttpServer());
     passwordHash = await app.get(PasswordService).hash(PASSWORD);
   });
@@ -572,10 +569,13 @@ describe('Me endpoints (e2e)', () => {
         .expect(401);
     });
 
-    it('all /me routes for a user blocked in the cache are 403 ACCOUNT_BLOCKED', async () => {
+    it('all /me routes for a blocked user are 403 ACCOUNT_BLOCKED', async () => {
       const user = await makeUser();
       const { token } = await signIn();
-      await blocklist.block(user.id);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'BLOCKED' },
+      });
       for (const [method, path, body] of routes) {
         const res = await call(method, path, body).set(auth(token)).expect(403);
         expect(res.body).toMatchObject({

@@ -8,7 +8,6 @@ import type { Cache } from 'cache-manager';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
-import { BlockListService } from '../src/auth/blocklist.service';
 import { PasswordService } from '../src/auth/password.service';
 import { AppException } from '../src/common/app.exception';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -64,7 +63,6 @@ describe('Favorites (e2e)', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
   let http: ReturnType<typeof request>;
-  let blocklist: BlockListService;
   let passwordHash: string;
   const tmdb = new FakeTmdb();
 
@@ -77,7 +75,6 @@ describe('Favorites (e2e)', () => {
     configureApp(app);
     await app.init();
     prisma = app.get(PrismaService);
-    blocklist = app.get(BlockListService);
     http = request(app.getHttpServer());
     passwordHash = await app.get(PasswordService).hash(PASSWORD);
   });
@@ -404,10 +401,13 @@ describe('Favorites (e2e)', () => {
       }
     });
 
-    it('a user blocked in the cache gets 403 ACCOUNT_BLOCKED on every route', async () => {
+    it('a blocked user gets 403 ACCOUNT_BLOCKED on every route', async () => {
       const { token, user } = await signUp();
       await seed(user.id, [{ id: 1 }]);
-      await blocklist.block(user.id);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'BLOCKED' },
+      });
       for (const [method, path] of routes) {
         const res = await call(method, path).set(auth(token)).expect(403);
         expect(res.body).toMatchObject({

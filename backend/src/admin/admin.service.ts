@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { BlockListService } from '../auth/blocklist.service';
 import { SessionsService } from '../auth/sessions.service';
 import { AppException } from '../common/app.exception';
 import type { Paged } from '../common/paged';
@@ -28,7 +27,6 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly sessions: SessionsService,
-    private readonly blocklist: BlockListService,
   ) {}
 
   async listUsers(
@@ -67,7 +65,7 @@ export class AdminService {
    * change takes an admin's powers away. Order of the refusals matters: an
    * attempt on the only active admin is LAST_ADMIN even from a stale actor;
    * then the actor must still be an ACTIVE admin in the DB (the JWT role is
-   * trusted for up to 10 minutes after a demotion or block): 403; then 404.
+   * trusted for up to 10 minutes after a demotion): 403; then 404.
    */
   private async lockAndLoad(
     tx: Prisma.TransactionClient,
@@ -147,23 +145,7 @@ export class AdminService {
       return tx.user.findUniqueOrThrow({ where: { id } });
     });
 
-    if (status !== undefined) await this.syncBlockList(id);
     return toUserDto(user);
-  }
-
-  /**
-   * Writes the block list from the DB status as it is NOW, not from what this
-   * request intended, so concurrent block/unblock calls cannot leave the cache
-   * disagreeing with the DB. Runs after commit, so it never gets ahead of the DB.
-   * A failed write is swallowed and logged by BlockListService (accepted degradation).
-   */
-  async syncBlockList(id: string): Promise<void> {
-    const row = await this.prisma.user.findUnique({
-      where: { id },
-      select: { status: true },
-    });
-    if (row?.status === 'BLOCKED') await this.blocklist.block(id);
-    else await this.blocklist.unblock(id);
   }
 
   /**

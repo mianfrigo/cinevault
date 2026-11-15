@@ -52,7 +52,7 @@ Use the latest stable majors at scaffold time. Where this document names an API 
 - Global exception filter produces `{statusCode, code, message}`.
 - `helmet`, CORS allow-list from `WEB_ORIGIN`, `cookie-parser`, `trust proxy` configurable.
 - Logging: structured, never logs passwords, tokens or Authorization headers.
-- `JwtAuthGuard` (verifies access token and checks Redis `blocked:<id>`) and `RolesGuard` with `@Roles('ADMIN')`.
+- `JwtAuthGuard` (verifies the access token and refuses a user whose row says BLOCKED) and `RolesGuard` with `@Roles('ADMIN')`.
 
 ### 3.3 Auth design
 
@@ -61,7 +61,7 @@ Use the latest stable majors at scaffold time. Where this document names an API 
 - Email tokens: 32 random bytes, hash stored, single use, expiry per type (see schema doc).
 - Responses for register, resend, forgot never reveal whether an email exists.
 - Login order: find user, verify password, then check status (PENDING gives `EMAIL_NOT_VERIFIED`, BLOCKED gives `ACCOUNT_BLOCKED`). Do a dummy hash comparison for unknown emails to equalize timing.
-- Blocking a user: revoke all refresh tokens and set `blocked:<id>` for 600 seconds; unblocking deletes the key.
+- Blocking a user: revoke all refresh tokens and set the status to BLOCKED; `JwtAuthGuard` reads the status on every request (one primary-key read), so the block applies at once and does not depend on the cache.
 
 ### 3.4 TMDB integration
 
